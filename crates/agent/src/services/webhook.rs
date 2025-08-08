@@ -39,6 +39,7 @@ impl Default for WebhookService {
 }
 
 /// Webhook response
+#[allow(dead_code)] // TODO: Remove after development phase
 #[derive(Serialize)]
 pub struct WebhookResponse {
     /// Status of the webhook operation
