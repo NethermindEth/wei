@@ -1,0 +1,47 @@
+name: UI CI
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'ui/**'
+      - '.github/workflows/ui-ci.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'ui/**'
+      - '.github/workflows/ui-ci.yml'
+
+jobs:
+  build:
+    name: Lint & Build (ui)
+    runs-on: ubuntu-latest
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: 'pnpm'
+          cache-dependency-path: ui/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: ui
+
+      - name: Lint
+        run: pnpm lint
+        working-directory: ui
+
+      - name: Build
+        run: pnpm build
+        working-directory: ui
