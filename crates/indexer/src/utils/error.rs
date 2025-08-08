@@ -3,6 +3,7 @@
 use thiserror::Error;
 
 /// Indexer service error
+#[allow(dead_code)] // TODO: Remove after development phase
 #[derive(Error, Debug)]
 pub enum IndexerError {
     /// Database operation failed
