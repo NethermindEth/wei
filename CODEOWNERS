@@ -1,4 +1,4 @@
-# CODEOWNERS File Template
+# CODEOWNERS File
 # 
 # This file defines code ownership for this repository.
 # Code owners are automatically requested for review when someone opens a pull request.
@@ -9,9 +9,7 @@
 # GLOBAL OWNERS
 # =============================================================================
 # These owners will be requested for review on ALL pull requests
-# Uncomment and customize the line below:
-
-# * @NethermindEth/your-team-name
+* @varex83 @JorikSchellekens @yehia67
 
 # =============================================================================
 # PATH-BASED OWNERSHIP
@@ -39,10 +37,8 @@
 # =============================================================================
 # INSTRUCTIONS FOR CUSTOMIZATION
 # =============================================================================
-# 1. Uncomment the lines you want to use
-# 2. Replace 'your-team-name' with actual team names from your organization
-# 3. Add specific paths that match your repository structure
-# 4. You can use individual usernames like @username instead of teams
-# 5. More specific rules override general ones
+# 1. Lines above with * define ownership for the entire repo.
+# 2. You can add more specific paths below if needed.
+# 3. More specific rules override general ones.
 #
 # Need help? Check the GitHub documentation link above! 🚀
