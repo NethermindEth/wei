@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0b0f14;
+  --foreground: #d5e7ff;
+  --accent: #19e3ff;
+  --accent-2: #00ffa5;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0b0f14;
+    --foreground: #d5e7ff;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/***** Accent ring/glow *****/
+.accent-glow {
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--accent) 40%, transparent),
+    0 0 24px -6px color-mix(in oklch, var(--accent) 60%, transparent),
+    inset 0 0 12px -4px color-mix(in oklch, var(--accent-2) 40%, transparent);
+}
