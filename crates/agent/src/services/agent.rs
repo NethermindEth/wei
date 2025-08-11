@@ -2,18 +2,12 @@
 
 use std::future::Future;
 
-use openrouter_rs::{
-    api::chat::ChatCompletionRequest, types::Role, Message, OpenRouterClient,
-};
+use openrouter_rs::{api::chat::ChatCompletionRequest, types::Role, Message, OpenRouterClient};
 
 use crate::prompts::ANALYZE_PROPOSAL_PROMPT;
 use crate::utils::error::Result;
 
-use crate::{
-    db::core::Database,
-    models::Proposal,
-    Config,
-};
+use crate::{db::core::Database, models::Proposal, Config};
 
 /// Main agent service
 #[derive(Clone)]

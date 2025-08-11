@@ -5,7 +5,7 @@ use axum::{
     http::StatusCode,
     Json,
 };
-use serde::{Serialize};
+use serde::Serialize;
 
 use crate::{api::routes::AppState, models::Proposal, services::agent::AgentServiceTrait};
 
@@ -15,14 +15,16 @@ pub async fn analyze_proposal(
     State(state): State<AppState>,
     Json(proposal): Json<Proposal>,
 ) -> Result<Json<AnalyzeResponse>, StatusCode> {
-    let analysis = state.agent_service.analyze_proposal(&proposal).await.map_err(|e| {
-        tracing::error!("Error analyzing proposal: {:?}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
+    let analysis = state
+        .agent_service
+        .analyze_proposal(&proposal)
+        .await
+        .map_err(|e| {
+            tracing::error!("Error analyzing proposal: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
-    Ok(Json(AnalyzeResponse {
-        analysis,
-    }))
+    Ok(Json(AnalyzeResponse { analysis }))
 }
 
 /// Get analysis by ID

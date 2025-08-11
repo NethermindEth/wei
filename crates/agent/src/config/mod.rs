@@ -19,19 +19,11 @@ pub struct Config {
     pub database_url: String,
 
     /// AI model provider
-    #[arg(
-        env = "WEI_AGENT_AI_MODEL_PROVIDER",
-        long,
-        default_value = "openai"
-    )]
+    #[arg(env = "WEI_AGENT_AI_MODEL_PROVIDER", long, default_value = "openai")]
     pub ai_model_provider: String,
 
     /// AI model name
-    #[arg(
-        env = "WEI_AGENT_AI_MODEL_NAME",
-        long,
-        default_value = "gpt-4o-mini"
-    )]
+    #[arg(env = "WEI_AGENT_AI_MODEL_NAME", long, default_value = "gpt-4o-mini")]
     pub ai_model_name: String,
 
     /// AI model API key
