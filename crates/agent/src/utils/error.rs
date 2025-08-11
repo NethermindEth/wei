@@ -48,11 +48,17 @@ pub enum Error {
     /// OpenRouter API error
     #[error("OpenRouter API error: {0}")]
     #[allow(dead_code)] // TODO: Remove after development phase
-    OpenRouter(#[from] openrouter_rs::error::OpenRouterError),
+    OpenRouter(Box<openrouter_rs::error::OpenRouterError>),
 
     /// Internal service error
     #[error("Internal error: {0}")]
     Internal(String),
+}
+
+impl From<openrouter_rs::error::OpenRouterError> for Error {
+    fn from(error: openrouter_rs::error::OpenRouterError) -> Self {
+        Error::OpenRouter(Box::new(error))
+    }
 }
 
 /// Result type for the agent service
