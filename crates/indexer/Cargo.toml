@@ -24,7 +24,7 @@ tracing.workspace = true
 tracing-subscriber.workspace = true
 chrono.workspace = true
 uuid.workspace = true
-config.workspace = true
+clap.workspace = true
 dotenv.workspace = true
 
 # Additional dependencies specific to indexer

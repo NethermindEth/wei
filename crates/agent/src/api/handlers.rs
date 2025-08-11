@@ -5,57 +5,49 @@ use axum::{
     http::StatusCode,
     Json,
 };
-use serde::{Deserialize, Serialize};
+use serde::{Serialize};
 
-use crate::db::Database;
+use crate::{api::routes::AppState, models::Proposal, services::agent::AgentServiceTrait};
 
 /// Analyze a proposal
-#[allow(unused_variables)] // TODO: Remove after development phase
+#[allow(dead_code, unused_variables)] // TODO: Remove after development phase
 pub async fn analyze_proposal(
-    State(_db): State<Database>,
-    Json(_payload): Json<AnalyzeRequest>,
+    State(state): State<AppState>,
+    Json(proposal): Json<Proposal>,
 ) -> Result<Json<AnalyzeResponse>, StatusCode> {
-    // TODO: Implement proposal analysis
-    todo!("Implement analyze_proposal")
+    let analysis = state.agent_service.analyze_proposal(&proposal).await.map_err(|e| {
+        tracing::error!("Error analyzing proposal: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Json(AnalyzeResponse {
+        analysis,
+    }))
 }
 
 /// Get analysis by ID
-#[allow(unused_variables)] // TODO: Remove after development phase
+#[allow(dead_code, unused_variables)] // TODO: Remove after development phase
 pub async fn get_analysis(
     Path(id): Path<String>,
-    State(_db): State<Database>,
+    State(state): State<AppState>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    // TODO: Implement analysis retrieval
+    // TODO: Implement analysis retrieval using state.agent_service
     todo!("Implement get_analysis")
 }
 
 /// Get analyses for a proposal
-#[allow(unused_variables)] // TODO: Remove after development phase
+#[allow(dead_code, unused_variables)] // TODO: Remove after development phase
 pub async fn get_proposal_analyses(
     Path(proposal_id): Path<String>,
-    State(_db): State<Database>,
+    State(state): State<AppState>,
 ) -> Result<Json<Vec<serde_json::Value>>, StatusCode> {
-    // TODO: Implement proposal analyses retrieval
+    // TODO: Implement proposal analyses retrieval using state.agent_service
     todo!("Implement get_proposal_analyses")
-}
-
-/// Request payload for proposal analysis
-#[derive(Deserialize)]
-#[allow(dead_code)] // TODO: Remove after development phase
-pub struct AnalyzeRequest {
-    /// ID of the proposal to analyze
-    pub proposal_id: String,
-    /// Title of the proposal
-    pub title: String,
-    /// Description of the proposal
-    pub description: String,
 }
 
 /// Response payload for analysis request
 #[derive(Serialize)]
 pub struct AnalyzeResponse {
-    /// ID of the created analysis
-    pub analysis_id: String,
-    /// Status of the analysis
-    pub status: String,
+    /// Analysis result
+    pub analysis: String,
 }

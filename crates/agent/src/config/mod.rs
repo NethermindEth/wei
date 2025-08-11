@@ -1,66 +1,40 @@
 //! Configuration management for the agent service
 
+use clap::Parser;
 use serde::{Deserialize, Serialize};
 
 /// Application configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Parser)]
 pub struct Config {
-    /// Server configuration
-    pub server: ServerConfig,
-    /// Database configuration
-    pub database: DatabaseConfig,
-    /// AI service configuration
-    pub ai: AIConfig,
-    /// Webhook configuration
-    pub webhook: WebhookConfig,
-}
-
-/// Server configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ServerConfig {
-    /// Host to bind to
-    pub host: String,
-    /// Port to bind to
+    /// Application port
+    #[arg(env = "WEI_AGENT_PORT", long, default_value = "8000")]
     pub port: u16,
-}
 
-/// Database configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DatabaseConfig {
     /// Database URL
-    pub url: String,
-    /// Maximum number of connections
-    pub max_connections: u32,
-}
+    #[arg(
+        env = "WEI_AGENT_DATABASE_URL",
+        long,
+        default_value = "postgresql://postgres:postgres@localhost:5432/wei_agent"
+    )]
+    pub database_url: String,
 
-/// AI service configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AIConfig {
-    /// AI model endpoint
-    pub endpoint: String,
-    /// API key for AI service
-    pub api_key: String,
-    /// Model name
-    pub model: String,
-}
+    /// AI model provider
+    #[arg(
+        env = "WEI_AGENT_AI_MODEL_PROVIDER",
+        long,
+        default_value = "openai"
+    )]
+    pub ai_model_provider: String,
 
-/// Webhook configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WebhookConfig {
-    /// Webhook secret for authentication
-    pub secret: String,
-    /// Maximum retry attempts
-    pub max_retries: u32,
-}
+    /// AI model name
+    #[arg(
+        env = "WEI_AGENT_AI_MODEL_NAME",
+        long,
+        default_value = "gpt-4o-mini"
+    )]
+    pub ai_model_name: String,
 
-impl Config {
-    /// Load configuration from environment variables
-    #[allow(dead_code)] // TODO: Remove after development phase
-    pub fn from_env() -> Result<Self, config::ConfigError> {
-        let cfg = config::Config::builder()
-            .add_source(config::Environment::default().separator("__"))
-            .build()?;
-
-        cfg.try_deserialize()
-    }
+    /// AI model API key
+    #[arg(env = "WEI_AGENT_OPEN_ROUTER_API_KEY", long)]
+    pub ai_model_api_key: String,
 }

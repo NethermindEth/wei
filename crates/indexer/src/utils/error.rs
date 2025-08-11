@@ -24,7 +24,7 @@ pub enum IndexerError {
     /// Configuration loading failed
     #[allow(dead_code)] // TODO: Remove after development phase
     #[error("Configuration error: {0}")]
-    Configuration(#[from] config::ConfigError),
+    Configuration(String),
 
     /// Data source operation failed
     #[allow(dead_code)] // TODO: Remove after development phase
