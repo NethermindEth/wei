@@ -12,6 +12,7 @@ Wei develops autonomous agents for blockchain protocol development and governanc
 - 📋 **[Internal Documentation](https://www.notion.so/nethermind/Wei-Governance-Agents-231360fc38d0808ead4be02d94345198)** - Nethermind Notion
 - 💬 **[Telegram](https://t.me/AgentWei)** - @AgentWei
 - 🔗 **[GitHub](https://github.com/nethermindeth/wei)** - Main Repository
+- 🐳 **[Docker Setup](DOCKER.md)** - Docker Documentation
 
 ## Working with the Rust workspace
 
@@ -89,3 +90,33 @@ Each crate has its own migrations under `crates/<crate>/migrations/`.
 Note:
 
 - The binaries currently initialize logging and then wait for Ctrl+C. As services are implemented (API, DB pool, background tasks), they will use the above configuration and databases.
+
+## Docker Setup
+
+The project can be run using Docker and Docker Compose for easier setup and deployment.
+
+### Prerequisites
+
+- **Docker**: Install from [https://docs.docker.com/get-docker/](https://docs.docker.com/get-docker/)
+- **Docker Compose**: Usually included with Docker Desktop
+
+### Quick Start
+
+1. Copy the environment file:
+   ```bash
+   cp env.example .env
+   ```
+
+2. Edit `.env` with your configuration values
+
+3. Start all services:
+   ```bash
+   docker-compose up -d
+   ```
+
+4. View logs:
+   ```bash
+   docker-compose logs -f
+   ```
+
+For more detailed Docker instructions, see the [Docker documentation](DOCKER.md).
