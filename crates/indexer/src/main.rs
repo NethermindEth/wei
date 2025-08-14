@@ -1,4 +1,7 @@
+use clap::Parser;
 use tracing::info;
+
+use indexer::config::Config;
 
 mod api;
 mod config;
@@ -9,12 +12,24 @@ mod utils;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    dotenv::dotenv().ok();
+
+    let _config = Config::parse();
+
+    if std::env::var("RUST_LOG").is_err() {
+        std::env::set_var("RUST_LOG", "info");
+    }
+
     // Initialize tracing
-    tracing_subscriber::fmt::init();
+    tracing_subscriber::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .with_target(false)
+        .with_thread_ids(true)
+        .with_thread_names(true)
+        .init();
 
     info!("Starting Wei Indexer service...");
 
-    // TODO: Initialize configuration
     // TODO: Initialize database connection
     // TODO: Initialize services
     // TODO: Start API server

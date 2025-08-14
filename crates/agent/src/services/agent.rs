@@ -1,58 +1,72 @@
 //! Main agent service
 
-use std::sync::Arc;
+use std::future::Future;
 
-use crate::{
-    db::Database,
-    models::{Analysis, Proposal},
-    services::ai::AIService,
-};
+use openrouter_rs::{api::chat::ChatCompletionRequest, types::Role, Message, OpenRouterClient};
+
+use crate::prompts::ANALYZE_PROPOSAL_PROMPT;
+use crate::utils::error::Result;
+
+use crate::{db::core::Database, models::Proposal, Config};
 
 /// Main agent service
-#[allow(dead_code)] // TODO: Remove after development phase
+#[derive(Clone)]
 pub struct AgentService {
     db: Database,
-    ai_service: Arc<AIService>,
+    openrouter: OpenRouterClient,
+    config: Config,
 }
 
 impl AgentService {
     /// Create a new agent service
-    #[allow(dead_code)] // TODO: Remove after development phase
-    pub fn new(db: Database, ai_service: AIService) -> Self {
+    pub fn new(db: Database, config: Config) -> Self {
         Self {
             db,
-            ai_service: Arc::new(ai_service),
+            // Unwrap is safe because we are doing it on init only
+            openrouter: Self::init_open_router(&config).unwrap(),
+            config,
         }
     }
 
+    /// Initialize the OpenRouter client
+    fn init_open_router(config: &Config) -> Result<OpenRouterClient> {
+        let openrouter = OpenRouterClient::builder()
+            .api_key(config.ai_model_api_key.clone())
+            .build()?;
+
+        Ok(openrouter)
+    }
+}
+
+/// Trait for the agent service
+pub trait AgentServiceTrait {
     /// Analyze a proposal
-    #[allow(dead_code, unused_variables)] // TODO: Remove after development phase
-    pub async fn analyze_proposal(&self, proposal: &Proposal) -> anyhow::Result<Analysis> {
-        // TODO: Implement proposal analysis
-        todo!("Implement analyze_proposal")
-    }
+    fn analyze_proposal(&self, proposal: &Proposal) -> impl Future<Output = Result<String>>;
+}
 
-    /// Get analysis by ID
-    #[allow(dead_code, unused_variables)] // TODO: Remove after development phase
-    pub async fn get_analysis(&self, id: &str) -> anyhow::Result<Analysis> {
-        // TODO: Implement analysis retrieval
-        todo!("Implement get_analysis")
-    }
+impl AgentServiceTrait for AgentService {
+    /// Analyze a proposal
+    async fn analyze_proposal(&self, proposal: &Proposal) -> Result<String> {
+        let request = ChatCompletionRequest::builder()
+            .model(self.config.ai_model_name.clone())
+            .messages(vec![
+                Message::new(Role::System, ANALYZE_PROPOSAL_PROMPT),
+                Message::new(Role::User, serde_json::to_string(&proposal)?.as_str()),
+            ])
+            .build()
+            .map_err(|e| crate::utils::error::Error::Internal(e.to_string()))?;
 
-    /// Get analyses for a proposal
-    #[allow(dead_code, unused_variables)] // TODO: Remove after development phase
-    pub async fn get_proposal_analyses(&self, proposal_id: &str) -> anyhow::Result<Vec<Analysis>> {
-        // TODO: Implement proposal analyses retrieval
-        todo!("Implement get_proposal_analyses")
-    }
+        let response = self
+            .openrouter
+            .send_chat_completion(&request)
+            .await
+            .map_err(|e| crate::utils::error::Error::Internal(e.to_string()))?;
 
-    /// Process webhook event
-    #[allow(dead_code, unused_variables)] // TODO: Remove after development phase
-    pub async fn process_webhook_event(
-        &self,
-        event: &crate::models::WebhookEvent,
-    ) -> anyhow::Result<()> {
-        // TODO: Implement webhook event processing
-        todo!("Implement process_webhook_event")
+        Ok(response.choices[0]
+            .content()
+            .ok_or(crate::utils::error::Error::Internal(
+                "No content in response".to_string(),
+            ))?
+            .to_string())
     }
 }

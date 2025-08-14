@@ -5,9 +5,3 @@
 
 /// Error types and handling
 pub mod error;
-/// Data validation utilities
-pub mod validation;
-
-// TODO: Remove unused import after development phase
-#[allow(unused_imports)]
-pub use error::AgentError;
