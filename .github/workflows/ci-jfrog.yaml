@@ -16,8 +16,8 @@ permissions:
   contents: read
 
 jobs:
-  push-wei-bd:
-    uses: NethermindEth/github-workflows/.github/workflows/docker-build-push-jfrog.yaml@1d0525fa740f879a4c9b00678bd3ccc27056e92a
+  push-wei:
+    uses: NethermindEth/github-workflows/.github/workflows/docker-build-push-jfrog.yaml@main
     with:
       repo_name: productsvents-oci-local-dev
       image_name: wei
