@@ -9,13 +9,13 @@ importers:
   .:
     dependencies:
       '@radix-ui/react-label':
-        specifier: ^2.1.7
+        specifier: 2.1.7
         version: 2.1.7(@types/react-dom@19.1.7(@types/react@19.1.9))(@types/react@19.1.9)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       next:
         specifier: 15.4.6
         version: 15.4.6(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       nuqs:
-        specifier: ^2.4.3
+        specifier: 2.4.3
         version: 2.4.3(next@15.4.6(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)
       react:
         specifier: 19.1.0
@@ -24,38 +24,38 @@ importers:
         specifier: 19.1.0
         version: 19.1.0(react@19.1.0)
       react-markdown:
-        specifier: ^10.1.0
+        specifier: 10.1.0
         version: 10.1.0(@types/react@19.1.9)(react@19.1.0)
       remark-gfm:
-        specifier: ^4.0.1
+        specifier: 4.0.1
         version: 4.0.1
     devDependencies:
       '@eslint/eslintrc':
-        specifier: ^3
+        specifier: '3'
         version: 3.3.1
       '@tailwindcss/postcss':
-        specifier: ^4
+        specifier: '4'
         version: 4.1.11
       '@types/node':
-        specifier: ^20
+        specifier: '20'
         version: 20.19.9
       '@types/react':
-        specifier: ^19
+        specifier: '19'
         version: 19.1.9
       '@types/react-dom':
-        specifier: ^19
+        specifier: '19'
         version: 19.1.7(@types/react@19.1.9)
       eslint:
-        specifier: ^9
+        specifier: '9'
         version: 9.32.0(jiti@2.5.1)
       eslint-config-next:
         specifier: 15.4.6
         version: 15.4.6(eslint@9.32.0(jiti@2.5.1))(typescript@5.9.2)
       tailwindcss:
-        specifier: ^4
+        specifier: '4'
         version: 4.1.11
       typescript:
-        specifier: ^5
+        specifier: '5'
         version: 5.9.2
 
 packages:
