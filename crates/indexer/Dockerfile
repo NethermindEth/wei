@@ -45,7 +45,7 @@ EXPOSE 8000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:8000 || exit 1
+    CMD curl -f http://localhost:8000/health || exit 1
 
 # Set default environment variables
 ENV WEI_indexer_PORT=8000

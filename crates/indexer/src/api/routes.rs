@@ -11,6 +11,7 @@ use crate::{api::handlers, db::Database};
 #[allow(dead_code)] // TODO: Remove after development phase
 pub fn create_router(db: Database) -> Router {
     Router::new()
+        .route("/health", get(handlers::health))
         .route("/proposals/:id", get(handlers::get_proposal_by_id))
         .route(
             "/proposals/network/:network",
