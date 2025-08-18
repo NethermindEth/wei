@@ -43,6 +43,7 @@ pub fn create_router(config: &Config, agent_service: AgentService) -> Router {
         .allow_headers(Any);
 
     Router::new()
+        .route("/health", get(handlers::health))
         .route("/analyze", post(handlers::analyze_proposal))
         .route("/analyses/:id", get(handlers::get_analysis))
         .route(

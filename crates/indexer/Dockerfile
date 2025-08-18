@@ -1,4 +1,4 @@
-# Multi-stage build for Wei Agent
+# Multi-stage build for Wei indexer
 FROM rustlang/rust:nightly AS builder
 
 WORKDIR /usr/src/wei
@@ -15,8 +15,8 @@ COPY Cargo.toml Cargo.lock ./
 # Copy all workspace crates (needed for workspace resolution)
 COPY crates/ ./crates/
 
-# Build only the agent binary with optimizations
-RUN cargo build --release --bin agent
+# Build only the indexer binary with optimizations
+RUN cargo build --release --bin indexer
 
 # Runtime stage
 FROM debian:bookworm-slim
@@ -29,11 +29,11 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy the agent binary from builder stage
-COPY --from=builder /usr/src/wei/target/release/agent /app/agent
+# Copy the indexer binary from builder stage
+COPY --from=builder /usr/src/wei/target/release/indexer /app/indexer
 
 # Copy migrations directory if it exists
-COPY --from=builder /usr/src/wei/crates/agent/migrations /app/migrations
+COPY --from=builder /usr/src/wei/crates/indexer/migrations /app/migrations
 
 # Create a non-root user for security
 RUN useradd -r -s /bin/false -m -d /app appuser && \
@@ -48,8 +48,8 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Set default environment variables
-ENV WEI_AGENT_PORT=8000
+ENV WEI_indexer_PORT=8000
 ENV RUST_LOG=info
 
-# Run the agent
-CMD ["/app/agent"]
+# Run the indexer
+CMD ["/app/indexer"]

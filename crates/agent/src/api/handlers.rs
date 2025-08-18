@@ -9,6 +9,11 @@ use serde::Serialize;
 
 use crate::{api::routes::AppState, models::Proposal, services::agent::AgentServiceTrait};
 
+/// Health check endpoint
+pub async fn health() -> StatusCode {
+    StatusCode::OK
+}
+
 /// Analyze a proposal
 #[allow(dead_code, unused_variables)] // TODO: Remove after development phase
 pub async fn analyze_proposal(

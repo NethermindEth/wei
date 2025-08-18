@@ -9,6 +9,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::{db::Database, models::Proposal};
 
+/// Health check endpoint
+pub async fn health() -> StatusCode {
+    StatusCode::OK
+}
+
 /// Get proposal by ID
 #[allow(unused_variables)] // TODO: Remove after development phase
 pub async fn get_proposal_by_id(
