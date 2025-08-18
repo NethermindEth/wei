@@ -1,5 +1,5 @@
-# Multi-stage build for Wei Indexer
-FROM rustlang/rust:nightly as builder
+# Multi-stage build for Wei indexer
+FROM rustlang/rust:nightly AS builder
 
 WORKDIR /usr/src/wei
 
@@ -9,18 +9,13 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy workspace configuration files
+# Copy workspace configuration files first for better caching
 COPY Cargo.toml Cargo.lock ./
 
-# Copy all crates needed for workspace dependencies
-COPY crates/indexer ./crates/indexer
-COPY crates/agent/Cargo.toml ./crates/agent/
+# Copy all workspace crates (needed for workspace resolution)
+COPY crates/ ./crates/
 
-# Create minimal src structure for agent to satisfy Cargo
-RUN mkdir -p ./crates/agent/src && \
-    echo "// Empty file to satisfy Cargo" > ./crates/agent/src/lib.rs
-
-# Build only the indexer binary
+# Build only the indexer binary with optimizations
 RUN cargo build --release --bin indexer
 
 # Runtime stage
@@ -30,33 +25,30 @@ WORKDIR /app
 
 # Install runtime dependencies
 RUN apt-get update && \
-    apt-get install -y libpq5 ca-certificates postgresql-client libssl3 && \
+    apt-get install -y libpq5 ca-certificates libssl3 curl && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
-
-# Copy migrations directory
-COPY --from=builder /usr/src/wei/crates/indexer/migrations /app/migrations
 
 # Copy the indexer binary from builder stage
 COPY --from=builder /usr/src/wei/target/release/indexer /app/indexer
 
-# Create a non-root user for security and set permissions
+# Copy migrations directory if it exists
+COPY --from=builder /usr/src/wei/crates/indexer/migrations /app/migrations
+
+# Create a non-root user for security
 RUN useradd -r -s /bin/false -m -d /app appuser && \
-    chown -R appuser:appuser /app && \
-    chmod +x /app/indexer
+    chown -R appuser:appuser /app
 USER appuser
 
 # Expose the default port
-EXPOSE 3001
+EXPOSE 8000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:3001 || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8000 || exit 1
 
 # Set default environment variables
-ENV INDEXER__SERVER__PORT=3001
-ENV INDEXER__SERVER__HOST=0.0.0.0
-ENV INDEXER__DATABASE__URL=postgresql://postgres:postgres@wei-postgres:5432/wei_indexer
+ENV WEI_indexer_PORT=8000
 ENV RUST_LOG=info
 
 # Run the indexer
