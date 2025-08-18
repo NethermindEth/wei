@@ -34,10 +34,8 @@ COPY --from=builder /usr/src/wei/crates/agent/migrations /app/crates/agent/migra
 COPY --from=builder /usr/src/wei/crates/indexer/migrations /app/crates/indexer/migrations
 
 # Create a script to run migrations and start the service
-COPY --from=builder /usr/src/wei/env.example /app/.env.example
 
-# Create entrypoint script
-RUN echo '#!/bin/bash\n\
+
 set -e\n\
 \n\
 SERVICE=$1\n\

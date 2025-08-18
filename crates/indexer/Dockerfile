@@ -32,10 +32,8 @@ COPY --from=builder /usr/src/wei/target/release/indexer /app/indexer
 COPY --from=builder /usr/src/wei/crates/indexer/migrations /app/crates/indexer/migrations
 
 # Copy env example for reference
-COPY --from=builder /usr/src/wei/env.example /app/.env.example
 
-# Create entrypoint script
-RUN echo '#!/bin/bash\n\
+
 set -e\n\
 \n\
 wait_for_postgres() {\n\
