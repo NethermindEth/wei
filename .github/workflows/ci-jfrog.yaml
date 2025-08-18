@@ -19,9 +19,12 @@ jobs:
   push-wei:
     uses: NethermindEth/github-workflows/.github/workflows/docker-build-push-jfrog.yaml@v1.5.1
     with:
-      group_name: productsvents
-      image_name: wei
+      repo_name: productsvents-oci-local-dev
+      # group_name: productsvents
+      image_name: wei-agent
       platforms: "linux/arm64"
       runner: ubuntu-24.04-arm
+      context: .
+      dockerfile_path: ./Dockerfile
       ignore_trivy: true
       push: ${{ github.event_name != 'pull_request' }}
