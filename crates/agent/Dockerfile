@@ -12,8 +12,8 @@ RUN apt-get update && \
 # Copy workspace configuration files first for better caching
 COPY Cargo.toml Cargo.lock ./
 
-# Copy the agent crate
-COPY crates/agent ./crates/agent
+# Copy all workspace crates (needed for workspace resolution)
+COPY crates/ ./crates/
 
 # Build only the agent binary with optimizations
 RUN cargo build --release --bin agent
