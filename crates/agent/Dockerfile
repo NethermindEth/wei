@@ -12,8 +12,13 @@ RUN apt-get update && \
 # Copy workspace configuration files
 COPY Cargo.toml Cargo.lock ./
 
-# Copy the agent crate
+# Copy all crates needed for workspace dependencies
 COPY crates/agent ./crates/agent
+COPY crates/indexer/Cargo.toml ./crates/indexer/
+
+# Create minimal src structure for indexer to satisfy Cargo
+RUN mkdir -p ./crates/indexer/src && \
+    echo "// Empty file to satisfy Cargo" > ./crates/indexer/src/lib.rs
 
 # Build only the agent binary
 RUN cargo build --release --bin agent
