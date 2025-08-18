@@ -46,7 +46,7 @@ shift\n\
 wait_for_postgres() {\n\
   echo "Waiting for PostgreSQL to be ready..."\n\
   # Use fixed values for PostgreSQL connection\n\
-  PG_HOST="wei-postgres"\n\
+  PG_HOST="wei-rds.cho66ai6o9lp.us-east-1.rds.amazonaws.com"\n\
   PG_PORT="5432"\n\
 \n\
   echo "Checking PostgreSQL connection at $PG_HOST:$PG_PORT..."\n\
@@ -64,7 +64,7 @@ if [ "$SERVICE" = "agent" ]; then\n\
   wait_for_postgres\n\
   echo "Starting agent service..."\n\
   # Update the database URL to use the correct hostname\n\
-  export WEI_AGENT_DATABASE_URL="postgresql://postgres:postgres@wei-postgres:5432/wei_agent"\n\
+  export WEI_AGENT_DATABASE_URL="postgresql://postgres:SX6QzOJwjSvwhE6J5fmu@wei-rds.cho66ai6o9lp.us-east-1.rds.amazonaws.com:5432/wei_agent"\n\
   exec /app/agent "$@"\n\
 elif [ "$SERVICE" = "indexer" ]; then\n\
   wait_for_postgres\n\

@@ -24,7 +24,7 @@ jobs:
       image_name: wei-agent
       platforms: "linux/arm64"
       runner: ubuntu-24.04-arm
-      context: .
-      dockerfile_path: ./Dockerfile
+      context: ./crates/agent
+      dockerfile_path: ./crates/agent/Dockerfile
       ignore_trivy: true
       push: ${{ github.event_name != 'pull_request' }}
