@@ -34,15 +34,16 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy the agent binary from builder stage
-COPY --from=builder /usr/src/wei/target/release/agent /app/agent
-
 # Copy migrations directory
 COPY --from=builder /usr/src/wei/crates/agent/migrations /app/migrations
 
-# Create a non-root user for security
+# Copy the agent binary from builder stage
+COPY --from=builder /usr/src/wei/target/release/agent /app/agent
+
+# Create a non-root user for security and set permissions
 RUN useradd -r -s /bin/false -m -d /app appuser && \
-    chown -R appuser:appuser /app
+    chown -R appuser:appuser /app && \
+    chmod +x /app/agent
 USER appuser
 
 # Expose the default port

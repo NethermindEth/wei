@@ -42,7 +42,7 @@ services:
       - RUST_BACKTRACE=${RUST_BACKTRACE:-1}
     ports:
       - "3000:3000"
-    command: ["agent"]
+    command: ["/app/agent"]
     restart: unless-stopped
     
   # Agent migrations
@@ -88,7 +88,7 @@ services:
       - RUST_BACKTRACE=${RUST_BACKTRACE:-1}
     ports:
       - "3001:3001"
-    command: ["indexer", "--webhook-secret", "${INDEXER__WEBHOOK__SECRET:-default_webhook_secret}"]
+    command: ["/app/indexer", "--webhook-secret", "${INDEXER__WEBHOOK__SECRET:-default_webhook_secret}"]
     restart: unless-stopped
     
   # Indexer migrations
