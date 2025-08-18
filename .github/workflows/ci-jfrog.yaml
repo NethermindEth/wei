@@ -1,0 +1,30 @@
+name: Build and Push image on jfrog for dev env
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  id-token: write
+  attestations: write
+  contents: read
+
+jobs:
+  push-wei:
+    uses: NethermindEth/github-workflows/.github/workflows/docker-build-push-jfrog.yaml@v1.5.1
+    with:
+      repo_name: productsvents-oci-local-dev
+      # group_name: productsvents
+      image_name: wei-agent
+      platforms: "linux/arm64"
+      runner: ubuntu-24.04-arm
+      context: .
+      dockerfile_path: ./Dockerfile
+      ignore_trivy: true
+      push: ${{ github.event_name != 'pull_request' }}
