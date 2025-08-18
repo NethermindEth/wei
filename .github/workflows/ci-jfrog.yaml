@@ -28,3 +28,15 @@ jobs:
       dockerfile_path: ./crates/agent/Dockerfile
       ignore_trivy: true
       push: ${{ github.event_name != 'pull_request' }}
+
+  push-indexer:
+    uses: NethermindEth/github-workflows/.github/workflows/docker-build-push-jfrog.yaml@v1.5.1
+    with:
+      repo_name: productsvents-oci-local-dev
+      image_name: wei-indexer
+      platforms: "linux/arm64"
+      runner: ubuntu-24.04-arm
+      context: .
+      dockerfile_path: ./crates/indexer/Dockerfile
+      ignore_trivy: true
+      push: ${{ github.event_name != 'pull_request' }}
