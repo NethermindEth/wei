@@ -25,7 +25,7 @@ WORKDIR /app
 
 # Install runtime dependencies
 RUN apt-get update && \
-    apt-get install -y libpq5 ca-certificates libssl3 curl && \
+    apt-get install -y libpq5 ca-certificates postgresql-client libssl3 libcurl4 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
