@@ -1,13 +1,18 @@
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 /// Represents a blockchain protocol/network
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, ToSchema)]
+#[schema(description = "A blockchain protocol or network identifier")]
 pub struct ProtocolId {
     /// Chain ID
+    #[schema(example = 1)]
     pub chain_id: u64,
     /// Protocol name
+    #[schema(example = "Ethereum Mainnet")]
     pub name: String,
     /// Protocol identifier
+    #[schema(example = "uniswap_v3")]
     pub protocol: String,
 }
 

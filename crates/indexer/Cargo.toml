@@ -33,6 +33,8 @@ futures = "0.3"
 url = "2.4"
 base64 = "0.21"
 hex = "0.4"
+utoipa = { version = "5.4", features = ["axum_extras", "chrono", "uuid"] }
+utoipa-axum = "0.2"
 
 [dev-dependencies]
 tokio-test = "0.4"
