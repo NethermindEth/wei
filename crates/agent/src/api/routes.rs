@@ -1,10 +1,10 @@
 //! API routes for the agent service
 
 use axum::{
+    extract::FromRef,
+    middleware,
     routing::{get, post},
     Router,
-    middleware,
-    extract::FromRef,
 };
 use tower_http::{
     cors::{Any, CorsLayer},
@@ -12,7 +12,11 @@ use tower_http::{
 };
 use tracing::Level;
 
-use crate::{api::{handlers, middleware::api_key_auth}, config::Config, AgentService};
+use crate::{
+    api::{handlers, middleware::api_key_auth},
+    config::Config,
+    AgentService,
+};
 
 /// Application state
 #[derive(Clone)]
@@ -51,9 +55,8 @@ pub fn create_router(config: &Config, agent_service: AgentService) -> Router {
         .allow_headers(Any);
 
     // Public routes that don't require authentication
-    let public_routes = Router::new()
-        .route("/health", get(handlers::health));
-    
+    let public_routes = Router::new().route("/health", get(handlers::health));
+
     // Protected routes that require API key authentication
     let protected_routes = Router::new()
         .route("/analyze", post(handlers::analyze_proposal))
@@ -62,7 +65,10 @@ pub fn create_router(config: &Config, agent_service: AgentService) -> Router {
             "/analyses/proposal/:proposal_id",
             get(handlers::get_proposal_analyses),
         )
-        .route_layer(middleware::from_fn_with_state(state.clone(), api_key_auth::<AppState>));
+        .route_layer(middleware::from_fn_with_state(
+            state.clone(),
+            api_key_auth::<AppState>,
+        ));
 
     // Combine routes
     public_routes
