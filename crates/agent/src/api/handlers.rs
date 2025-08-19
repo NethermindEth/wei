@@ -9,9 +9,23 @@ use serde::Serialize;
 
 use crate::{api::routes::AppState, models::Proposal, services::agent::AgentServiceTrait};
 
+use chrono::Utc;
+
 /// Health check endpoint
-pub async fn health() -> StatusCode {
-    StatusCode::OK
+pub async fn health() -> Json<HealthResponse> {
+    Json(HealthResponse {
+        status: "ok".to_string(),
+        timestamp: Utc::now().to_rfc3339(),
+    })
+}
+
+/// Health check response
+#[derive(Serialize)]
+pub struct HealthResponse {
+    /// Service status
+    pub status: String,
+    /// Current timestamp in RFC3339 format
+    pub timestamp: String,
 }
 
 /// Analyze a proposal
