@@ -1,12 +1,19 @@
 //! API handlers for the agent service
 
 use axum::{
-    extract::{State, Path},
+    extract::{Path, State},
     Json,
 };
 use serde::Serialize;
 
-use crate::{api::{routes::AppState, error::{ApiError, internal_error}}, models::Proposal, services::agent::AgentServiceTrait};
+use crate::{
+    api::{
+        error::{internal_error, ApiError},
+        routes::AppState,
+    },
+    models::Proposal,
+    services::agent::AgentServiceTrait,
+};
 
 use chrono::Utc;
 
@@ -62,7 +69,9 @@ pub async fn get_proposal_analyses(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<serde_json::Value>>, ApiError> {
     // TODO: Implement proposal analyses retrieval using state.agent_service
-    Err(internal_error("Proposal analyses retrieval not yet implemented"))
+    Err(internal_error(
+        "Proposal analyses retrieval not yet implemented",
+    ))
 }
 
 /// Response payload for analysis request

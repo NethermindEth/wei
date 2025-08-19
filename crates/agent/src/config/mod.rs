@@ -30,11 +30,11 @@ pub struct Config {
     /// AI model API key
     #[arg(env = "WEI_AGENT_OPEN_ROUTER_API_KEY", long)]
     pub ai_model_api_key: String,
-    
+
     /// API keys for authentication (comma-separated list)
     #[arg(env = "WEI_AGENT_API_KEYS", long, default_value = "")]
     api_keys_raw: String,
-    
+
     /// Whether API key authentication is enabled
     #[arg(env = "WEI_AGENT_API_KEY_AUTH_ENABLED", long, default_value = "true")]
     pub api_key_auth_enabled: bool,
@@ -53,20 +53,20 @@ impl Config {
                 .collect()
         }
     }
-    
+
     /// Check if an API key is valid
     pub fn is_valid_api_key(&self, key: &str) -> bool {
         // If authentication is disabled, all keys are valid
         if !self.api_key_auth_enabled {
             return true;
         }
-        
+
         // If no keys are configured, authentication is effectively disabled
         let keys = self.api_keys();
         if keys.is_empty() {
             return true;
         }
-        
+
         // Check if the provided key is in the set of valid keys
         keys.contains(key)
     }
