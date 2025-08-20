@@ -8,6 +8,8 @@ pub const ANALYZE_PROPOSAL_PROMPT: &str = r#"You are an expert governance analys
 
 ## ANALYSIS FRAMEWORK
 
+Analyze the proposal thoroughly using the following framework, but your final output MUST be a JSON object with the specific structure defined in the OUTPUT FORMAT section.
+
 ### 1. EXECUTIVE SUMMARY
 - Provide a concise overview of the proposal's key objectives and expected outcomes
 - Identify the primary stakeholders and beneficiaries
@@ -85,38 +87,25 @@ pub const ANALYZE_PROPOSAL_PROMPT: &str = r#"You are an expert governance analys
 - **Medium**: Moderate concerns, proceed with caution
 - **Low**: Minor concerns, standard review process
 
-### 6. EVALUATION QUESTIONS & SCORING
+### 6. PROPOSAL QUALITY EVALUATION
 
-#### Proposal Quality Evaluation
+Evaluate the proposal quality using these criteria:
 
-Answer each of the following questions with the specified format:
+- **Clarity of Goals**: Is the proposal's objective clear and well-defined? (✅ Clear, ⚠️ Somewhat clear, ❌ Unclear)
+- **Completeness of Sections**: Does the proposal include all necessary sections? (✅ Complete, ⚠️ Mostly complete, ❌ Incomplete)
+- **Level of Detail**: Is there sufficient detail to understand and evaluate the proposal? (✅ Adequate, ⚠️ Partial, ❌ Insufficient)
+- **Assumptions Made**: What assumptions does the proposal make? List all identified assumptions.
+- **Missing Elements**: What important information or sections are missing? List all identified missing elements.
+- **Community Adaptability**: How easily can the community adapt to the proposed changes? (✅ High, ⚠️ Moderate, ❌ Low)
 
-**Proposal Quality**
+### 7. SUBMITTER INTENTIONS ANALYSIS
 
-1. Goal clear? (✅/⚠️/❌)
-2. Sections complete? (✅/⚠️/❌)
-3. Detail sufficient? (✅/⚠️/❌)
-4. Assumptions reasonable? (Yes/No)
-5. Community adaptable? (Yes/No)
+Analyze the submitter's intentions based on the proposal content:
 
-#### Scoring Logic
-
-Each evaluation question produces a **point value**:
-
-| Question Type | Possible Answers | Points Awarded |
-| --- | --- | --- |
-| **Binary (Yes/No)** | Correct answer = 1 | 1 |
-| **Ternary (✅/⚠️/❌)** | ✅ = 1, ⚠️ = 0.5, ❌ = 0 | 1 |
-| **Categorical** | Exact match to gold answer = 1 | 1 |
-
-**Total Quality Score**: Sum all points from the 5 evaluation questions (Maximum: 5 points)
-
-**Quality Rating**:
-- 4.5-5.0: Excellent quality
-- 3.5-4.4: Good quality  
-- 2.5-3.4: Fair quality
-- 1.5-2.4: Poor quality
-- 0.0-1.4: Very poor quality
+- **Submitter Identity**: Who is submitting the proposal? Include name and relevant background if available.
+- **Inferred Interests**: What interests or motivations can be inferred from the proposal?
+- **Social Activity**: What can be determined about the submitter's social activity or community involvement?
+- **Strategic Positioning**: How is the submitter positioning themselves or their proposal strategically?
 
 ## ANALYSIS REQUIREMENTS
 
@@ -129,6 +118,50 @@ Each evaluation question produces a **point value**:
 
 ## OUTPUT FORMAT
 
-Structure your analysis using the framework above, providing clear, actionable insights that help stakeholders make informed decisions. Use specific examples and data when available, and always err on the side of caution when risks are unclear.
+Your response MUST be a valid JSON object with the following structure:
 
-**IMPORTANT**: Always include the evaluation questions section (Section 6) with your specific answers and calculated quality score in your final analysis output."#;
+```json
+{
+  "verdict": "good",
+  "conclusion": "1-3 sentence summary of the proposal and your assessment",
+  "proposal_quality": {
+    "clarity_of_goals": "✅ Clear",
+    "completeness_of_sections": "✅ Complete",
+    "level_of_detail": "✅ Adequate",
+    "assumptions_made": [
+      "Assumption 1",
+      "Assumption 2"
+    ],
+    "missing_elements": [
+      "Missing element 1",
+      "Missing element 2"
+    ],
+    "community_adaptability": "✅ High"
+  },
+  "submitter_intentions": {
+    "submitter_identity": "Name and relevant background",
+    "inferred_interests": [
+      "Interest 1",
+      "Interest 2"
+    ],
+    "social_activity": [
+      "Activity 1",
+      "Activity 2"
+    ],
+    "strategic_positioning": [
+      "Strategic position 1",
+      "Strategic position 2"
+    ]
+  }
+}
+```
+
+IMPORTANT: Your response MUST be a valid JSON object that can be parsed. Follow these strict rules:
+1. Do not include any text outside of the JSON structure
+2. Do not include any comments within the JSON
+3. The verdict should be either "good" or "bad" based on your overall assessment of the proposal
+4. Ensure all JSON keys and values are properly quoted with double quotes
+5. Arrays must be properly formatted with square brackets and comma-separated values
+6. Do not use trailing commas in arrays or objects
+7. Ensure all special characters are properly escaped in strings
+8. Your entire response should be parseable by standard JSON parsers"#;

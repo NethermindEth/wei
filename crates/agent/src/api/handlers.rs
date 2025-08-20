@@ -11,7 +11,7 @@ use crate::{
         error::{internal_error, ApiError},
         routes::AppState,
     },
-    models::Proposal,
+    models::{analysis::StructuredAnalysisResponse, Proposal},
     services::agent::AgentServiceTrait,
 };
 
@@ -35,12 +35,11 @@ pub struct HealthResponse {
 }
 
 /// Analyze a proposal
-#[allow(dead_code, unused_variables)] // TODO: Remove after development phase
 pub async fn analyze_proposal(
     State(state): State<AppState>,
     Json(proposal): Json<Proposal>,
 ) -> Result<Json<AnalyzeResponse>, ApiError> {
-    let analysis = state
+    let structured_response = state
         .agent_service
         .analyze_proposal(&proposal)
         .await
@@ -49,7 +48,9 @@ pub async fn analyze_proposal(
             internal_error(format!("Failed to analyze proposal: {}", e))
         })?;
 
-    Ok(Json(AnalyzeResponse { analysis }))
+    Ok(Json(AnalyzeResponse {
+        structured_response,
+    }))
 }
 
 /// Get analysis by ID
@@ -77,6 +78,7 @@ pub async fn get_proposal_analyses(
 /// Response payload for analysis request
 #[derive(Serialize)]
 pub struct AnalyzeResponse {
-    /// Analysis result
-    pub analysis: String,
+    /// Structured analysis response
+    #[serde(flatten)]
+    pub structured_response: StructuredAnalysisResponse,
 }

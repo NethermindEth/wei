@@ -17,6 +17,9 @@ pub struct Analysis {
     pub details: String,
     /// Creation timestamp
     pub created_at: DateTime<Utc>,
+    /// Structured analysis response
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub structured_response: Option<StructuredAnalysisResponse>,
 }
 
 /// Result of proposal analysis
@@ -30,6 +33,49 @@ pub enum AnalysisResult {
     Neutral,
     /// Proposal needs manual review
     NeedsReview,
+}
+
+/// Structured response from the AI model
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct StructuredAnalysisResponse {
+    /// Overall verdict (good or bad)
+    pub verdict: String,
+    /// Conclusion summary (1-3 sentences)
+    pub conclusion: String,
+    /// Proposal quality evaluation
+    pub proposal_quality: ProposalQuality,
+    /// Submitter intentions analysis
+    pub submitter_intentions: SubmitterIntentions,
+}
+
+/// Proposal quality evaluation
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ProposalQuality {
+    /// Clarity of goals assessment
+    pub clarity_of_goals: String,
+    /// Completeness of sections assessment
+    pub completeness_of_sections: String,
+    /// Level of detail assessment
+    pub level_of_detail: String,
+    /// Assumptions made in the proposal
+    pub assumptions_made: Vec<String>,
+    /// Missing elements in the proposal
+    pub missing_elements: Vec<String>,
+    /// Community adaptability assessment
+    pub community_adaptability: String,
+}
+
+/// Submitter intentions analysis
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct SubmitterIntentions {
+    /// Submitter identity information
+    pub submitter_identity: String,
+    /// Inferred interests of the submitter
+    pub inferred_interests: Vec<String>,
+    /// Social activity of the submitter
+    pub social_activity: Vec<String>,
+    /// Strategic positioning of the submitter
+    pub strategic_positioning: Vec<String>,
 }
 
 /// Complete proposal analysis with metadata
