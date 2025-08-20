@@ -43,7 +43,10 @@ impl AgentService {
 /// Trait for the agent service
 pub trait AgentServiceTrait {
     /// Analyze a proposal
-    fn analyze_proposal(&self, proposal: &Proposal) -> impl Future<Output = Result<StructuredAnalysisResponse>>;
+    fn analyze_proposal(
+        &self,
+        proposal: &Proposal,
+    ) -> impl Future<Output = Result<StructuredAnalysisResponse>>;
 }
 
 impl AgentServiceTrait for AgentService {
@@ -70,22 +73,26 @@ impl AgentServiceTrait for AgentService {
                 "No content in response".to_string(),
             ))?
             .to_string();
-            
+
         // Parse the JSON response into our structured format
         match serde_json::from_str::<StructuredAnalysisResponse>(&content) {
             Ok(structured_response) => Ok(structured_response),
             Err(e) => {
                 tracing::error!("Failed to parse structured response: {}", e);
                 tracing::error!("Raw response: {}", content);
-                
+
                 // Create a fallback response with just the raw text
                 let fallback = StructuredAnalysisResponse {
-                    verdict: if content.to_lowercase().contains("good") { "good".to_string() } else { "bad".to_string() },
+                    verdict: if content.to_lowercase().contains("good") {
+                        "good".to_string()
+                    } else {
+                        "bad".to_string()
+                    },
                     conclusion: content.chars().take(300).collect::<String>() + "...",
                     proposal_quality: Default::default(),
                     submitter_intentions: Default::default(),
                 };
-                
+
                 Ok(fallback)
             }
         }

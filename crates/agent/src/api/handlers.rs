@@ -12,10 +12,7 @@ use crate::{
         error::{internal_error, ApiError},
         routes::AppState,
     },
-    models::{
-        analysis::StructuredAnalysisResponse,
-        Proposal,
-    },
+    models::{analysis::StructuredAnalysisResponse, Proposal},
     services::agent::AgentServiceTrait,
 };
 
@@ -52,7 +49,9 @@ pub async fn analyze_proposal(
             internal_error(format!("Failed to analyze proposal: {}", e))
         })?;
 
-    Ok(Json(AnalyzeResponse { structured_response }))
+    Ok(Json(AnalyzeResponse {
+        structured_response,
+    }))
 }
 
 /// Get analysis by ID
