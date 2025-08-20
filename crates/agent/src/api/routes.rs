@@ -86,7 +86,7 @@ pub fn create_router(config: &Config, agent_service: AgentService) -> Router {
         )
         .route(
             "/analyze/:id",
-            get(|path, state| handlers::get_analysis(path, state))
+            get(handlers::get_analysis)
                 .options(|_: axum::extract::Request| async { "" })
                 .post(method_not_allowed_handler)
                 .put(method_not_allowed_handler)
@@ -95,7 +95,7 @@ pub fn create_router(config: &Config, agent_service: AgentService) -> Router {
         )
         .route(
             "/analyses/:id",
-            get(|path, state| handlers::get_analysis(path, state))
+            get(handlers::get_analysis)
                 .options(|_: axum::extract::Request| async { "" })
                 .post(method_not_allowed_handler)
                 .put(method_not_allowed_handler)
@@ -104,7 +104,7 @@ pub fn create_router(config: &Config, agent_service: AgentService) -> Router {
         )
         .route(
             "/analyses/proposal/:proposal_id",
-            get(|path, state| handlers::get_proposal_analyses(path, state))
+            get(handlers::get_proposal_analyses)
                 .options(|_: axum::extract::Request| async { "" })
                 .post(method_not_allowed_handler)
                 .put(method_not_allowed_handler)
