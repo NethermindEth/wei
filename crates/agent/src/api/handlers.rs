@@ -2,16 +2,36 @@
 
 use axum::{
     extract::{Path, State},
-    http::StatusCode,
     Json,
 };
 use serde::Serialize;
 
-use crate::{api::routes::AppState, models::Proposal, services::agent::AgentServiceTrait};
+use crate::{
+    api::{
+        error::{internal_error, ApiError},
+        routes::AppState,
+    },
+    models::Proposal,
+    services::agent::AgentServiceTrait,
+};
+
+use chrono::Utc;
 
 /// Health check endpoint
-pub async fn health() -> StatusCode {
-    StatusCode::OK
+pub async fn health() -> Json<HealthResponse> {
+    Json(HealthResponse {
+        status: "ok".to_string(),
+        timestamp: Utc::now().to_rfc3339(),
+    })
+}
+
+/// Health check response
+#[derive(Serialize)]
+pub struct HealthResponse {
+    /// Service status
+    pub status: String,
+    /// Current timestamp in RFC3339 format
+    pub timestamp: String,
 }
 
 /// Analyze a proposal
@@ -19,14 +39,14 @@ pub async fn health() -> StatusCode {
 pub async fn analyze_proposal(
     State(state): State<AppState>,
     Json(proposal): Json<Proposal>,
-) -> Result<Json<AnalyzeResponse>, StatusCode> {
+) -> Result<Json<AnalyzeResponse>, ApiError> {
     let analysis = state
         .agent_service
         .analyze_proposal(&proposal)
         .await
         .map_err(|e| {
             tracing::error!("Error analyzing proposal: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
+            internal_error(format!("Failed to analyze proposal: {}", e))
         })?;
 
     Ok(Json(AnalyzeResponse { analysis }))
@@ -37,9 +57,9 @@ pub async fn analyze_proposal(
 pub async fn get_analysis(
     Path(id): Path<String>,
     State(state): State<AppState>,
-) -> Result<Json<serde_json::Value>, StatusCode> {
+) -> Result<Json<serde_json::Value>, ApiError> {
     // TODO: Implement analysis retrieval using state.agent_service
-    todo!("Implement get_analysis")
+    Err(internal_error("Analysis retrieval not yet implemented"))
 }
 
 /// Get analyses for a proposal
@@ -47,9 +67,11 @@ pub async fn get_analysis(
 pub async fn get_proposal_analyses(
     Path(proposal_id): Path<String>,
     State(state): State<AppState>,
-) -> Result<Json<Vec<serde_json::Value>>, StatusCode> {
+) -> Result<Json<Vec<serde_json::Value>>, ApiError> {
     // TODO: Implement proposal analyses retrieval using state.agent_service
-    todo!("Implement get_proposal_analyses")
+    Err(internal_error(
+        "Proposal analyses retrieval not yet implemented",
+    ))
 }
 
 /// Response payload for analysis request

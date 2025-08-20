@@ -1,4 +1,4 @@
-import { getApiUrl } from '../config/api';
+import { getApiUrl, getApiHeaders } from '../config/api';
 import { Proposal, AnalysisResponse } from '../types/proposal';
 
 export class ApiService {
@@ -11,7 +11,7 @@ export class ApiService {
     try {
       const response = await fetch(url, {
         headers: {
-          'Content-Type': 'application/json',
+          ...getApiHeaders(),
           ...options.headers,
         },
         ...options,

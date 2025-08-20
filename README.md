@@ -75,17 +75,31 @@ Each crate has its own migrations under `crates/<crate>/migrations/`.
 
 ### Environment configuration
 
-- Example `.env` for Agent:
+See the `env.example` file for a complete list of environment variables. Copy this file to `.env` and update the values as needed.
+
+### API Authentication
+
+The Agent service includes API key authentication for protected endpoints. This ensures only authorized clients can access sensitive routes.
+
+#### Configuration
+
+API authentication is configured through environment variables:
 
 ```env
-  todo
+# Comma-separated list of valid API keys
+WEI_AGENT_API_KEYS=key1,key2,key3
+
+# Enable/disable API key authentication (default: true)
+WEI_AGENT_API_KEY_AUTH_ENABLED=true
 ```
 
-- Example `.env` for Indexer:
+#### Usage
 
-```env
-  todo
-```
+- Public endpoints (e.g., `/health`) are accessible without authentication
+- Protected endpoints require an API key provided in the `x-api-key` header
+- Requests without a valid API key will receive:
+  - `401 Unauthorized` if no API key is provided
+  - `403 Forbidden` if an invalid API key is provided
 
 Note:
 
