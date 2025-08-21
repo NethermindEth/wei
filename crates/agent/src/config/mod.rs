@@ -38,6 +38,14 @@ pub struct Config {
     /// Whether API key authentication is enabled
     #[arg(env = "WEI_AGENT_API_KEY_AUTH_ENABLED", long, default_value = "true")]
     pub api_key_auth_enabled: bool,
+
+    /// CORS allowed origins (comma-separated list)
+    #[arg(
+        env = "CORS_ALLOWED_URLS",
+        long,
+        default_value = "http://localhost:3000"
+    )]
+    cors_allowed_urls_raw: String,
 }
 
 impl Config {
@@ -69,5 +77,18 @@ impl Config {
 
         // Check if the provided key is in the set of valid keys
         keys.contains(key)
+    }
+
+    /// Get the list of allowed CORS origins
+    pub fn cors_allowed_urls(&self) -> Vec<String> {
+        if self.cors_allowed_urls_raw.is_empty() {
+            vec!["http://localhost:3000".to_string()]
+        } else {
+            self.cors_allowed_urls_raw
+                .split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect()
+        }
     }
 }

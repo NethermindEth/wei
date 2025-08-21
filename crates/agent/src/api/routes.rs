@@ -54,21 +54,56 @@ pub fn create_router(config: &Config, agent_service: AgentService) -> Router {
     };
 
     // Configure CORS
-    let cors = CorsLayer::new()
-        .allow_origin(AllowOrigin::exact("http://localhost:3000".parse().unwrap()))
-        .allow_methods(AllowMethods::list([
-            Method::GET,
-            Method::POST,
-            Method::OPTIONS,
-        ]))
-        .allow_headers([
-            header::CONTENT_TYPE,
-            header::AUTHORIZATION,
-            header::ACCEPT,
-            header::HeaderName::from_static("x-api-key"),
-        ])
-        .expose_headers([header::HeaderName::from_static("x-api-key")])
-        .allow_credentials(true);
+    let cors_allowed_urls = config.cors_allowed_urls();
+
+    // Check if any URL contains a wildcard pattern
+    let has_wildcard = cors_allowed_urls.iter().any(|url| url.contains("*"));
+
+    let cors = if has_wildcard {
+        // If we have any wildcard patterns, use permissive CORS settings
+        // Note: We can't use allow_credentials(true) with AllowOrigin::any()
+        CorsLayer::new()
+            .allow_origin(AllowOrigin::any())
+            .allow_methods(AllowMethods::list([
+                Method::GET,
+                Method::POST,
+                Method::OPTIONS,
+            ]))
+            .allow_headers([
+                header::CONTENT_TYPE,
+                header::AUTHORIZATION,
+                header::ACCEPT,
+                header::HeaderName::from_static("x-api-key"),
+            ])
+            .expose_headers([header::HeaderName::from_static("x-api-key")])
+    } else {
+        // Otherwise, use the exact list of allowed origins
+        let mut cors_layer = CorsLayer::new();
+
+        // Add each origin to the allowed origins list
+        for url in cors_allowed_urls {
+            if let Ok(origin) = url.parse() {
+                cors_layer = cors_layer.allow_origin(AllowOrigin::exact(origin));
+            } else {
+                tracing::warn!("Invalid CORS origin: {}", url);
+            }
+        }
+
+        cors_layer
+            .allow_methods(AllowMethods::list([
+                Method::GET,
+                Method::POST,
+                Method::OPTIONS,
+            ]))
+            .allow_headers([
+                header::CONTENT_TYPE,
+                header::AUTHORIZATION,
+                header::ACCEPT,
+                header::HeaderName::from_static("x-api-key"),
+            ])
+            .expose_headers([header::HeaderName::from_static("x-api-key")])
+            .allow_credentials(true)
+    };
 
     // Public routes that don't require authentication
     let public_routes = Router::new().route("/health", get(handlers::health));
