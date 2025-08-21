@@ -1,66 +1,73 @@
 //! Configuration management for the agent service
 
+use clap::Parser;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 
 /// Application configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Parser)]
 pub struct Config {
-    /// Server configuration
-    pub server: ServerConfig,
-    /// Database configuration
-    pub database: DatabaseConfig,
-    /// AI service configuration
-    pub ai: AIConfig,
-    /// Webhook configuration
-    pub webhook: WebhookConfig,
-}
-
-/// Server configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ServerConfig {
-    /// Host to bind to
-    pub host: String,
-    /// Port to bind to
+    /// Application port
+    #[arg(env = "WEI_AGENT_PORT", long, default_value = "8000")]
     pub port: u16,
-}
 
-/// Database configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DatabaseConfig {
     /// Database URL
-    pub url: String,
-    /// Maximum number of connections
-    pub max_connections: u32,
-}
+    #[arg(
+        env = "WEI_AGENT_DATABASE_URL",
+        long,
+        default_value = "postgresql://postgres:postgres@localhost:5432/wei_agent"
+    )]
+    pub database_url: String,
 
-/// AI service configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AIConfig {
-    /// AI model endpoint
-    pub endpoint: String,
-    /// API key for AI service
-    pub api_key: String,
-    /// Model name
-    pub model: String,
-}
+    /// AI model provider
+    #[arg(env = "WEI_AGENT_AI_MODEL_PROVIDER", long, default_value = "openai")]
+    pub ai_model_provider: String,
 
-/// Webhook configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WebhookConfig {
-    /// Webhook secret for authentication
-    pub secret: String,
-    /// Maximum retry attempts
-    pub max_retries: u32,
+    /// AI model name
+    #[arg(env = "WEI_AGENT_AI_MODEL_NAME", long, default_value = "gpt-4o-mini")]
+    pub ai_model_name: String,
+
+    /// AI model API key
+    #[arg(env = "WEI_AGENT_OPEN_ROUTER_API_KEY", long)]
+    pub ai_model_api_key: String,
+
+    /// API keys for authentication (comma-separated list)
+    #[arg(env = "WEI_AGENT_API_KEYS", long, default_value = "")]
+    api_keys_raw: String,
+
+    /// Whether API key authentication is enabled
+    #[arg(env = "WEI_AGENT_API_KEY_AUTH_ENABLED", long, default_value = "true")]
+    pub api_key_auth_enabled: bool,
 }
 
 impl Config {
-    /// Load configuration from environment variables
-    #[allow(dead_code)] // TODO: Remove after development phase
-    pub fn from_env() -> Result<Self, config::ConfigError> {
-        let cfg = config::Config::builder()
-            .add_source(config::Environment::default().separator("__"))
-            .build()?;
+    /// Get the set of valid API keys
+    pub fn api_keys(&self) -> HashSet<String> {
+        if self.api_keys_raw.is_empty() {
+            HashSet::new()
+        } else {
+            self.api_keys_raw
+                .split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect()
+        }
+    }
 
-        cfg.try_deserialize()
+    /// Check if an API key is valid
+    pub fn is_valid_api_key(&self, key: &str) -> bool {
+        // If authentication is disabled, all keys are valid
+        if !self.api_key_auth_enabled {
+            return true;
+        }
+
+        // If no keys are configured, authentication is effectively disabled
+        let keys = self.api_keys();
+        if keys.is_empty() {
+            return true;
+        }
+
+        // Check if the provided key is in the set of valid keys
+        keys.contains(key)
     }
 }

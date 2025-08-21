@@ -2,60 +2,83 @@
 
 use axum::{
     extract::{Path, State},
-    http::StatusCode,
     Json,
 };
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
-use crate::db::Database;
+use crate::{
+    api::{
+        error::{internal_error, ApiError},
+        routes::AppState,
+    },
+    models::{analysis::StructuredAnalysisResponse, Proposal},
+    services::agent::AgentServiceTrait,
+};
+
+use chrono::Utc;
+
+/// Health check endpoint
+pub async fn health() -> Json<HealthResponse> {
+    Json(HealthResponse {
+        status: "ok".to_string(),
+        timestamp: Utc::now().to_rfc3339(),
+    })
+}
+
+/// Health check response
+#[derive(Serialize)]
+pub struct HealthResponse {
+    /// Service status
+    pub status: String,
+    /// Current timestamp in RFC3339 format
+    pub timestamp: String,
+}
 
 /// Analyze a proposal
-#[allow(unused_variables)] // TODO: Remove after development phase
 pub async fn analyze_proposal(
-    State(_db): State<Database>,
-    Json(_payload): Json<AnalyzeRequest>,
-) -> Result<Json<AnalyzeResponse>, StatusCode> {
-    // TODO: Implement proposal analysis
-    todo!("Implement analyze_proposal")
+    State(state): State<AppState>,
+    Json(proposal): Json<Proposal>,
+) -> Result<Json<AnalyzeResponse>, ApiError> {
+    let structured_response = state
+        .agent_service
+        .analyze_proposal(&proposal)
+        .await
+        .map_err(|e| {
+            tracing::error!("Error analyzing proposal: {:?}", e);
+            internal_error(format!("Failed to analyze proposal: {}", e))
+        })?;
+
+    Ok(Json(AnalyzeResponse {
+        structured_response,
+    }))
 }
 
 /// Get analysis by ID
-#[allow(unused_variables)] // TODO: Remove after development phase
+#[allow(dead_code, unused_variables)] // TODO: Remove after development phase
 pub async fn get_analysis(
     Path(id): Path<String>,
-    State(_db): State<Database>,
-) -> Result<Json<serde_json::Value>, StatusCode> {
-    // TODO: Implement analysis retrieval
-    todo!("Implement get_analysis")
+    State(state): State<AppState>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    // TODO: Implement analysis retrieval using state.agent_service
+    Err(internal_error("Analysis retrieval not yet implemented"))
 }
 
 /// Get analyses for a proposal
-#[allow(unused_variables)] // TODO: Remove after development phase
+#[allow(dead_code, unused_variables)] // TODO: Remove after development phase
 pub async fn get_proposal_analyses(
     Path(proposal_id): Path<String>,
-    State(_db): State<Database>,
-) -> Result<Json<Vec<serde_json::Value>>, StatusCode> {
-    // TODO: Implement proposal analyses retrieval
-    todo!("Implement get_proposal_analyses")
-}
-
-/// Request payload for proposal analysis
-#[derive(Deserialize)]
-#[allow(dead_code)] // TODO: Remove after development phase
-pub struct AnalyzeRequest {
-    /// ID of the proposal to analyze
-    pub proposal_id: String,
-    /// Title of the proposal
-    pub title: String,
-    /// Description of the proposal
-    pub description: String,
+    State(state): State<AppState>,
+) -> Result<Json<Vec<serde_json::Value>>, ApiError> {
+    // TODO: Implement proposal analyses retrieval using state.agent_service
+    Err(internal_error(
+        "Proposal analyses retrieval not yet implemented",
+    ))
 }
 
 /// Response payload for analysis request
 #[derive(Serialize)]
 pub struct AnalyzeResponse {
-    /// ID of the created analysis
-    pub analysis_id: String,
-    /// Status of the analysis
-    pub status: String,
+    /// Structured analysis response
+    #[serde(flatten)]
+    pub structured_response: StructuredAnalysisResponse,
 }

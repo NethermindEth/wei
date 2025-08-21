@@ -1,0 +1,112 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database for both services
+  postgres:
+    image: postgres:16
+    container_name: wei-postgres
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      # Initialize databases on first run
+      - ./docker/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Agent service
+  agent:
+    build:
+      context: .
+      dockerfile: crates/agent/Dockerfile
+    container_name: wei-agent
+    depends_on:
+      postgres:
+        condition: service_healthy
+      agent-migrations:
+        condition: service_completed_successfully
+    environment:
+      - WEI_AGENT_PORT=3000
+      - WEI_AGENT_DATABASE_URL=postgresql://postgres:postgres@postgres:5432/wei_agent
+      - WEI_AGENT_AI_MODEL_PROVIDER=${WEI_AGENT_AI_MODEL_PROVIDER:-openai}
+      - WEI_AGENT_AI_MODEL_NAME=${WEI_AGENT_AI_MODEL_NAME:-gpt-4o-mini}
+      - WEI_AGENT_OPEN_ROUTER_API_KEY=${WEI_AGENT_OPEN_ROUTER_API_KEY}
+      - RUST_LOG=${RUST_LOG:-info}
+      - RUST_ENV=${RUST_ENV:-development}
+      - RUST_BACKTRACE=${RUST_BACKTRACE:-1}
+    ports:
+      - "3000:3000"
+    command: ["/app/agent"]
+    restart: unless-stopped
+    
+  # Agent migrations
+  agent-migrations:
+    image: postgres:16
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./crates/agent/migrations:/migrations
+    environment:
+      - PGHOST=postgres
+      - PGUSER=postgres
+      - PGPASSWORD=postgres
+      - PGDATABASE=wei_agent
+    command: ["/bin/bash", "-c", "for sql in /migrations/*.sql; do psql -f $$sql; done"]
+    restart: "no"
+
+  # Indexer service
+  indexer:
+    build:
+      context: .
+      dockerfile: crates/indexer/Dockerfile
+    container_name: wei-indexer
+    depends_on:
+      postgres:
+        condition: service_healthy
+      indexer-migrations:
+        condition: service_completed_successfully
+    environment:
+      - INDEXER__SERVER__HOST=0.0.0.0
+      - INDEXER__SERVER__PORT=3001
+      - INDEXER__DATABASE__URL=postgresql://postgres:postgres@postgres:5432/wei_indexer
+      - INDEXER__DATABASE__MAX_CONNECTIONS=10
+      - INDEXER__DATA_SOURCES__SNAPSHOT__BASE_URL=${INDEXER__DATA_SOURCES__SNAPSHOT__BASE_URL:-https://hub.snapshot.org/api}
+      - INDEXER__DATA_SOURCES__SNAPSHOT__API_KEY=${INDEXER__DATA_SOURCES__SNAPSHOT__API_KEY}
+      - INDEXER__DATA_SOURCES__TALLY__BASE_URL=${INDEXER__DATA_SOURCES__TALLY__BASE_URL:-https://api.tally.xyz}
+      - INDEXER__DATA_SOURCES__TALLY__API_KEY=${INDEXER__DATA_SOURCES__TALLY__API_KEY}
+      - INDEXER__WEBHOOK__SECRET=${INDEXER__WEBHOOK__SECRET}
+      - INDEXER__WEBHOOK__MAX_RETRIES=${INDEXER__WEBHOOK__MAX_RETRIES:-3}
+      - RUST_LOG=${RUST_LOG:-info}
+      - RUST_ENV=${RUST_ENV:-development}
+      - RUST_BACKTRACE=${RUST_BACKTRACE:-1}
+    ports:
+      - "3001:3001"
+    command: ["/app/indexer", "--webhook-secret", "${INDEXER__WEBHOOK__SECRET:-default_webhook_secret}"]
+    restart: unless-stopped
+    
+  # Indexer migrations
+  indexer-migrations:
+    image: postgres:16
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./crates/indexer/migrations:/migrations
+    environment:
+      - PGHOST=postgres
+      - PGUSER=postgres
+      - PGPASSWORD=postgres
+      - PGDATABASE=wei_indexer
+    command: ["/bin/bash", "-c", "for sql in /migrations/*.sql; do psql -f $$sql; done"]
+    restart: "no"
+
+volumes:
+  postgres-data:
+    driver: local
