@@ -1,13 +1,13 @@
 use std::cmp::min;
 use std::env;
 
-use dotenv::dotenv;
-use agent::models::Proposal;
 use agent::models::analysis::StructuredAnalysisResponse;
+use agent::models::Proposal;
 use agent::services::agent::{AgentService, AgentServiceTrait};
 use agent::utils::error::Result;
 use agent::Config;
 use clap::Parser;
+use dotenv::dotenv;
 
 // Import the fixtures directly
 mod fixtures {
@@ -56,24 +56,42 @@ async fn create_agent_service() -> Result<AgentService> {
 fn validate_analysis(analysis: &StructuredAnalysisResponse) {
     // Basic validation of required fields
     assert!(!analysis.verdict.is_empty(), "Verdict should not be empty");
-    assert!(!analysis.conclusion.is_empty(), "Conclusion should not be empty");
+    assert!(
+        !analysis.conclusion.is_empty(),
+        "Conclusion should not be empty"
+    );
 
     // Validate proposal quality fields with more flexibility
     let q = &analysis.proposal_quality;
-    assert!(!q.clarity_of_goals.is_empty(), "Clarity of goals should not be empty");
-    assert!(!q.completeness_of_sections.is_empty(), "Completeness should not be empty");
-    assert!(!q.level_of_detail.is_empty(), "Level of detail should not be empty");
-    assert!(!q.community_adaptability.is_empty(), "Community adaptability should not be empty");
-    
+    assert!(
+        !q.clarity_of_goals.is_empty(),
+        "Clarity of goals should not be empty"
+    );
+    assert!(
+        !q.completeness_of_sections.is_empty(),
+        "Completeness should not be empty"
+    );
+    assert!(
+        !q.level_of_detail.is_empty(),
+        "Level of detail should not be empty"
+    );
+    assert!(
+        !q.community_adaptability.is_empty(),
+        "Community adaptability should not be empty"
+    );
+
     // For array fields, check that they exist but don't require them to be non-empty
     // Different AI models might handle these fields differently
     println!("Assumptions made: {:?}", q.assumptions_made);
     println!("Missing elements: {:?}", q.missing_elements);
-    
+
     // Validate submitter intentions fields with more flexibility
     let s = &analysis.submitter_intentions;
-    assert!(!s.submitter_identity.is_empty(), "Submitter identity should not be empty");
-    
+    assert!(
+        !s.submitter_identity.is_empty(),
+        "Submitter identity should not be empty"
+    );
+
     // For array fields, print them but don't strictly require content
     println!("Inferred interests: {:?}", s.inferred_interests);
     println!("Social activity: {:?}", s.social_activity);
@@ -110,7 +128,11 @@ async fn test_e2e_multiple_proposals() {
         let analysis = agent_service.analyze_proposal(&proposal).await.unwrap();
         validate_analysis(&analysis);
 
-        println!("E2E test passed for proposal {}: {}", i + 1, analysis.verdict);
+        println!(
+            "E2E test passed for proposal {}: {}",
+            i + 1,
+            analysis.verdict
+        );
     }
 }
 
@@ -119,7 +141,10 @@ async fn test_e2e_all_proposals() {
     let proposals_data = fixtures::get_proposals();
     let agent_service = create_agent_service().await.unwrap();
 
-    println!("Testing all {} proposals from fixtures", proposals_data.len());
+    println!(
+        "Testing all {} proposals from fixtures",
+        proposals_data.len()
+    );
 
     for (i, proposal_text) in proposals_data.iter().enumerate() {
         let proposal = Proposal {
