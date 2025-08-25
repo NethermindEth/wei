@@ -46,7 +46,7 @@ tmp/
 
 # Documentation build
 /doc/
-/docs/
+
 
 # Coverage reports
 coverage/
