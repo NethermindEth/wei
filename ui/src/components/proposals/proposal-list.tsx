@@ -59,7 +59,7 @@ export function ProposalList({ onSelectProposal, selectedProposalId }: ProposalL
           <p className="text-[#9fb5cc]">No proposals found.</p>
         </div>
       ) : (
-        <div className="grid gap-4 h-[400px] overflow-y-auto overflow-x-hidden pr-2">
+        <div className="grid gap-4 h-[400px] overflow-y-auto overflow-x-hidden pr-2" style={{ width: '100%', boxSizing: 'border-box' }}>
           {proposals.map(proposal => (
             <ProposalCard
               key={proposal.id}

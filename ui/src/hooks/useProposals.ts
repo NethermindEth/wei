@@ -72,7 +72,7 @@ export function useProposals(initialPageSize = 20): UseProposalsResult {
           skip: newSkip,
           orderDirection: 'desc'
         },
-        fetchPolicy: 'network-only' n
+        fetchPolicy: 'network-only'
       });
 
       if (result.data?.proposals) {
