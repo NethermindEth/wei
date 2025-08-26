@@ -10,13 +10,19 @@
   },
   "dependencies": {
     "@apollo/client": "4.0.1",
+    "@iarna/toml": "^2.2.5",
     "@radix-ui/react-label": "2.1.7",
+    "@types/js-yaml": "^4.0.9",
+    "js-yaml": "^4.1.0",
     "next": "15.4.6",
     "nuqs": "2.4.3",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-markdown": "10.1.0",
-    "remark-gfm": "4.0.1"
+    "remark-gfm": "4.0.1",
+    "swagger-ui": "^5.27.1",
+    "swagger-ui-dist": "^5.27.1",
+    "swagger-ui-react": "^5.27.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "3",
@@ -24,6 +30,8 @@
     "@types/node": "20",
     "@types/react": "19",
     "@types/react-dom": "19",
+    "@types/swagger-ui": "^5.21.1",
+    "@types/swagger-ui-react": "^5.18.0",
     "eslint": "9",
     "eslint-config-next": "15.4.6",
     "tailwindcss": "4",

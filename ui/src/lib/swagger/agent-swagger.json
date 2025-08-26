@@ -1,0 +1,514 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Wei Agent Service API",
+    "description": "AI-powered governance proposal analysis service that provides intelligent insights and structured feedback on DAO proposals.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Wei Team",
+      "url": "https://github.com/NethermindEth/wei"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000",
+      "description": "Development server"
+    },
+    {
+      "url": "https://wei-agent.dev-nethermind.xyz/",
+      "description": "Production server"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Check the health status of the agent service",
+        "operationId": "healthCheck",
+        "tags": ["Health"],
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/analyze": {
+      "post": {
+        "summary": "Analyze Proposal",
+        "description": "Submit a governance proposal for AI-powered analysis and get structured feedback",
+        "operationId": "analyzeProposal",
+        "tags": ["Analysis"],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Proposal"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Analysis completed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyzeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - invalid proposal data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error during analysis",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/analyze/{id}": {
+      "get": {
+        "summary": "Get Analysis by ID",
+        "description": "Retrieve a specific analysis by its unique identifier",
+        "operationId": "getAnalysisById",
+        "tags": ["Analysis"],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique identifier of the analysis",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Analysis retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Analysis"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Analysis not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/analyses/{id}": {
+      "get": {
+        "summary": "Get Analysis by ID (Alternative Endpoint)",
+        "description": "Alternative endpoint to retrieve a specific analysis by its unique identifier",
+        "operationId": "getAnalysisByIdAlt",
+        "tags": ["Analysis"],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique identifier of the analysis",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Analysis retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Analysis"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Analysis not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/analyses/proposal/{proposal_id}": {
+      "get": {
+        "summary": "Get Analyses for Proposal",
+        "description": "Retrieve all analyses associated with a specific proposal",
+        "operationId": "getProposalAnalyses",
+        "tags": ["Analysis"],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "proposal_id",
+            "in": "path",
+            "required": true,
+            "description": "Unique identifier of the proposal",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Analyses retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Analysis"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Proposal not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key",
+        "description": "API key for authentication"
+      }
+    },
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Service status",
+            "example": "ok"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Current timestamp in RFC3339 format",
+            "example": "2024-01-15T10:30:00Z"
+          }
+        },
+        "required": ["status", "timestamp"]
+      },
+      "Proposal": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier of the proposal"
+          },
+          "title": {
+            "type": "string",
+            "description": "Title of the proposal"
+          },
+          "description": {
+            "type": "string",
+            "description": "Detailed description of the proposal"
+          },
+          "protocol_id": {
+            "type": "string",
+            "description": "Identifier of the protocol/network"
+          },
+          "author": {
+            "type": "string",
+            "description": "Address or identifier of the proposal author"
+          }
+        },
+        "required": ["id", "title", "description", "protocol_id", "author"]
+      },
+      "Analysis": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier for the analysis"
+          },
+          "proposal_id": {
+            "type": "string",
+            "description": "ID of the proposal being analyzed"
+          },
+          "result": {
+            "$ref": "#/components/schemas/AnalysisResult"
+          },
+          "confidence": {
+            "type": "number",
+            "format": "float",
+            "minimum": 0.0,
+            "maximum": 1.0,
+            "description": "Confidence score (0.0 to 1.0)"
+          },
+          "details": {
+            "type": "string",
+            "description": "Detailed analysis text"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Creation timestamp"
+          },
+          "structured_response": {
+            "$ref": "#/components/schemas/StructuredAnalysisResponse"
+          }
+        },
+        "required": ["id", "proposal_id", "result", "confidence", "details", "created_at"]
+      },
+      "AnalysisResult": {
+        "type": "string",
+        "enum": ["Good", "Bad", "Neutral", "NeedsReview"],
+        "description": "Result of proposal analysis"
+      },
+      "StructuredAnalysisResponse": {
+        "type": "object",
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "description": "Overall verdict (good or bad)"
+          },
+          "conclusion": {
+            "type": "string",
+            "description": "Conclusion summary (1-3 sentences)"
+          },
+          "proposal_quality": {
+            "$ref": "#/components/schemas/ProposalQuality"
+          },
+          "submitter_intentions": {
+            "$ref": "#/components/schemas/SubmitterIntentions"
+          }
+        },
+        "required": ["verdict", "conclusion", "proposal_quality", "submitter_intentions"]
+      },
+      "ProposalQuality": {
+        "type": "object",
+        "properties": {
+          "clarity_of_goals": {
+            "type": "string",
+            "description": "Clarity of goals assessment"
+          },
+          "completeness_of_sections": {
+            "type": "string",
+            "description": "Completeness of sections assessment"
+          },
+          "level_of_detail": {
+            "type": "string",
+            "description": "Level of detail assessment"
+          },
+          "assumptions_made": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Assumptions made in the proposal"
+          },
+          "missing_elements": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Missing elements in the proposal"
+          },
+          "community_adaptability": {
+            "type": "string",
+            "description": "Community adaptability assessment"
+          }
+        },
+        "required": ["clarity_of_goals", "completeness_of_sections", "level_of_detail", "assumptions_made", "missing_elements", "community_adaptability"]
+      },
+      "SubmitterIntentions": {
+        "type": "object",
+        "properties": {
+          "submitter_identity": {
+            "type": "string",
+            "description": "Submitter identity information"
+          },
+          "inferred_interests": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Inferred interests of the submitter"
+          },
+          "social_activity": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Social activity of the submitter"
+          },
+          "strategic_positioning": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Strategic positioning of the submitter"
+          }
+        },
+        "required": ["submitter_identity", "inferred_interests", "social_activity", "strategic_positioning"]
+      },
+      "AnalyzeResponse": {
+        "type": "object",
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "description": "Overall verdict (good or bad)"
+          },
+          "conclusion": {
+            "type": "string",
+            "description": "Conclusion summary (1-3 sentences)"
+          },
+          "proposal_quality": {
+            "$ref": "#/components/schemas/ProposalQuality"
+          },
+          "submitter_intentions": {
+            "$ref": "#/components/schemas/SubmitterIntentions"
+          }
+        },
+        "required": ["verdict", "conclusion", "proposal_quality", "submitter_intentions"]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Error message describing what went wrong"
+          },
+          "status": {
+            "type": "integer",
+            "description": "HTTP status code"
+          }
+        },
+        "required": ["message", "status"]
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Health",
+      "description": "Health check endpoints"
+    },
+    {
+      "name": "Analysis",
+      "description": "Proposal analysis endpoints"
+    }
+  ]
+}
