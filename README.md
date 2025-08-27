@@ -203,7 +203,7 @@ The Wei UI is built with React, Next.js, and TypeScript.
 
 3. **Configure environment**:
    ```bash
-   cp .env.example .env.local
+   cp env.example .env
    # Edit .env.local with your configuration values
    ```
 
