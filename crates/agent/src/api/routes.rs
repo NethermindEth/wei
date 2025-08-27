@@ -112,19 +112,19 @@ pub fn create_router(config: &Config, agent_service: AgentService) -> Router {
     // Protected routes that require API key authentication
     let protected_routes = Router::new()
         .route(
-            "/analyze",
+            "/pre-filter",
             post(handlers::analyze_proposal).options(|_: Request| async { "" }),
         )
         .route(
-            "/analyze/:id",
+            "/pre-filter/:id",
             get(handlers::get_analysis).options(|_: Request| async { "" }),
         )
         .route(
-            "/analyses/:id",
+            "/pre-filter/:id",
             get(handlers::get_analysis).options(|_: Request| async { "" }),
         )
         .route(
-            "/analyses/proposal/:proposal_id",
+            "/pre-filter/proposal/:proposal_id",
             get(handlers::get_proposal_analyses).options(|_: Request| async { "" }),
         )
         .route_layer(middleware::from_fn_with_state(
