@@ -57,19 +57,48 @@ This repository is a Rust workspace with two crates: `crates/agent` and `crates/
    # Edit .env with your configuration values
    ```
 
-4. **Set up databases**:
+4. **Database Setup**:
+
+   **Start PostgreSQL with Docker:**
    ```bash
-   # Create databases
-   createdb wei_agent
-   createdb wei_indexer
-   
-   # Run migrations for agent
-   export DATABASE_URL=postgres://postgres:postgres@localhost:5432/wei_agent
-   sqlx migrate run --source crates/agent/migrations
-   
-   # Run migrations for indexer
-   export DATABASE_URL=postgres://postgres:postgres@localhost:5432/wei_indexer
-   sqlx migrate run --source crates/indexer/migrations
+   # Start PostgreSQL container
+   docker run --name wei-postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres:16
+   ```
+
+   **Configure Environment Variables:**
+   Make sure your `.env` file contains the correct database URL:
+   ```
+   WEI_AGENT_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/wei_agent
+   ```
+
+   The Wei Agent now features automatic database creation and migration management. When you run the agent for the first time, it will:
+   - Check if the database exists
+   - Create the database if needed
+   - Run migrations automatically for new databases
+   - Skip migrations for existing databases
+
+   **First-time run output:**
+   ```
+   Running `target/debug/agent`
+   2025-08-27T09:42:49.343451Z  INFO main ThreadId(01) Starting Wei Agent service...
+   2025-08-27T09:42:49.343686Z  INFO main ThreadId(01) Connecting to postgres database to check if wei_agent exists
+   2025-08-27T09:42:49.479824Z  INFO main ThreadId(01) Database wei_agent does not exist, creating it
+   2025-08-27T09:42:49.569456Z  INFO main ThreadId(01) Created database: wei_agent
+   2025-08-27T09:42:49.645587Z  INFO main ThreadId(01) New database detected, running migrations
+   2025-08-27T09:42:49.708811Z  INFO main ThreadId(01) Database migrations completed successfully
+   2025-08-27T09:42:49.708928Z  INFO main ThreadId(01) Database initialized successfully with migrations
+   2025-08-27T09:42:49.708944Z  INFO main ThreadId(01) Wei Agent service started successfully
+   ```
+
+   **Subsequent runs output:**
+   ```
+   Running `target/debug/agent`
+   2025-08-27T09:41:28.760128Z  INFO main ThreadId(01) Starting Wei Agent service...
+   2025-08-27T09:41:28.760593Z  INFO main ThreadId(01) Connecting to postgres database to check if wei_agent exists
+   2025-08-27T09:41:28.850690Z  INFO main ThreadId(01) Database wei_agent already exists
+   2025-08-27T09:41:28.914459Z  INFO main ThreadId(01) Using existing database, skipping migrations
+   2025-08-27T09:41:28.914484Z  INFO main ThreadId(01) Database initialized successfully with migrations
+   2025-08-27T09:41:28.914489Z  INFO main ThreadId(01) Wei Agent service started successfully
    ```
 
 ### Build
@@ -126,6 +155,10 @@ This repository is a Rust workspace with two crates: `crates/agent` and `crates/
   ```bash
   cargo clippy --workspace --all-targets -- -D warnings
   ```
+
+### Environment configuration
+
+See the `env.example` file for a complete list of environment variables. Copy this file to `.env` and update the values as needed.
 
 ### API Authentication
 

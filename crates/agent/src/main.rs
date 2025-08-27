@@ -32,10 +32,22 @@ async fn main() -> agent::Result<()> {
 
     info!("Starting Wei Agent service...");
 
-    info!("Wei Agent service started successfully");
+    // Initialize database connection using config with automatic database creation and migrations
+    let db = match agent::db::core::init_db_with_migrations(&config.database_url).await {
+        Ok(pool) => {
+            info!("Database initialized successfully with migrations");
+            pool
+        },
+        Err(e) => {
+            tracing::error!("Failed to initialize database: {}", e);
+            return Err(agent::utils::error::Error::Internal(
+                format!("Database initialization failed: {}", e)
+            ));
+        }
+    };
 
-    // Create mock database for now
-    let db = ();
+    info!("Wei Agent service started successfully");
+    
     let agent_service = AgentService::new(db, config.clone());
 
     let app = create_router(&config, agent_service);
