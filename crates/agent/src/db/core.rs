@@ -2,9 +2,10 @@
 //!
 //! This module contains the core database types and functions.
 
+use sqlx::migrate::MigrateError;
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use std::time::Duration;
-use sqlx::migrate::MigrateError;
+use tracing::{error, info};
 
 /// Database type - PostgreSQL connection pool
 pub type Database = PgPool;
@@ -18,11 +19,11 @@ pub enum DatabaseError {
     /// Error from the underlying SQLx library
     #[error("Database error: {0}")]
     Sqlx(#[from] sqlx::Error),
-    
+
     /// Error during database migration
     #[error("Migration error: {0}")]
     Migration(#[from] MigrateError),
-    
+
     /// Other general errors
     #[error("Other error: {0}")]
     Other(String),
@@ -32,7 +33,7 @@ pub enum DatabaseError {
 fn extract_db_name(connection_params: &str) -> String {
     connection_params
         .split('/')
-        .last()
+        .next_back()
         .and_then(|s| s.split('?').next())
         .unwrap_or("wei_agent")
         .to_string()
@@ -40,81 +41,109 @@ fn extract_db_name(connection_params: &str) -> String {
 
 /// Check if the database exists and create it if it doesn't
 /// Returns a boolean indicating if the database was newly created
-pub async fn ensure_database_exists(connection_params: &str) -> Result<bool, DatabaseError> {
-    let db_name = extract_db_name(connection_params);
-    
-    // Connect to default postgres database
-    let postgres_url = if connection_params.contains('/') {
+/// Build a connection string to the postgres system database
+fn build_postgres_system_url(connection_params: &str) -> String {
+    if connection_params.contains('/') {
         // Handle URL format like postgres://user:pass@host:port/dbname
-        let base_url = connection_params.rsplitn(2, '/').nth(1).unwrap_or(connection_params);
+        let base_url = connection_params
+            .rsplit_once('/')
+            .map(|(base, _)| base)
+            .unwrap_or(connection_params);
         format!("{}/postgres", base_url)
     } else {
         // Handle simple connection string
         format!("{}/postgres", connection_params)
-    };
-    
-    tracing::info!("Connecting to postgres database to check if {} exists", db_name);
-    
-    let pool = PgPoolOptions::new()
+    }
+}
+
+/// Connect to the postgres system database
+async fn connect_to_postgres_system(postgres_url: &str) -> Result<PgPool, DatabaseError> {
+    info!("Connecting to postgres system database");
+
+    PgPoolOptions::new()
         .max_connections(1)
         .acquire_timeout(Duration::from_secs(3))
-        .connect(&postgres_url)
+        .connect(postgres_url)
         .await
         .map_err(|e| {
-            tracing::error!("Failed to connect to postgres database: {}", e);
+            error!("Failed to connect to postgres database: {}", e);
             DatabaseError::Sqlx(e)
-        })?;
+        })
+}
 
-    // Check if database exists, create if not
+/// Check if a database exists
+async fn database_exists(pool: &PgPool, db_name: &str) -> Result<bool, DatabaseError> {
     let query = format!("SELECT 1 FROM pg_database WHERE datname = '{}'", db_name);
     let exists: Option<(i32,)> = sqlx::query_as(&query)
-        .fetch_optional(&pool)
+        .fetch_optional(pool)
         .await
         .map_err(DatabaseError::Sqlx)?;
 
-    let is_new_database = exists.is_none();
-    if is_new_database {
-        tracing::info!("Database {} does not exist, creating it", db_name);
-        let create_query = format!("CREATE DATABASE {}", db_name);
-        sqlx::query(&create_query)
-            .execute(&pool)
-            .await
-            .map_err(|e| {
-                tracing::error!("Failed to create database {}: {}", db_name, e);
-                DatabaseError::Sqlx(e)
-            })?;
-        tracing::info!("Created database: {}", db_name);
-    } else {
-        tracing::info!("Database {} already exists", db_name);
+    Ok(exists.is_some())
+}
+
+/// Create a new database
+async fn create_database(pool: &PgPool, db_name: &str) -> Result<(), DatabaseError> {
+    info!("Creating database: {}", db_name);
+    let create_query = format!("CREATE DATABASE {}", db_name);
+
+    sqlx::query(&create_query)
+        .execute(pool)
+        .await
+        .map_err(|e| {
+            error!("Failed to create database {}: {}", db_name, e);
+            DatabaseError::Sqlx(e)
+        })?;
+
+    info!("Created database: {}", db_name);
+    Ok(())
+}
+
+/// Ensure a database exists, creating it if necessary
+pub async fn ensure_database_exists(connection_params: &str) -> Result<bool, DatabaseError> {
+    let db_name = extract_db_name(connection_params);
+    let postgres_url = build_postgres_system_url(connection_params);
+
+    // Connect to postgres system database
+    let pool = connect_to_postgres_system(&postgres_url).await?;
+
+    // Check if database exists
+    let exists = database_exists(&pool, &db_name).await?;
+
+    // Create database if it doesn't exist
+    if !exists {
+        create_database(&pool, &db_name).await?;
+        return Ok(true); // New database was created
     }
 
-    Ok(is_new_database)
+    info!("Database {} already exists", db_name);
+    Ok(false) // Database already existed
 }
 
 /// Initialize the database with automatic creation and run migrations only for new databases
 pub async fn init_db_with_migrations(database_url: &str) -> Result<Database, DatabaseError> {
     // Create database if needed and check if it's new
     let is_new_database = ensure_database_exists(database_url).await?;
-    
+
     // Connect to the database
     let pool = init_db_pool(database_url).await?;
-    
+
     // Run migrations only if the database was newly created
     if is_new_database {
-        tracing::info!("New database detected, running migrations");
+        info!("New database detected, running migrations");
         sqlx::migrate!("./migrations")
             .run(&pool)
             .await
             .map_err(|e| {
-                tracing::error!("Error running migrations: {}", e);
+                error!("Error running migrations: {}", e);
                 DatabaseError::Migration(e)
             })?;
-        
-        tracing::info!("Database migrations completed successfully");
+
+        info!("Database migrations completed successfully");
     } else {
-        tracing::info!("Using existing database, skipping migrations");
+        info!("Using existing database, skipping migrations");
     }
-    
+
     Ok(pool)
 }
 
