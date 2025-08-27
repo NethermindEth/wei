@@ -111,7 +111,7 @@ pub fn create_router(config: &Config, agent_service: AgentService) -> Router {
     // Protected routes that require API key authentication
     let protected_routes = Router::new()
         .route(
-            "/analyze",
+            "/pre-filter",
             post(handlers::analyze_proposal)
                 .options(|_: axum::extract::Request| async { "" })
                 .get(method_not_allowed_handler)
@@ -120,7 +120,7 @@ pub fn create_router(config: &Config, agent_service: AgentService) -> Router {
                 .patch(method_not_allowed_handler),
         )
         .route(
-            "/analyze/:id",
+            "/pre-filter/:id",
             get(handlers::get_analysis)
                 .options(|_: axum::extract::Request| async { "" })
                 .post(method_not_allowed_handler)
@@ -129,16 +129,7 @@ pub fn create_router(config: &Config, agent_service: AgentService) -> Router {
                 .patch(method_not_allowed_handler),
         )
         .route(
-            "/analyses/:id",
-            get(handlers::get_analysis)
-                .options(|_: axum::extract::Request| async { "" })
-                .post(method_not_allowed_handler)
-                .put(method_not_allowed_handler)
-                .delete(method_not_allowed_handler)
-                .patch(method_not_allowed_handler),
-        )
-        .route(
-            "/analyses/proposal/:proposal_id",
+            "/pre-filter/proposal/:proposal_id",
             get(handlers::get_proposal_analyses)
                 .options(|_: axum::extract::Request| async { "" })
                 .post(method_not_allowed_handler)
