@@ -113,23 +113,19 @@ pub fn create_router(config: &Config, agent_service: AgentService) -> Router {
     let protected_routes = Router::new()
         .route(
             "/analyze",
-            post(handlers::analyze_proposal)
-                .options(|_: Request| async { "" })
+            post(handlers::analyze_proposal).options(|_: Request| async { "" }),
         )
         .route(
             "/analyze/:id",
-            get(handlers::get_analysis)
-                .options(|_: Request| async { "" })
+            get(handlers::get_analysis).options(|_: Request| async { "" }),
         )
         .route(
             "/analyses/:id",
-            get(handlers::get_analysis)
-                .options(|_: Request| async { "" })
+            get(handlers::get_analysis).options(|_: Request| async { "" }),
         )
         .route(
             "/analyses/proposal/:proposal_id",
-            get(handlers::get_proposal_analyses)
-                .options(|_: Request| async { "" })
+            get(handlers::get_proposal_analyses).options(|_: Request| async { "" }),
         )
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
@@ -141,13 +137,17 @@ pub fn create_router(config: &Config, agent_service: AgentService) -> Router {
         // Check if this is a known route but with wrong method
         let uri = req.uri().clone();
         let method = req.method().clone();
-        
+
         // Simple heuristic: if the path exists in our routes but the method is not allowed
         // This is a simplified approach - in a real app you might want to check against registered routes
         let known_paths = ["/analyze", "/analyze/", "/analyses/", "/analyses/proposal/"];
         let path_exists = known_paths.iter().any(|&p| uri.path().starts_with(p));
-        
-        if path_exists && method != Method::GET && method != Method::POST && method != Method::OPTIONS {
+
+        if path_exists
+            && method != Method::GET
+            && method != Method::POST
+            && method != Method::OPTIONS
+        {
             // Method Not Allowed (405)
             let error_response = ErrorResponse {
                 message: "Method not allowed".to_string(),

@@ -7,10 +7,7 @@ use axum::{
 use serde::Serialize;
 
 use crate::{
-    api::{
-        error::ApiError,
-        routes::AppState,
-    },
+    api::{error::ApiError, routes::AppState},
     models::{analysis::StructuredAnalysisResponse, Proposal},
     services::agent::AgentServiceTrait,
 };
@@ -60,7 +57,9 @@ pub async fn get_analysis(
     State(state): State<AppState>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
     // TODO: Implement analysis retrieval using state.agent_service
-    Err(ApiError::internal_error("Analysis retrieval not yet implemented"))
+    Err(ApiError::internal_error(
+        "Analysis retrieval not yet implemented",
+    ))
 }
 
 /// Get analyses for a proposal
