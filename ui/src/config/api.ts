@@ -7,7 +7,7 @@ export const API_CONFIG = {
   
   // API endpoints
   ENDPOINTS: {
-    ANALYZE: '/analyze',
+    ANALYZE: '/pre-filter',
   },
 } as const;
 

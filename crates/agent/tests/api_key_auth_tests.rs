@@ -51,7 +51,7 @@ fn test_protected_endpoint_auth_required() {
 fn test_protected_endpoint_no_key() {
     let validator: MockValidator = MockValidator::new(&["valid-key"], true);
 
-    let result: Result<(), StatusCode> = validate_api_key(&validator, "/analyze", None);
+    let result: Result<(), StatusCode> = validate_api_key(&validator, "/pre-filter", None);
 
     assert!(result.is_err());
     assert_eq!(result.unwrap_err(), StatusCode::UNAUTHORIZED);
@@ -62,7 +62,7 @@ fn test_protected_endpoint_invalid_key() {
     let validator: MockValidator = MockValidator::new(&["valid-key"], true);
 
     let result: Result<(), StatusCode> =
-        validate_api_key(&validator, "/analyze", Some("invalid-key"));
+        validate_api_key(&validator, "/pre-filter", Some("invalid-key"));
 
     assert!(result.is_err());
     assert_eq!(result.unwrap_err(), StatusCode::FORBIDDEN);
@@ -73,7 +73,7 @@ fn test_protected_endpoint_valid_key() {
     let validator: MockValidator = MockValidator::new(&["valid-key"], true);
 
     let result: Result<(), StatusCode> =
-        validate_api_key(&validator, "/analyze", Some("valid-key"));
+        validate_api_key(&validator, "/pre-filter", Some("valid-key"));
 
     assert!(result.is_ok());
 }
@@ -82,7 +82,7 @@ fn test_protected_endpoint_valid_key() {
 fn test_auth_disabled() {
     let validator: MockValidator = MockValidator::new(&["valid-key"], false);
 
-    let result: Result<(), StatusCode> = validate_api_key(&validator, "/analyze", None);
+    let result: Result<(), StatusCode> = validate_api_key(&validator, "/pre-filter", None);
 
     assert!(result.is_ok());
 }
@@ -93,7 +93,7 @@ fn test_protected_endpoint_multiple_valid_keys_unmatched_key() {
         MockValidator::new(&["matched_key1", "matched_key2", "matched_key3"], true);
 
     let result: Result<(), StatusCode> =
-        validate_api_key(&validator, "/analyze", Some("unmatched_key"));
+        validate_api_key(&validator, "/pre-filter", Some("unmatched_key"));
 
     assert!(result.is_err());
     assert_eq!(result.unwrap_err(), StatusCode::FORBIDDEN);
