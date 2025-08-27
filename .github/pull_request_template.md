@@ -14,7 +14,7 @@ Related to #issue
 
 - [ ] The code has suitable naming variables and followed all best practices (no any, nullabel ...etc)
 - [ ] I tested the code before pushing, and it is not crashing.
-- [ ] tests should pass in local environment
+- [ ] Tests should pass in local environment
 - [ ] Everything is documented
 
 
