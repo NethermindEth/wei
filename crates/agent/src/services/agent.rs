@@ -5,7 +5,7 @@ use std::future::Future;
 use openrouter_rs::{api::chat::ChatCompletionRequest, types::Role, Message, OpenRouterClient};
 use serde_json;
 
-use crate::models::analysis::{StructuredAnalysisResponse, EvaluationCategory};
+use crate::models::analysis::{EvaluationCategory, StructuredAnalysisResponse};
 use crate::prompts::ANALYZE_PROPOSAL_PROMPT;
 use crate::utils::error::Result;
 
@@ -88,7 +88,7 @@ impl AgentServiceTrait for AgentService {
                     justification: "Could not parse response".to_string(),
                     suggestions: vec!["Please try again".to_string()],
                 };
-                
+
                 let fallback = StructuredAnalysisResponse {
                     goals_and_motivation: default_category.clone(),
                     measurable_outcomes: default_category.clone(),
