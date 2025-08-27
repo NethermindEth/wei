@@ -71,7 +71,22 @@ This repository is a Rust workspace with two crates: `crates/agent` and `crates/
    WEI_AGENT_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/wei_agent
    ```
 
-   The Wei Agent now features automatic database creation and migration management. When you run the agent for the first time, it will:
+### Build
+
+- **Build everything**:
+  ```bash
+  cargo build --workspace
+  ```
+
+- **Build specific crates**:
+  ```bash
+  cargo build -p agent
+  cargo build -p indexer
+  ```
+
+- **Expected output for Agent**:
+
+The Wei Agent now features automatic database creation and migration management. When you run the agent for the first time, it will:
    - Check if the database exists
    - Create the database if needed
    - Run migrations automatically for new databases
@@ -100,19 +115,6 @@ This repository is a Rust workspace with two crates: `crates/agent` and `crates/
    2025-08-27T09:41:28.914484Z  INFO main ThreadId(01) Database initialized successfully with migrations
    2025-08-27T09:41:28.914489Z  INFO main ThreadId(01) Wei Agent service started successfully
    ```
-
-### Build
-
-- **Build everything**:
-  ```bash
-  cargo build --workspace
-  ```
-
-- **Build specific crates**:
-  ```bash
-  cargo build -p agent
-  cargo build -p indexer
-  ```
 
 ### Run
 
