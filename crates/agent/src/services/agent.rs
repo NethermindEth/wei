@@ -4,8 +4,9 @@ use std::future::Future;
 
 use openrouter_rs::{api::chat::ChatCompletionRequest, types::Role, Message, OpenRouterClient};
 use serde_json;
+use tracing::error;
 
-use crate::models::analysis::StructuredAnalysisResponse;
+use crate::models::analysis::{EvaluationCategory, StructuredAnalysisResponse};
 use crate::prompts::ANALYZE_PROPOSAL_PROMPT;
 use crate::utils::error::Result;
 
@@ -78,19 +79,23 @@ impl AgentServiceTrait for AgentService {
         match serde_json::from_str::<StructuredAnalysisResponse>(&content) {
             Ok(structured_response) => Ok(structured_response),
             Err(e) => {
-                tracing::error!("Failed to parse structured response: {}", e);
-                tracing::error!("Raw response: {}", content);
+                error!("Failed to parse structured response: {}", e);
+                error!("Raw response: {}", content);
 
-                // Create a fallback response with just the raw text
+                // Create a fallback response with the new structure
+                // Try to extract any valid JSON from the content
+                let default_category = EvaluationCategory {
+                    status: "n/a".to_string(),
+                    justification: "Could not parse response".to_string(),
+                    suggestions: vec!["Please try again".to_string()],
+                };
+
                 let fallback = StructuredAnalysisResponse {
-                    verdict: if content.to_lowercase().contains("good") {
-                        "good".to_string()
-                    } else {
-                        "bad".to_string()
-                    },
-                    conclusion: content.chars().take(300).collect::<String>() + "...",
-                    proposal_quality: Default::default(),
-                    submitter_intentions: Default::default(),
+                    goals_and_motivation: default_category.clone(),
+                    measurable_outcomes: default_category.clone(),
+                    budget: default_category.clone(),
+                    technical_specifications: default_category.clone(),
+                    language_quality: default_category.clone(),
                 };
 
                 Ok(fallback)

@@ -5,12 +5,10 @@ use axum::{
     Json,
 };
 use serde::Serialize;
+use tracing::error;
 
 use crate::{
-    api::{
-        error::{internal_error, ApiError},
-        routes::AppState,
-    },
+    api::{error::ApiError, routes::AppState},
     models::{analysis::StructuredAnalysisResponse, Proposal},
     services::agent::AgentServiceTrait,
 };
@@ -44,8 +42,8 @@ pub async fn analyze_proposal(
         .analyze_proposal(&proposal)
         .await
         .map_err(|e| {
-            tracing::error!("Error analyzing proposal: {:?}", e);
-            internal_error(format!("Failed to analyze proposal: {}", e))
+            error!("Error analyzing proposal: {:?}", e);
+            ApiError::internal_error(format!("Failed to analyze proposal: {}", e))
         })?;
 
     Ok(Json(AnalyzeResponse {
@@ -60,7 +58,9 @@ pub async fn get_analysis(
     State(state): State<AppState>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
     // TODO: Implement analysis retrieval using state.agent_service
-    Err(internal_error("Analysis retrieval not yet implemented"))
+    Err(ApiError::internal_error(
+        "Analysis retrieval not yet implemented",
+    ))
 }
 
 /// Get analyses for a proposal
@@ -70,7 +70,7 @@ pub async fn get_proposal_analyses(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<serde_json::Value>>, ApiError> {
     // TODO: Implement proposal analyses retrieval using state.agent_service
-    Err(internal_error(
+    Err(ApiError::internal_error(
         "Proposal analyses retrieval not yet implemented",
     ))
 }
