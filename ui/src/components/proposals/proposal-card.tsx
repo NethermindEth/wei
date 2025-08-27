@@ -35,12 +35,13 @@ export function ProposalCard({ proposal, onClick, isSelected }: ProposalCardProp
   return (
     <>
       <div 
-        className={`p-4 rounded-lg border cursor-pointer transition-all overflow-visible flex flex-col min-h-[120px] ${
+        className={`p-4 rounded-lg border cursor-pointer transition-colors overflow-visible flex flex-col min-h-[120px] w-full ${
           isSelected 
             ? 'border-[--color-accent] bg-white/10' 
             : 'border-white/10 bg-white/5 hover:bg-white/8'
         }`}
         onClick={handleCardClick}
+        style={{ boxSizing: 'border-box' }}
       >
         <h3 className="font-medium text-white/90 mb-2 break-words">{proposal.title}</h3>
         <p className="text-sm text-white/70 mb-3 break-words">{truncatedPreview}</p>
