@@ -1,9 +1,10 @@
 //! API routes for the agent service
 
 use axum::{
-    extract::FromRef,
+    extract::{FromRef, Request},
     http::{header, Method, StatusCode},
     middleware,
+    response::IntoResponse,
     routing::{get, post},
     Json, Router,
 };
@@ -113,66 +114,60 @@ pub fn create_router(config: &Config, agent_service: AgentService) -> Router {
         .route(
             "/analyze",
             post(handlers::analyze_proposal)
-                .options(|_: axum::extract::Request| async { "" })
-                .get(method_not_allowed_handler)
-                .put(method_not_allowed_handler)
-                .delete(method_not_allowed_handler)
-                .patch(method_not_allowed_handler),
+                .options(|_: Request| async { "" })
         )
         .route(
             "/analyze/:id",
             get(handlers::get_analysis)
-                .options(|_: axum::extract::Request| async { "" })
-                .post(method_not_allowed_handler)
-                .put(method_not_allowed_handler)
-                .delete(method_not_allowed_handler)
-                .patch(method_not_allowed_handler),
+                .options(|_: Request| async { "" })
         )
         .route(
             "/analyses/:id",
             get(handlers::get_analysis)
-                .options(|_: axum::extract::Request| async { "" })
-                .post(method_not_allowed_handler)
-                .put(method_not_allowed_handler)
-                .delete(method_not_allowed_handler)
-                .patch(method_not_allowed_handler),
+                .options(|_: Request| async { "" })
         )
         .route(
             "/analyses/proposal/:proposal_id",
             get(handlers::get_proposal_analyses)
-                .options(|_: axum::extract::Request| async { "" })
-                .post(method_not_allowed_handler)
-                .put(method_not_allowed_handler)
-                .delete(method_not_allowed_handler)
-                .patch(method_not_allowed_handler),
+                .options(|_: Request| async { "" })
         )
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             api_key_auth::<AppState>,
         ));
 
-    // Method not allowed handler
-    async fn method_not_allowed_handler() -> (StatusCode, Json<ErrorResponse>) {
-        let error_response = ErrorResponse {
-            message: "Method not allowed".to_string(),
-            status: StatusCode::METHOD_NOT_ALLOWED.as_u16(),
-        };
-        (StatusCode::METHOD_NOT_ALLOWED, Json(error_response))
+    // Custom fallback handler for both 404 and 405 errors
+    async fn custom_fallback(req: Request) -> impl IntoResponse {
+        // Check if this is a known route but with wrong method
+        let uri = req.uri().clone();
+        let method = req.method().clone();
+        
+        // Simple heuristic: if the path exists in our routes but the method is not allowed
+        // This is a simplified approach - in a real app you might want to check against registered routes
+        let known_paths = ["/analyze", "/analyze/", "/analyses/", "/analyses/proposal/"];
+        let path_exists = known_paths.iter().any(|&p| uri.path().starts_with(p));
+        
+        if path_exists && method != Method::GET && method != Method::POST && method != Method::OPTIONS {
+            // Method Not Allowed (405)
+            let error_response = ErrorResponse {
+                message: "Method not allowed".to_string(),
+                status: StatusCode::METHOD_NOT_ALLOWED.as_u16(),
+            };
+            (StatusCode::METHOD_NOT_ALLOWED, Json(error_response))
+        } else {
+            // Not Found (404)
+            let error_response = ErrorResponse {
+                message: "Not Found".to_string(),
+                status: StatusCode::NOT_FOUND.as_u16(),
+            };
+            (StatusCode::NOT_FOUND, Json(error_response))
+        }
     }
-
-    // Fallback handler for 404 errors
-    let fallback = |_: axum::extract::Request| async {
-        let error_response = ErrorResponse {
-            message: "Not Found".to_string(),
-            status: StatusCode::NOT_FOUND.as_u16(),
-        };
-        (StatusCode::NOT_FOUND, Json(error_response))
-    };
 
     // Combine routes
     public_routes
         .merge(protected_routes)
-        .fallback(fallback)
+        .fallback(custom_fallback)
         // Use a simpler error handling approach
         .layer(axum::error_handling::HandleErrorLayer::new(|_| async {
             let error_response = ErrorResponse {
