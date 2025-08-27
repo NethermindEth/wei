@@ -27,6 +27,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#0b0f14] text-[#d5e7ff]`}
+        suppressHydrationWarning
       >
         {/* Providers include URL state adapter for nuqs */}
         <Providers>{children}</Providers>

@@ -12,7 +12,7 @@ use std::panic::AssertUnwindSafe;
 use tracing::{debug, error, info, warn};
 
 use crate::api::{
-    error::{forbidden, unauthorized, ApiError, ErrorResponse},
+    error::{ApiError, ErrorResponse},
     routes::AppState,
 };
 
@@ -153,13 +153,11 @@ where
 
     match validate_api_key(&state, path, api_key) {
         Ok(_) => Ok(next.run(request).await),
-        Err(status) => match status {
-            StatusCode::UNAUTHORIZED => Err(unauthorized("API key is required")),
-            StatusCode::FORBIDDEN => Err(forbidden("Invalid API key provided")),
-            _ => Err(ApiError {
-                status_code: status,
-                message: "Authentication error".to_string(),
-            }),
-        },
+        Err(StatusCode::UNAUTHORIZED) => Err(ApiError::unauthorized("API key is required")),
+        Err(StatusCode::FORBIDDEN) => Err(ApiError::forbidden("Invalid API key provided")),
+        Err(status_code) => Err(ApiError {
+            status_code,
+            message: "Authentication error".to_string(),
+        }),
     }
 }

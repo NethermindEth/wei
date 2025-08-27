@@ -2,12 +2,36 @@
 
 import * as React from "react";
 import { useQueryState } from "nuqs";
-import * as Label from "@radix-ui/react-label";
 import { ApiService } from "../../services/api";
 import { Proposal, LocalAnalysisResult, AnalysisResponse } from "../../types/proposal";
+import { ProposalList } from "../proposals/proposal-list";
+import { Proposal as GraphQLProposal } from "../../hooks/useProposals";
+
+// Status badge component for consistent styling
+const StatusBadge = ({ status }: { status?: string }) => {
+  if (!status) return <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-500/20 text-gray-400">UNKNOWN</span>;
+  
+  const getStatusStyle = (status: string) => {
+    switch(status.toLowerCase()) {
+      case 'pass':
+        return 'bg-green-500/20 text-green-400';
+      case 'fail':
+        return 'bg-red-500/20 text-red-400';
+      case 'n/a':
+      default:
+        return 'bg-yellow-500/20 text-yellow-400';
+    }
+  };
+  
+  return (
+    <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusStyle(status)}`}>
+      {status.toUpperCase()}
+    </span>
+  );
+};
 
 export function AnalyzerClient() {
-  const [proposal, setProposal] = useQueryState("q", {
+  const [proposalId, setProposalId] = useQueryState("q", {
     history: "push",
     shallow: true,
     clearOnDefault: true,
@@ -16,21 +40,30 @@ export function AnalyzerClient() {
   const [result, setResult] = React.useState<LocalAnalysisResult | null>(null);
   const [backendResult, setBackendResult] = React.useState<AnalysisResponse | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const [selectedProposal, setSelectedProposal] = React.useState<GraphQLProposal | null>(null);
 
-  async function onAnalyze() {
-    if (!proposal?.trim()) {
-      setResult(null);
-      setBackendResult(null);
-      setError(null);
-      return;
-    }
+  const handleSelectProposal = async (proposal: GraphQLProposal) => {
+    setSelectedProposal(proposal);
+    setProposalId(proposal.id);
+    setResult(null);
+    setBackendResult(null);
+    setError(null);
     
+    await analyzeProposal(proposal);
+  };
+  
+  const analyzeProposal = async (proposal: GraphQLProposal) => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const proposalData: Proposal = { description: proposal };
+      const description = `${proposal.title}\n\n${proposal.body}`;
+      const proposalData: Proposal = { description };
+      console.log('Analyzing proposal:', proposalData);
       const response = await ApiService.analyzeProposal(proposalData);
+      console.log('Analysis response:', response);
+      
+      // Set the response directly - it should match our interface
       setBackendResult(response);
       setResult(null);
     } catch (err) {
@@ -39,168 +72,215 @@ export function AnalyzerClient() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  async function onAnalyze() {
+    if (!selectedProposal) {
+      setError("Please select a proposal to analyze");
+      return;
+    }
+    
+    await analyzeProposal(selectedProposal);
   }
 
   return (
-    <section className="w-full max-w-3xl grid gap-4">
-      <div className="grid gap-2">
-        <Label.Root htmlFor="proposal" className="text-sm text-[#9fb5cc]">
-          Governance proposal
-        </Label.Root>
-        <textarea
-          id="proposal"
-          value={proposal ?? ""}
-          onChange={(e) => setProposal(e.target.value)}
-          placeholder="Paste proposal text..."
-          rows={8}
-          className="accent-glow w-full resize-y rounded-xl bg-white/5 text-white/90 placeholder:text-[#7d93ab] px-4 py-3 outline-none focus:ring-2 focus:ring-[--color-accent] border border-white/10"
+    <div className="grid gap-4 md:grid-cols-2 max-w-full overflow-hidden h-full">
+      <div className="grid gap-4 content-start">
+        <ProposalList 
+          onSelectProposal={handleSelectProposal} 
+          selectedProposalId={proposalId || undefined}
         />
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onAnalyze}
+            disabled={isLoading || !selectedProposal}
+            className="inline-flex h-9 items-center justify-center rounded-md bg-[--color-accent] px-4 py-2 text-sm font-medium text-white shadow transition-colors hover:bg-[--color-accent]/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[--color-accent] disabled:pointer-events-none disabled:opacity-50"
+          >
+            {isLoading ? "Analyzing..." : "Analyze Selected"}
+          </button>
+          {error && <div className="text-red-500 text-sm">{error}</div>}
+        </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={onAnalyze}
-          disabled={isLoading || !proposal?.trim()}
-          className="accent-glow rounded-lg bg-gradient-to-br from-[--color-accent] to-[--color-accent-2] text-white font-semibold px-4 py-2 transition disabled:opacity-40 hover:brightness-110 border border-white/15 shadow"
-        >
-          {isLoading ? "Analyzing…" : "Analyze"}
-        </button>
-
-        <span className="text-xs text-[#7d93ab]">URL saves your text with `?q=`</span>
-      </div>
-
-      <div className="grid gap-3 rounded-xl border border-white/10 bg-white/5 p-4">
-        {!result && !backendResult && !error && (
-          <p className="text-sm text-[#7d93ab]">Feedback will appear here.</p>
-        )}
-
-        {/* Error Display */}
-        {error && (
-          <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3">
-            <p className="text-sm text-red-400">
-              <strong>Error:</strong> {error}
-            </p>
-            <p className="text-xs text-red-300 mt-1">
-              Falling back to local analysis...
-            </p>
-          </div>
-        )}
-
-        {/* Backend Analysis Result */}
+      <div className="grid gap-4 content-start overflow-hidden">
+        <h2 className="text-lg font-semibold mb-2">Analysis Result</h2>
+          
         {backendResult && (
-          <div className="grid gap-3">
-            <div className="flex items-center gap-2">
-              <div className="h-6 w-6 rounded-full bg-[--color-accent] grid place-items-center">
-                <span className="text-[10px] text-[#04141f] font-bold">AI</span>
-              </div>
-              <p className="text-sm font-medium text-[--color-accent]">
-                AI Analysis: <span className={`${backendResult.verdict === 'good' ? 'text-green-400' : 'text-red-400'}`}>
-                  {backendResult.verdict.toUpperCase()}
-                </span>
-              </p>
-            </div>
-            
-            {/* Conclusion */}
-            <div className="bg-white/5 p-3 rounded-lg border border-white/10">
-              <h3 className="text-sm font-semibold text-[--color-accent] mb-2">Conclusion</h3>
-              <p className="text-sm">{backendResult.conclusion}</p>
-            </div>
-            
-            {/* Proposal Quality */}
-            <div className="bg-white/5 p-3 rounded-lg border border-white/10">
-              <h3 className="text-sm font-semibold text-[--color-accent] mb-2">Proposal Quality</h3>
-              <div className="grid gap-2">
-                <div className="grid grid-cols-2 gap-1">
-                  <p className="text-xs text-[#9fb5cc]">Clarity of Goals:</p>
-                  <p className="text-xs">{backendResult.proposal_quality.clarity_of_goals}</p>
+          <div className="rounded-md border border-white/10 bg-white/5 p-4 overflow-hidden">
+            <div className="grid gap-4 break-words">
+              {/* Goals & Motivation */}
+              <div className="border-b border-white/10 pb-3">
+                <h3 className="text-md font-semibold mb-2">Goals & Motivation</h3>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-medium">Status:</span>
+                  <StatusBadge status={backendResult.goals_and_motivation?.status} />
                 </div>
-                <div className="grid grid-cols-2 gap-1">
-                  <p className="text-xs text-[#9fb5cc]">Completeness:</p>
-                  <p className="text-xs">{backendResult.proposal_quality.completeness_of_sections}</p>
-                </div>
-                <div className="grid grid-cols-2 gap-1">
-                  <p className="text-xs text-[#9fb5cc]">Level of Detail:</p>
-                  <p className="text-xs">{backendResult.proposal_quality.level_of_detail}</p>
-                </div>
-                <div className="grid grid-cols-2 gap-1">
-                  <p className="text-xs text-[#9fb5cc]">Community Adaptability:</p>
-                  <p className="text-xs">{backendResult.proposal_quality.community_adaptability}</p>
-                </div>
-                
-                {backendResult.proposal_quality.assumptions_made.length > 0 && (
-                  <div className="mt-2">
-                    <p className="text-xs font-medium mb-1">Assumptions Made:</p>
-                    <ul className="list-disc pl-5 text-xs space-y-1">
-                      {backendResult.proposal_quality.assumptions_made.map((assumption, i) => (
-                        <li key={i}>{assumption}</li>
-                      ))}
-                    </ul>
+                {backendResult.goals_and_motivation?.justification && (
+                  <div className="mb-1">
+                    <span className="font-medium">Justification:</span>{" "}
+                    <span>{backendResult.goals_and_motivation.justification}</span>
                   </div>
                 )}
-                
-                {backendResult.proposal_quality.missing_elements.length > 0 && (
-                  <div className="mt-2">
-                    <p className="text-xs font-medium mb-1">Missing Elements:</p>
-                    <ul className="list-disc pl-5 text-xs space-y-1">
-                      {backendResult.proposal_quality.missing_elements.map((element, i) => (
-                        <li key={i}>{element}</li>
+                {backendResult.goals_and_motivation?.suggestions?.length > 0 && (
+                  <div>
+                    <span className="font-medium">Suggestions:</span>
+                    <ul className="list-disc pl-5">
+                      {backendResult.goals_and_motivation.suggestions.map((suggestion, index) => (
+                        <li key={index}>{suggestion}</li>
                       ))}
                     </ul>
                   </div>
                 )}
               </div>
+
+              {/* Measurable Outcomes */}
+              <div className="border-b border-white/10 pb-3">
+                <h3 className="text-md font-semibold mb-2">Measurable Outcomes</h3>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-medium">Status:</span>
+                  <StatusBadge status={backendResult.measurable_outcomes?.status} />
+                </div>
+                {backendResult.measurable_outcomes?.justification && (
+                  <div className="mb-1">
+                    <span className="font-medium">Justification:</span>{" "}
+                    <span>{backendResult.measurable_outcomes.justification}</span>
+                  </div>
+                )}
+                {backendResult.measurable_outcomes?.suggestions?.length > 0 && (
+                  <div>
+                    <span className="font-medium">Suggestions:</span>
+                    <ul className="list-disc pl-5">
+                      {backendResult.measurable_outcomes.suggestions.map((suggestion, index) => (
+                        <li key={index}>{suggestion}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              {/* Budget */}
+              <div className="border-b border-white/10 pb-3">
+                <h3 className="text-md font-semibold mb-2">Budget</h3>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-medium">Status:</span>
+                  <StatusBadge status={backendResult.budget?.status} />
+                </div>
+                {backendResult.budget?.justification && (
+                  <div className="mb-1">
+                    <span className="font-medium">Justification:</span>{" "}
+                    <span>{backendResult.budget.justification}</span>
+                  </div>
+                )}
+                {backendResult.budget?.suggestions?.length > 0 && (
+                  <div>
+                    <span className="font-medium">Suggestions:</span>
+                    <ul className="list-disc pl-5">
+                      {backendResult.budget.suggestions.map((suggestion, index) => (
+                        <li key={index}>{suggestion}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              {/* Technical Specifications */}
+              <div className="border-b border-white/10 pb-3">
+                <h3 className="text-md font-semibold mb-2">Technical Specifications</h3>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-medium">Status:</span>
+                  <StatusBadge status={backendResult.technical_specifications?.status} />
+                </div>
+                {backendResult.technical_specifications?.justification && (
+                  <div className="mb-1">
+                    <span className="font-medium">Justification:</span>{" "}
+                    <span>{backendResult.technical_specifications.justification}</span>
+                  </div>
+                )}
+                {backendResult.technical_specifications?.suggestions?.length > 0 && (
+                  <div>
+                    <span className="font-medium">Suggestions:</span>
+                    <ul className="list-disc pl-5">
+                      {backendResult.technical_specifications.suggestions.map((suggestion, index) => (
+                        <li key={index}>{suggestion}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              {/* Language Quality */}
+              <div>
+                <h3 className="text-md font-semibold mb-2">Language Quality</h3>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-medium">Status:</span>
+                  <StatusBadge status={backendResult.language_quality?.status} />
+                </div>
+                {backendResult.language_quality?.justification && (
+                  <div className="mb-1">
+                    <span className="font-medium">Justification:</span>{" "}
+                    <span>{backendResult.language_quality.justification}</span>
+                  </div>
+                )}
+                {backendResult.language_quality?.suggestions?.length > 0 && (
+                  <div>
+                    <span className="font-medium">Suggestions:</span>
+                    <ul className="list-disc pl-5">
+                      {backendResult.language_quality.suggestions.map((suggestion, index) => (
+                        <li key={index}>{suggestion}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
             </div>
-            
-            {/* Submitter Intentions */}
-            <div className="bg-white/5 p-3 rounded-lg border border-white/10">
-              <h3 className="text-sm font-semibold text-[--color-accent] mb-2">Submitter Analysis</h3>
-              <p className="text-xs mb-2">{backendResult.submitter_intentions.submitter_identity}</p>
-              
-              {backendResult.submitter_intentions.inferred_interests.length > 0 && (
-                <div className="mb-2">
-                  <p className="text-xs font-medium mb-1">Inferred Interests:</p>
-                  <ul className="list-disc pl-5 text-xs space-y-1">
-                    {backendResult.submitter_intentions.inferred_interests.map((interest, i) => (
-                      <li key={i}>{interest}</li>
-                    ))}
-                  </ul>
+          </div>
+        )}
+        {result && (
+          <div className="grid gap-4 overflow-hidden">
+            <div className="grid gap-2">
+              <h2 className="text-lg font-semibold">Local Analysis Result</h2>
+              <div className="rounded-md border border-white/10 bg-white/5 p-4 overflow-hidden">
+                <div className="grid gap-2 break-words">
+                  <div>
+                    <span className="font-medium">Summary:</span>{" "}
+                    <span>{result.summary}</span>
+                  </div>
+                  <div>
+                    <span className="font-medium">Score:</span>{" "}
+                    <span className={`${result.score > 50 ? "text-green-500" : "text-red-500"}`}>
+                      {result.score}/100
+                    </span>
+                  </div>
+                  {result.risks.length > 0 && (
+                    <div>
+                      <span className="font-medium">Risks:</span>
+                      <ul className="list-disc pl-5">
+                        {result.risks.map((risk, index) => (
+                          <li key={index}>{risk}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
-              )}
-              
-              {backendResult.submitter_intentions.social_activity.length > 0 && (
-                <div className="mb-2">
-                  <p className="text-xs font-medium mb-1">Social Activity:</p>
-                  <ul className="list-disc pl-5 text-xs space-y-1">
-                    {backendResult.submitter_intentions.social_activity.map((activity, i) => (
-                      <li key={i}>{activity}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              {backendResult.submitter_intentions.strategic_positioning.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium mb-1">Strategic Positioning:</p>
-                  <ul className="list-disc pl-5 text-xs space-y-1">
-                    {backendResult.submitter_intentions.strategic_positioning.map((position, i) => (
-                      <li key={i}>{position}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              </div>
             </div>
-            
-            {/* Raw JSON View */}
-            <details className="text-xs">
-              <summary className="cursor-pointer text-[#9fb5cc] hover:text-white transition-colors">View Raw JSON</summary>
-              <pre className="mt-2 p-3 bg-[#04141f] border border-white/10 rounded-lg overflow-x-auto">
-                {JSON.stringify(backendResult, null, 2)}
-              </pre>
-            </details>
+          </div>
+        )}
+
+        {!backendResult && !result && !isLoading && (
+          <div className="flex items-center mt-4">
+            <p className="text-white/70 text-sm italic">Select a proposal to see analysis results</p>
+          </div>
+        )}
+
+        {isLoading && (
+          <div className="flex items-center mt-4">
+            <div className="h-4 w-4 border-2 border-t-[--color-accent] border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin mr-2"></div>
+            <p className="text-white/70 text-sm">Analyzing proposal...</p>
           </div>
         )}
       </div>
-    </section>
+    </div>
   );
 } 
