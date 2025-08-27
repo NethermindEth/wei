@@ -120,7 +120,7 @@ pub fn create_router(config: &Config, agent_service: AgentService) -> Router {
             get(handlers::get_analysis).options(|_: Request| async { "" }),
         )
         .route(
-            "/pre-filter/:id",
+            "/pre-filter/proposals/:id",
             get(handlers::get_analysis).options(|_: Request| async { "" }),
         )
         .route(
