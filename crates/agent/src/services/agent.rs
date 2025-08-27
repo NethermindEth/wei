@@ -4,6 +4,7 @@ use std::future::Future;
 
 use openrouter_rs::{api::chat::ChatCompletionRequest, types::Role, Message, OpenRouterClient};
 use serde_json;
+use tracing::error;
 
 use crate::models::analysis::StructuredAnalysisResponse;
 use crate::prompts::ANALYZE_PROPOSAL_PROMPT;
@@ -78,8 +79,8 @@ impl AgentServiceTrait for AgentService {
         match serde_json::from_str::<StructuredAnalysisResponse>(&content) {
             Ok(structured_response) => Ok(structured_response),
             Err(e) => {
-                tracing::error!("Failed to parse structured response: {}", e);
-                tracing::error!("Raw response: {}", content);
+                error!("Failed to parse structured response: {}", e);
+                error!("Raw response: {}", content);
 
                 // Create a fallback response with just the raw text
                 let fallback = StructuredAnalysisResponse {

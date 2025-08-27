@@ -3,7 +3,7 @@ use std::net::SocketAddr;
 use agent::api::create_router;
 use clap::Parser;
 use tokio::net::TcpListener;
-use tracing::info;
+use tracing::{error, info};
 
 use tokio::signal;
 
@@ -37,17 +37,18 @@ async fn main() -> agent::Result<()> {
         Ok(pool) => {
             info!("Database initialized successfully with migrations");
             pool
-        },
+        }
         Err(e) => {
-            tracing::error!("Failed to initialize database: {}", e);
-            return Err(agent::utils::error::Error::Internal(
-                format!("Database initialization failed: {}", e)
-            ));
+            error!("Failed to initialize database: {}", e);
+            return Err(agent::utils::error::Error::Internal(format!(
+                "Database initialization failed: {}",
+                e
+            )));
         }
     };
 
     info!("Wei Agent service started successfully");
-    
+
     let agent_service = AgentService::new(db, config.clone());
 
     let app = create_router(&config, agent_service);

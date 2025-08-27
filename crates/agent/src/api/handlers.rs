@@ -5,6 +5,7 @@ use axum::{
     Json,
 };
 use serde::Serialize;
+use tracing::error;
 
 use crate::{
     api::{
@@ -44,7 +45,7 @@ pub async fn analyze_proposal(
         .analyze_proposal(&proposal)
         .await
         .map_err(|e| {
-            tracing::error!("Error analyzing proposal: {:?}", e);
+            error!("Error analyzing proposal: {:?}", e);
             internal_error(format!("Failed to analyze proposal: {}", e))
         })?;
 

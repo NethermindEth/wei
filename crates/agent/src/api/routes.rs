@@ -11,7 +11,7 @@ use tower_http::{
     cors::{AllowMethods, AllowOrigin, CorsLayer},
     trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer},
 };
-use tracing::Level;
+use tracing::{warn, Level};
 
 use crate::{
     api::{
@@ -85,7 +85,7 @@ pub fn create_router(config: &Config, agent_service: AgentService) -> Router {
             if let Ok(origin) = url.parse() {
                 cors_layer = cors_layer.allow_origin(AllowOrigin::exact(origin));
             } else {
-                tracing::warn!("Invalid CORS origin: {}", url);
+                warn!("Invalid CORS origin: {}", url);
             }
         }
 
