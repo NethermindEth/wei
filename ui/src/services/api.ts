@@ -29,7 +29,7 @@ export class ApiService {
   }
 
   static async analyzeProposal(proposal: Proposal): Promise<AnalysisResponse> {
-    return this.makeRequest<AnalysisResponse>('/analyze', {
+    return this.makeRequest<AnalysisResponse>('/pre-filter', {
       method: 'POST',
       body: JSON.stringify(proposal),
     });

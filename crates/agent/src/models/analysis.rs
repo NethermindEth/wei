@@ -35,48 +35,35 @@ pub enum AnalysisResult {
     NeedsReview,
 }
 
-/// Structured response from the AI model
+/// Structured response from the AI model based on standardized evaluation criteria
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct StructuredAnalysisResponse {
-    /// Overall verdict (good or bad)
-    pub verdict: String,
-    /// Conclusion summary (1-3 sentences)
-    pub conclusion: String,
-    /// Proposal quality evaluation
-    pub proposal_quality: ProposalQuality,
-    /// Submitter intentions analysis
-    pub submitter_intentions: SubmitterIntentions,
+    /// Goals and motivation evaluation
+    pub goals_and_motivation: EvaluationCategory,
+    /// Measurable outcomes evaluation
+    pub measurable_outcomes: EvaluationCategory,
+    /// Budget evaluation
+    pub budget: EvaluationCategory,
+    /// Technical specifications evaluation
+    pub technical_specifications: EvaluationCategory,
+    /// Language quality evaluation
+    pub language_quality: EvaluationCategory,
 }
 
-/// Proposal quality evaluation
+/// Evaluation category with status, justification and suggestions
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct ProposalQuality {
-    /// Clarity of goals assessment
-    pub clarity_of_goals: String,
-    /// Completeness of sections assessment
-    pub completeness_of_sections: String,
-    /// Level of detail assessment
-    pub level_of_detail: String,
-    /// Assumptions made in the proposal
-    pub assumptions_made: Vec<String>,
-    /// Missing elements in the proposal
-    pub missing_elements: Vec<String>,
-    /// Community adaptability assessment
-    pub community_adaptability: String,
+pub struct EvaluationCategory {
+    /// Status of the evaluation: pass, fail, or n/a
+    pub status: String,
+    /// Justification for the status (empty for pass/fail, explanation for n/a)
+    pub justification: String,
+    /// Suggestions for improvement (only provided for fail status)
+    pub suggestions: Vec<String>,
 }
 
-/// Submitter intentions analysis
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct SubmitterIntentions {
-    /// Submitter identity information
-    pub submitter_identity: String,
-    /// Inferred interests of the submitter
-    pub inferred_interests: Vec<String>,
-    /// Social activity of the submitter
-    pub social_activity: Vec<String>,
-    /// Strategic positioning of the submitter
-    pub strategic_positioning: Vec<String>,
-}
+// Deprecated structs have been removed
+// ProposalQuality and SubmitterIntentions were previously here
+// They have been replaced by the new evaluation categories above
 
 /// Complete proposal analysis with metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]

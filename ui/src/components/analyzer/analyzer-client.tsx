@@ -7,6 +7,29 @@ import { Proposal, LocalAnalysisResult, AnalysisResponse } from "../../types/pro
 import { ProposalList } from "../proposals/proposal-list";
 import { Proposal as GraphQLProposal } from "../../hooks/useProposals";
 
+// Status badge component for consistent styling
+const StatusBadge = ({ status }: { status?: string }) => {
+  if (!status) return <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-500/20 text-gray-400">UNKNOWN</span>;
+  
+  const getStatusStyle = (status: string) => {
+    switch(status.toLowerCase()) {
+      case 'pass':
+        return 'bg-green-500/20 text-green-400';
+      case 'fail':
+        return 'bg-red-500/20 text-red-400';
+      case 'n/a':
+      default:
+        return 'bg-yellow-500/20 text-yellow-400';
+    }
+  };
+  
+  return (
+    <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusStyle(status)}`}>
+      {status.toUpperCase()}
+    </span>
+  );
+};
+
 export function AnalyzerClient() {
   const [proposalId, setProposalId] = useQueryState("q", {
     history: "push",
@@ -39,6 +62,8 @@ export function AnalyzerClient() {
       console.log('Analyzing proposal:', proposalData);
       const response = await ApiService.analyzeProposal(proposalData);
       console.log('Analysis response:', response);
+      
+      // Set the response directly - it should match our interface
       setBackendResult(response);
       setResult(null);
     } catch (err) {
@@ -83,48 +108,134 @@ export function AnalyzerClient() {
           
         {backendResult && (
           <div className="rounded-md border border-white/10 bg-white/5 p-4 overflow-hidden">
-            <div className="grid gap-2 break-words">
-              <div>
-                <span className="font-medium">Verdict:</span>{" "}
-                <span
-                  className={`${backendResult.verdict === "good" ? "text-green-500" : "text-red-500"}`}
-                >
-                  {backendResult.verdict}
-                </span>
+            <div className="grid gap-4 break-words">
+              {/* Goals & Motivation */}
+              <div className="border-b border-white/10 pb-3">
+                <h3 className="text-md font-semibold mb-2">Goals & Motivation</h3>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-medium">Status:</span>
+                  <StatusBadge status={backendResult.goals_and_motivation?.status} />
+                </div>
+                {backendResult.goals_and_motivation?.justification && (
+                  <div className="mb-1">
+                    <span className="font-medium">Justification:</span>{" "}
+                    <span>{backendResult.goals_and_motivation.justification}</span>
+                  </div>
+                )}
+                {backendResult.goals_and_motivation?.suggestions?.length > 0 && (
+                  <div>
+                    <span className="font-medium">Suggestions:</span>
+                    <ul className="list-disc pl-5">
+                      {backendResult.goals_and_motivation.suggestions.map((suggestion, index) => (
+                        <li key={index}>{suggestion}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
-              <div>
-                <span className="font-medium">Conclusion:</span>{" "}
-                <span>{backendResult.conclusion}</span>
+
+              {/* Measurable Outcomes */}
+              <div className="border-b border-white/10 pb-3">
+                <h3 className="text-md font-semibold mb-2">Measurable Outcomes</h3>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-medium">Status:</span>
+                  <StatusBadge status={backendResult.measurable_outcomes?.status} />
+                </div>
+                {backendResult.measurable_outcomes?.justification && (
+                  <div className="mb-1">
+                    <span className="font-medium">Justification:</span>{" "}
+                    <span>{backendResult.measurable_outcomes.justification}</span>
+                  </div>
+                )}
+                {backendResult.measurable_outcomes?.suggestions?.length > 0 && (
+                  <div>
+                    <span className="font-medium">Suggestions:</span>
+                    <ul className="list-disc pl-5">
+                      {backendResult.measurable_outcomes.suggestions.map((suggestion, index) => (
+                        <li key={index}>{suggestion}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
-              <div>
-                <span className="font-medium">Proposal Quality:</span>
-                <ul className="list-disc pl-5">
-                  <li>
-                    <span className="font-medium">Clarity of Goals:</span> {backendResult.proposal_quality.clarity_of_goals}
-                  </li>
-                  <li>
-                    <span className="font-medium">Completeness:</span> {backendResult.proposal_quality.completeness_of_sections}
-                  </li>
-                  <li>
-                    <span className="font-medium">Level of Detail:</span> {backendResult.proposal_quality.level_of_detail}
-                  </li>
-                  <li>
-                    <span className="font-medium">Community Adaptability:</span> {backendResult.proposal_quality.community_adaptability}
-                  </li>
-                </ul>
+
+              {/* Budget */}
+              <div className="border-b border-white/10 pb-3">
+                <h3 className="text-md font-semibold mb-2">Budget</h3>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-medium">Status:</span>
+                  <StatusBadge status={backendResult.budget?.status} />
+                </div>
+                {backendResult.budget?.justification && (
+                  <div className="mb-1">
+                    <span className="font-medium">Justification:</span>{" "}
+                    <span>{backendResult.budget.justification}</span>
+                  </div>
+                )}
+                {backendResult.budget?.suggestions?.length > 0 && (
+                  <div>
+                    <span className="font-medium">Suggestions:</span>
+                    <ul className="list-disc pl-5">
+                      {backendResult.budget.suggestions.map((suggestion, index) => (
+                        <li key={index}>{suggestion}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
+
+              {/* Technical Specifications */}
+              <div className="border-b border-white/10 pb-3">
+                <h3 className="text-md font-semibold mb-2">Technical Specifications</h3>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-medium">Status:</span>
+                  <StatusBadge status={backendResult.technical_specifications?.status} />
+                </div>
+                {backendResult.technical_specifications?.justification && (
+                  <div className="mb-1">
+                    <span className="font-medium">Justification:</span>{" "}
+                    <span>{backendResult.technical_specifications.justification}</span>
+                  </div>
+                )}
+                {backendResult.technical_specifications?.suggestions?.length > 0 && (
+                  <div>
+                    <span className="font-medium">Suggestions:</span>
+                    <ul className="list-disc pl-5">
+                      {backendResult.technical_specifications.suggestions.map((suggestion, index) => (
+                        <li key={index}>{suggestion}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              {/* Language Quality */}
               <div>
-                <span className="font-medium">Submitter Intentions:</span>
-                <ul className="list-disc pl-5">
-                  <li>
-                    <span className="font-medium">Identity:</span> {backendResult.submitter_intentions.submitter_identity}
-                  </li>
-                </ul>
+                <h3 className="text-md font-semibold mb-2">Language Quality</h3>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-medium">Status:</span>
+                  <StatusBadge status={backendResult.language_quality?.status} />
+                </div>
+                {backendResult.language_quality?.justification && (
+                  <div className="mb-1">
+                    <span className="font-medium">Justification:</span>{" "}
+                    <span>{backendResult.language_quality.justification}</span>
+                  </div>
+                )}
+                {backendResult.language_quality?.suggestions?.length > 0 && (
+                  <div>
+                    <span className="font-medium">Suggestions:</span>
+                    <ul className="list-disc pl-5">
+                      {backendResult.language_quality.suggestions.map((suggestion, index) => (
+                        <li key={index}>{suggestion}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         )}
-
         {result && (
           <div className="grid gap-4 overflow-hidden">
             <div className="grid gap-2">
