@@ -6,30 +6,56 @@ body:
   - type: markdown
     attributes:
       value: |
-        ## Description
-        Please provide a clear description of the issue
+        # Bug Report
+        
+        Please provide a clear and detailed description of the issue you're experiencing.
+  
   - type: textarea
     id: description
     attributes:
       label: Description
-      description: What happened?
+      placeholder: |
+        ### Description
+        
+        The proposal analysis feature is failing when processing proposals with embedded code blocks. When a user submits a proposal containing ```code``` blocks, the analysis returns a 500 error instead of properly analyzing the content.
+        
+        **Steps to reproduce:**
+        1. Navigate to the proposal analysis page
+        2. Submit a proposal containing markdown code blocks
+        3. Wait for analysis to complete
+        
+        **Expected behavior:** Analysis should complete successfully with proper handling of code blocks
+        **Actual behavior:** Server returns 500 error and analysis fails
     validations:
       required: true
-  - type: markdown
-    attributes:
-      value: |
-        ## Acceptance Criteria
+  
   - type: textarea
-    id: acceptance
+    id: acceptance_criteria
     attributes:
       label: Acceptance Criteria
-      description: What needs to be done to resolve this issue?
+      placeholder: |
+        ### Acceptance Criteria
+        
+        * [ ] Fix the parser to properly handle markdown code blocks in proposals
+        * [ ] Add proper escaping of special characters in the analysis pipeline
+        * [ ] Add unit tests for proposals containing various markdown elements
+        * [ ] Ensure the API returns appropriate error messages instead of 500 errors
+        * [ ] Verify fix works with both single and triple backtick code blocks
     validations:
       required: true
-  - type: checkboxes
-    id: checks
+      
+  - type: textarea
+    id: additional_info
     attributes:
-      label: Checklist
-      options:
-        - label: check one
-        - label: check two
+      label: Additional Information
+      description: Any additional context, environment details, or screenshots that might help
+      placeholder: |
+        ### Additional Information
+        
+        * Browser: Chrome 115.0.5790.171
+        * OS: macOS 13.4
+        * Error from console: `Uncaught SyntaxError: Unexpected token '`' in JSON at position 42`
+        
+        ![Screenshot of the error](URL_TO_SCREENSHOT)
+    validations:
+      required: false
