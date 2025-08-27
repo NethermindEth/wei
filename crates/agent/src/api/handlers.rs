@@ -43,7 +43,7 @@ pub async fn analyze_proposal(
         .await
         .map_err(|e| {
             error!("Error analyzing proposal: {:?}", e);
-            internal_error(format!("Failed to analyze proposal: {}", e))
+            ApiError::internal_error(format!("Failed to analyze proposal: {}", e))
         })?;
 
     Ok(Json(AnalyzeResponse {
