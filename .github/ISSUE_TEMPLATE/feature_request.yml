@@ -35,12 +35,12 @@ body:
   - type: textarea
     id: alternatives
     attributes:
-      label: Alternatives Considered
+      label: Alternatives Considered (Optional)
       description: Have you considered any alternative solutions or features?
-      value: |
+      placeholder: |
         ### Alternatives Considered
         
-        * Full OAuth integration was considered but rejected due to complexity and timeline constraints.
-        * Using a simple password system was considered but offers no real security benefit over the proposed solution.
+        * alternative one
+        * alternative two
     validations:
       required: false
