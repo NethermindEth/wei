@@ -5,14 +5,10 @@ pub struct ProposalQuestions {
 
 pub struct BinaryQuestions {
     pub proposal: Vec<&'static str>,
-    pub submitter_identity: Vec<&'static str>,
-    pub submitter_motivation: Vec<&'static str>,
 }
 
 pub struct ReasoningQuestions {
     pub proposal: Vec<&'static str>,
-    pub submitter_identity: Vec<&'static str>,
-    pub submitter_motivation: Vec<&'static str>,
 }
 
 pub fn get_proposal_questions() -> ProposalQuestions {
@@ -39,22 +35,6 @@ pub fn get_proposal_questions() -> ProposalQuestions {
                 "Does the proposal indicate future work or unlocks after the proposal is completed (yes/no)",
                 "Does the proposal relate to building a community (yes/no)",
             ],
-            submitter_identity: vec![
-                "Is the proposal submitter identified? (yes/no)",
-                "Does the submitter have an official or recognized role in the DAO (e.g., delegate, core contributor, grantee)? (yes/no)",
-                "Has the submitter contributed to previous proposals or DAO initiatives? (yes/no)",
-                "Is this the submitter's first proposal to the DAO? (yes/no)",
-                "Is the submitter affiliated with an organization mentioned in the proposal? (yes/no)",
-            ],
-            submitter_motivation: vec![
-                "Does the proposal describe how the submitter is impacted by the problem being addressed? (yes/no)",
-                "Is the submitter asking for compensation or reimbursement? (yes/no)",
-                "Does the submitter reference community needs, ecosystem growth, or long-term impact as justification? (yes/no)",
-                "Was the proposal updated or improved after community input? (yes/no)",
-                "Is the proposer's past performance discussed in the current proposal? (yes/no)",
-                "Is there independent verification or endorsement of the submitter's work or claims? (yes/no)",
-                "Is the proposal's success dependent on the submitter's execution or leadership? (yes/no)",
-            ],
         },
         reasoning_questions: ReasoningQuestions {
             proposal: vec![
@@ -68,24 +48,6 @@ pub fn get_proposal_questions() -> ProposalQuestions {
                 "What past events or decisions does this proposal reference or build on?",
                 "What are the voting options and what does each one mean?",
                 "What part of the DAO or ecosystem will be affected by this proposal?",
-            ],
-            submitter_identity: vec![
-                "Who is the submitter of this proposal?",
-                "What is the submitter's relationship to the DAO (e.g., delegate, core team, external contributor)?",
-                "Is the submitter affiliated with any organization or team mentioned in the proposal?",
-                "What previous contributions has the submitter made to the DAO or ecosystem?",
-                "What responsibilities (if any) does the submitter claim in the implementation of this proposal?",
-                "Does the submitter reference any relevant expertise or qualifications?",
-                "How visible or active is the submitter in public DAO discussions or governance forums?",
-            ],
-            submitter_motivation: vec![
-                "What is the submitter's stated or implied motivation for this proposal?",
-                "How might the submitter or their affiliates benefit if the proposal passes?",
-                "Does the submitter explain how the proposal aligns with broader DAO goals?",
-                "Has the submitter acknowledged any risks or trade-offs in the proposal?",
-                "Did the submitter commit to any follow-up, delivery, or accountability steps?",
-                "What tone does the submitter use in the proposal (e.g., neutral, persuasive, defensive)?",
-                "How has the submitter responded to questions or feedback from the community, if at all?",
             ],
         },
     }

@@ -5,14 +5,10 @@ pub struct ProposalQuestions {
 
 pub struct BinaryQuestions {
     pub proposal: Vec<&'static str>,
-    pub submitter_identity: Vec<&'static str>,
-    pub submitter_motivation: Vec<&'static str>,
 }
 
 pub struct ReasoningQuestions {
     pub proposal: Vec<&'static str>,
-    pub submitter_identity: Vec<&'static str>,
-    pub submitter_motivation: Vec<&'static str>,
 }
 
 pub fn get_proposal_one_answers() -> ProposalQuestions {
@@ -39,22 +35,6 @@ pub fn get_proposal_one_answers() -> ProposalQuestions {
                 "yes",
                 "yes",
             ],
-            submitter_identity: vec![
-                "yes",
-                "yes",
-                "yes",
-                "no",
-                "yes",
-            ],
-            submitter_motivation: vec![
-                "yes",
-                "no",
-                "yes",
-                "yes",
-                "yes",
-                "yes",
-                "yes",
-            ],
         },
         reasoning_questions: ReasoningQuestions {
             proposal: vec![
@@ -68,24 +48,6 @@ pub fn get_proposal_one_answers() -> ProposalQuestions {
                 "Hackathon Continuation Program (DAO-approved).Domain Allocator Season 1 leftover funds.Treasury Management Committee (TMC v1.2 proposal).Coordination with Arbitrum Foundation (AF)",
                 "A. Only top-up the HCP → Use $89,980 to fund HCP; send remaining funds back to DAO.B. Yes to both → Fund HCP and allocate leftover funds to TMC.C. Against → No top-up for HCP; all funds returned to DAO.D. Abstain → No preference.",
                 "Hackathon Continuation Program (direct funding).Projects participating in HCP (builders).Treasury Management Committee (if option B passes).DAO Treasury (depending on outcome).",
-            ],
-            submitter_identity: vec![
-                "RnDAO (with references to @jojo).",
-                "Grantee / program operator — manages the Hackathon Continuation Program.",
-                "Yes — RnDAO is directly referenced as program lead.",
-                "Running the HCP. Developing a fund management process in coordination with the AF.",
-                "Managing the continuation of the Hackathon program and handling payments under the updated fund management system.",
-                "Indirectly — demonstrated by past work with AF on designing a compliance-friendly fund management system.",
-                "Moderately visible — cited coordination with AF, proposals on fund management, and references to community suggestions (e.g., @jojo’s input).",
-            ],
-            submitter_motivation: vec![
-                "Ensure that Hackathon projects receive expected funding to continue, while also securing a stronger foundation for DAO-led investments.",
-                "RnDAO maintains credibility as a program operator.Projects under HCP get funded and continue building.RnDAO indirectly benefits by successfully delivering on commitments.",
-                "Yes — supports builders, prevents ecosystem leakage, and contributes to sustainable treasury management practices.",
-                "Yes — mentions market risks, compliance routing, and the fact that this is not meant to set a recurring precedent.",
-                "Yes — describes how funds will be routed, managed, and used; commits to continuing HCP with improved fund management system.",
-                "Persuasive but factual — explains the problem, risks, and urgency without emotional language.",
-                "Yes — incorporated input from @jojo and collaborated with AF for compliance, indicating responsiveness to community/DAO stakeholders.",
             ],
         },
     }

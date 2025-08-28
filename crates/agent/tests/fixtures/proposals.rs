@@ -1,8 +1,8 @@
 // Fixed proposal strings with proper Rust syntax
 
 pub fn get_proposals() -> Vec<&'static str> {
-// Proposal 1 - Arbitrum Hackathon Continuation Program
-let proposal_1: &'static str = r#"Abstract
+    // Proposal 1 - Arbitrum Hackathon Continuation Program
+    let proposal_1: &'static str = r#"Abstract
 Arbitrum lacks an efficient mechanism to swap funds for projects, which has led to multiple challenges for service providers around token price changes. Specifically, the Hackathon Continuation Program is currently underfunded by $89,980 USD due to token price drop before RnDAO received any funds.
 
 Beyond usual market risks, the program faced prolonged market risks due to delays as we worked with the Arbitrum Foundation on an improved fund management system for DAO-led investments, creating a valuable process template for the Arbitrum ecosystem, but exposing us to this situation.
@@ -55,8 +55,8 @@ B. yes to both: top-up the HCP and leftover funds to the TMC
 C. againts:all funds to the DAO (don't top-up the HCP nor TMC)
 D. abstain"#;
 
-// Proposal 2 - Arbitrum Events Budget
-let proposal_2 = r#"Non-Constitutional
+    // Proposal 2 - Arbitrum Events Budget
+    let proposal_2 = r#"Non-Constitutional
 Key Changes Made on July 23, 2025
 The 2025 Events Budget will no longer be dissolved, and instead funds will be moved to a yield bearing account managed by the Arbitrum Foundation/treasury managers. The Events Budget process will remain as currently structured until the end of 2025.
 
@@ -91,8 +91,8 @@ July 14th: Forum post
 July 24th - July 31st : Snapshot vote
 By August 7th: If passed, funds will be transferred to the stablecoin strategy address within 7 days"#;
 
-// Proposal 3 - Increasing LOL Easy Track Limits
-let proposal_3 = r#"Increasing LOL Easy Track Limits to align with Grant Requests
+    // Proposal 3 - Increasing LOL Easy Track Limits
+    let proposal_3 = r#"Increasing LOL Easy Track Limits to align with Grant Requests
 Closed
 
 TLDR
@@ -107,8 +107,8 @@ The LOL Easy Track Motions have a limit of 100k DAI per motion. This proposal se
 Copyright
 Copyright and related rights waived via CC0."#;
 
-// Proposal 4 - Lido Ecosystem BORG Foundation
-let proposal_4 = r#"TLDR
+    // Proposal 4 - Lido Ecosystem BORG Foundation
+    let proposal_4 = r#"TLDR
 The Lido Ecosystem BORG Foundation (the "Foundation") proposes changing the Easy Track limits for the Reimbursement and Reward Committee (RCC) to 100,000 DAI per motion (from 50,000 DAI) and 500,000 DAI per month (from 250,000 DAI).
 
 Motivation
@@ -120,8 +120,8 @@ The Foundation proposes changing the Easy Track limits for the Reimbursement and
 Copyright
 Copyright and related rights waived via CC0."#;
 
-// Proposal 5 - Increase Snapshot Proposal Threshold
-let proposal_5 = r#"l;dr
+    // Proposal 5 - Increase Snapshot Proposal Threshold
+    let proposal_5 = r#"l;dr
 This proposal seeks to increase the Snapshot proposal threshold to 5,000 ~ 15,000 LDO to prevent spam and ensure that only serious proposals are submitted. The current threshold of 0.5% of the total voting power is too low and has resulted in a large number of low-quality proposals.
 
 Motivation
@@ -133,8 +133,8 @@ This proposal seeks to increase the Snapshot proposal threshold to 5,000 ~ 15,00
 Copyright
 Copyright and related rights waived via CC0."#;
 
-// Proposal 6 - Orbit Program Renewal
-let proposal_6 = r#"[ARFC] Orbit Program Renewal - Q2 2025
+    // Proposal 6 - Orbit Program Renewal
+    let proposal_6 = r#"[ARFC] Orbit Program Renewal - Q2 2025
 Author: ACI (Aave Chan Initiative)
 Date: 2025-07-03
 Summary
@@ -170,7 +170,7 @@ The ACI is independent and has not received any form of compensation from relate
 Copyright
 Copyright and related rights waived under Creative Commons Zero (CC0)"#;
 
-let proposal_8 = r#"GIP-128 Should GnosisDAO fund Gnosis Ltd with $30m/ year?
+    let proposal_8 = r#"GIP-128 Should GnosisDAO fund Gnosis Ltd with $30m/ year?
 Passed
 
 0xbE96...795B
@@ -250,7 +250,7 @@ Future funding will depend on DAO review of outcomes and updated proposals.
 
 Gnosis Ltd seeded the DAO. This proposal ensures the DAO can continue to rely on it. Onwards and upwards! :rocket:"#;
 
-let proposal_9 = r#"Ecosystem Proposal - Zen Card
+    let proposal_9 = r#"Ecosystem Proposal - Zen Card
 Closed
 
 0xb6Ba...6903
@@ -292,7 +292,7 @@ Official Links
 Website: zencard.io
 Twitter: x.com/ZenCardio"#;
 
-let proposal_10 = r#"AIP-555: Rebranding ApeCoin: Transition from Ape Skull to New Gorilla Logo
+    let proposal_10 = r#"AIP-555: Rebranding ApeCoin: Transition from Ape Skull to New Gorilla Logo
  Passed
 
 0xFA98...bC28 admin
@@ -325,7 +325,7 @@ Link to the full proposal: (https://forum.apecoin.com/t/aip-555-rebranding-apeco
 
 The AIP implementation is administered by the Ape Foundation. Implementation may be immaterially or materially altered to optimise for security, usability, to protect APE holders, and otherwise to effect the intent of the AIP. Any material deviations from an AIP, as initially approved, will be disclosed to the APE holder community."#;
 
-let proposal_11 = r#"Add USDe to Moonwell Core Market on Base and Optimism
+    let proposal_11 = r#"Add USDe to Moonwell Core Market on Base and Optimism
  Passed
 
 azgardadmin.eth
@@ -407,7 +407,7 @@ Adding USDe as a core lending market will boost stablecoin utility and drive liq
 
 I'm opening this proposal to the community for review, discussion, and feedback to ensure its success and alignment with our vision for a secure and decentralized onchain financial future."#;
 
-let proposal_12 = r#"[RCC-3] October 1, 2022 - October 31, 2022 Budget Request
+    let proposal_12 = r#"[RCC-3] October 1, 2022 - October 31, 2022 Budget Request
  Passed
 
 zuzu_eeka
@@ -444,20 +444,20 @@ If requested, DAI 400k will be made available to the RCC multisig 0xDE06d17Db929
 If not necessary, the DAI 400k will not be drawn at all
 If drawn, unused funds will be returned before 31-Dec-2022"#;
 
-// Create an array with all proposal variables
-let proposals = vec![
-    proposal_1,
-    proposal_2,
-    proposal_3,
-    proposal_4,
-    proposal_5,
-    proposal_6,
-    proposal_8,
-    proposal_9,
-    proposal_10,
-    proposal_11,
-    proposal_12,
-];
+    // Create an array with all proposal variables
+    let proposals = vec![
+        proposal_1,
+        proposal_2,
+        proposal_3,
+        proposal_4,
+        proposal_5,
+        proposal_6,
+        proposal_8,
+        proposal_9,
+        proposal_10,
+        proposal_11,
+        proposal_12,
+    ];
 
-proposals
+    proposals
 }

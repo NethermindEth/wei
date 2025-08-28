@@ -1,4 +1,4 @@
-use agent::models::analysis::{StructuredAnalysisResponse, EvaluationCategory};
+use agent::models::analysis::{EvaluationCategory, StructuredAnalysisResponse};
 use agent::models::Proposal;
 use agent::utils::error::Result;
 use serde_json::{json, Value};
@@ -98,12 +98,14 @@ async fn test_expected_format() {
     let response = StructuredAnalysisResponse {
         goals_and_motivation: EvaluationCategory {
             status: "pass".to_string(),
-            justification: "The proposal clearly states its goal to address funding shortfall.".to_string(),
+            justification: "The proposal clearly states its goal to address funding shortfall."
+                .to_string(),
             suggestions: vec![],
         },
         measurable_outcomes: EvaluationCategory {
             status: "pass".to_string(),
-            justification: "The proposal specifies the exact amount needed ($89,980 USD).".to_string(),
+            justification: "The proposal specifies the exact amount needed ($89,980 USD)."
+                .to_string(),
             suggestions: vec![],
         },
         budget: EvaluationCategory {
@@ -113,12 +115,15 @@ async fn test_expected_format() {
         },
         technical_specifications: EvaluationCategory {
             status: "n/a".to_string(),
-            justification: "This proposal is about fund reallocation, not technical implementation.".to_string(),
+            justification:
+                "This proposal is about fund reallocation, not technical implementation."
+                    .to_string(),
             suggestions: vec![],
         },
         language_quality: EvaluationCategory {
             status: "pass".to_string(),
-            justification: "The proposal is well-written and clearly communicates the need.".to_string(),
+            justification: "The proposal is well-written and clearly communicates the need."
+                .to_string(),
             suggestions: vec![],
         },
     };
@@ -174,24 +179,39 @@ async fn test_expected_format() {
     validate_category(&analysis.goals_and_motivation, "Goals and motivation");
     validate_category(&analysis.measurable_outcomes, "Measurable outcomes");
     validate_category(&analysis.budget, "Budget");
-    validate_category(&analysis.technical_specifications, "Technical specifications");
+    validate_category(
+        &analysis.technical_specifications,
+        "Technical specifications",
+    );
     validate_category(&analysis.language_quality, "Language quality");
 }
 
 // Helper function to validate an evaluation category
 fn validate_category(category: &EvaluationCategory, name: &str) {
-    assert!(!category.status.is_empty(), "{} status should not be empty", name);
-    
+    assert!(
+        !category.status.is_empty(),
+        "{} status should not be empty",
+        name
+    );
+
     // If status is "fail", there should be suggestions
     if category.status == "fail" {
-        assert!(!category.suggestions.is_empty(), "{} should have suggestions when failing", name);
+        assert!(
+            !category.suggestions.is_empty(),
+            "{} should have suggestions when failing",
+            name
+        );
     }
-    
+
     // If status is "n/a", there should be a justification
     if category.status == "n/a" {
-        assert!(!category.justification.is_empty(), "{} should have justification when n/a", name);
+        assert!(
+            !category.justification.is_empty(),
+            "{} should have justification when n/a",
+            name
+        );
     }
-    
+
     println!("{} status: {}", name, category.status);
     if !category.justification.is_empty() {
         println!("{} justification: {}", name, category.justification);
