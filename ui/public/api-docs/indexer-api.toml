@@ -1,0 +1,468 @@
+# Wei Indexer Service API Specification
+# OpenAPI 3.0.3 in TOML format
+
+openapi = "3.0.3"
+
+[info]
+title = "Wei Indexer Service API"
+description = """
+The Wei Indexer Service indexes and provides access to DAO/Governance proposals across multiple networks.
+It aggregates proposal data from various sources, tracks proposal status, and enables webhook subscriptions
+for real-time updates.
+"""
+version = "1.0.0"
+contact = { name = "Wei Team", email = "support@wei.io" }
+license = { name = "MIT", url = "https://opensource.org/licenses/MIT" }
+
+[servers]
+[[servers]]
+url = "http://localhost:8002"
+description = "Local development server"
+
+[[servers]]
+url = "https://api.wei.io/indexer"
+description = "Production server"
+
+[components.schemas.ProposalStatus]
+type = "string"
+enum = ["Active", "Accepted", "Rejected", "Pending", "Cancelled", "Executed"]
+description = "Current status of the proposal"
+
+[components.schemas.ProtocolId]
+type = "string"
+description = "Identifier of the protocol/network (e.g., ethereum, arbitrum, optimism)"
+example = "ethereum"
+
+[components.schemas.Proposal]
+type = "object"
+required = ["id", "title", "description", "status", "protocol_id", "choices", "author", "created_at", "updated_at"]
+properties = {
+  id = { type = "string", description = "Unique identifier combining protocol and proposal ID", example = "ethereum-prop-123" },
+  title = { type = "string", description = "Title of the proposal", example = "Allocate funds for Q2 development" },
+  description = { type = "string", description = "Full description of the proposal" },
+  status = { "$ref" = "#/components/schemas/ProposalStatus" },
+  protocol_id = { "$ref" = "#/components/schemas/ProtocolId" },
+  choices = { type = "array", items = { type = "string" }, description = "Available voting options", example = ["For", "Against", "Abstain"] },
+  author = { type = "string", description = "Address or ENS of the proposal author", example = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb1" },
+  comments = { type = "array", items = { type = "string" }, description = "Comments and discussions about the proposal" },
+  created_at = { type = "string", format = "date-time", description = "Proposal creation timestamp" },
+  updated_at = { type = "string", format = "date-time", description = "Last update timestamp" }
+}
+
+[components.schemas.Account]
+type = "object"
+properties = {
+  address = { type = "string", description = "Ethereum address", example = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb1" },
+  ens = { type = "string", description = "ENS name if available", example = "vitalik.eth" },
+  proposals_created = { type = "integer", description = "Number of proposals created by this account" },
+  votes_cast = { type = "integer", description = "Number of votes cast by this account" },
+  voting_power = { type = "string", description = "Current voting power" },
+  first_seen = { type = "string", format = "date-time", description = "First activity timestamp" },
+  last_active = { type = "string", format = "date-time", description = "Last activity timestamp" }
+}
+
+[components.schemas.WebhookRegistration]
+type = "object"
+required = ["url", "events"]
+properties = {
+  url = { type = "string", format = "uri", description = "URL to send webhook notifications to", example = "https://example.com/webhooks/wei" },
+  events = { 
+    type = "array", 
+    items = { type = "string" }, 
+    description = "List of event types to subscribe to",
+    example = ["proposal.created", "proposal.executed", "proposal.cancelled"]
+  },
+  secret = { type = "string", description = "Optional secret for webhook signature verification" },
+  active = { type = "boolean", default = true, description = "Whether the webhook is active" }
+}
+
+[components.schemas.WebhookResponse]
+type = "object"
+required = ["id", "status"]
+properties = {
+  id = { type = "string", format = "uuid", description = "Unique identifier for the registered webhook" },
+  status = { type = "string", description = "Registration status", example = "active" },
+  created_at = { type = "string", format = "date-time", description = "Registration timestamp" }
+}
+
+[components.schemas.SearchParams]
+type = "object"
+properties = {
+  description = { type = "string", description = "Text to search for in proposal descriptions" },
+  title = { type = "string", description = "Text to search for in proposal titles" },
+  status = { "$ref" = "#/components/schemas/ProposalStatus" },
+  protocol_id = { "$ref" = "#/components/schemas/ProtocolId" },
+  author = { type = "string", description = "Filter by author address or ENS" },
+  created_after = { type = "string", format = "date-time", description = "Filter proposals created after this date" },
+  created_before = { type = "string", format = "date-time", description = "Filter proposals created before this date" },
+  limit = { type = "integer", minimum = 1, maximum = 100, default = 20, description = "Maximum number of results to return" },
+  offset = { type = "integer", minimum = 0, default = 0, description = "Number of results to skip" }
+}
+
+[components.schemas.ErrorResponse]
+type = "object"
+required = ["message", "status"]
+properties = {
+  message = { type = "string", description = "Error message" },
+  status = { type = "integer", description = "HTTP status code" }
+}
+
+[paths."/health"]
+get = {
+  summary = "Health Check",
+  description = "Check if the service is running and healthy",
+  operationId = "healthCheck",
+  tags = ["Health"],
+  responses = {
+    "200" = {
+      description = "Service is healthy",
+      content = {
+        "text/plain" = {
+          schema = { type = "string", example = "OK" }
+        }
+      }
+    }
+  }
+}
+
+[paths."/proposals/{id}"]
+get = {
+  summary = "Get Proposal by ID",
+  description = "Retrieve a specific proposal by its unique identifier",
+  operationId = "getProposalById",
+  tags = ["Proposals"],
+  parameters = [
+    {
+      name = "id",
+      in = "path",
+      required = true,
+      description = "Proposal ID (format: protocol-proposal_number)",
+      schema = { type = "string", example = "ethereum-prop-123" }
+    }
+  ],
+  responses = {
+    "200" = {
+      description = "Proposal retrieved successfully",
+      content = {
+        "application/json" = {
+          schema = { "$ref" = "#/components/schemas/Proposal" }
+        }
+      }
+    },
+    "404" = {
+      description = "Proposal not found",
+      content = {
+        "application/json" = {
+          schema = { "$ref" = "#/components/schemas/ErrorResponse" }
+        }
+      }
+    },
+    "501" = {
+      description = "Not implemented yet",
+      content = {
+        "application/json" = {
+          schema = { "$ref" = "#/components/schemas/ErrorResponse" }
+        }
+      }
+    }
+  }
+}
+
+[paths."/proposals/network/{network}"]
+get = {
+  summary = "Get Proposals by Network",
+  description = "Retrieve all proposals for a specific network/protocol",
+  operationId = "getProposalsByNetwork",
+  tags = ["Proposals"],
+  parameters = [
+    {
+      name = "network",
+      in = "path",
+      required = true,
+      description = "Network/Protocol identifier",
+      schema = { "$ref" = "#/components/schemas/ProtocolId" }
+    },
+    {
+      name = "status",
+      in = "query",
+      required = false,
+      description = "Filter by proposal status",
+      schema = { "$ref" = "#/components/schemas/ProposalStatus" }
+    },
+    {
+      name = "limit",
+      in = "query",
+      required = false,
+      description = "Maximum number of results",
+      schema = { type = "integer", minimum = 1, maximum = 100, default = 20 }
+    },
+    {
+      name = "offset",
+      in = "query",
+      required = false,
+      description = "Number of results to skip",
+      schema = { type = "integer", minimum = 0, default = 0 }
+    }
+  ],
+  responses = {
+    "200" = {
+      description = "Proposals retrieved successfully",
+      content = {
+        "application/json" = {
+          schema = {
+            type = "array",
+            items = { "$ref" = "#/components/schemas/Proposal" }
+          }
+        }
+      }
+    },
+    "404" = {
+      description = "Network not found",
+      content = {
+        "application/json" = {
+          schema = { "$ref" = "#/components/schemas/ErrorResponse" }
+        }
+      }
+    },
+    "501" = {
+      description = "Not implemented yet",
+      content = {
+        "application/json" = {
+          schema = { "$ref" = "#/components/schemas/ErrorResponse" }
+        }
+      }
+    }
+  }
+}
+
+[paths."/proposals/search"]
+get = {
+  summary = "Search Proposals",
+  description = "Search proposals by title, description, or other criteria",
+  operationId = "searchProposals",
+  tags = ["Proposals"],
+  parameters = [
+    {
+      name = "description",
+      in = "query",
+      required = false,
+      description = "Search text in proposal descriptions",
+      schema = { type = "string" }
+    },
+    {
+      name = "title",
+      in = "query",
+      required = false,
+      description = "Search text in proposal titles",
+      schema = { type = "string" }
+    },
+    {
+      name = "status",
+      in = "query",
+      required = false,
+      description = "Filter by proposal status",
+      schema = { "$ref" = "#/components/schemas/ProposalStatus" }
+    },
+    {
+      name = "protocol_id",
+      in = "query",
+      required = false,
+      description = "Filter by protocol/network",
+      schema = { "$ref" = "#/components/schemas/ProtocolId" }
+    },
+    {
+      name = "author",
+      in = "query",
+      required = false,
+      description = "Filter by author address or ENS",
+      schema = { type = "string" }
+    },
+    {
+      name = "created_after",
+      in = "query",
+      required = false,
+      description = "Filter proposals created after this date",
+      schema = { type = "string", format = "date-time" }
+    },
+    {
+      name = "created_before",
+      in = "query",
+      required = false,
+      description = "Filter proposals created before this date",
+      schema = { type = "string", format = "date-time" }
+    },
+    {
+      name = "limit",
+      in = "query",
+      required = false,
+      description = "Maximum number of results",
+      schema = { type = "integer", minimum = 1, maximum = 100, default = 20 }
+    },
+    {
+      name = "offset",
+      in = "query",
+      required = false,
+      description = "Number of results to skip",
+      schema = { type = "integer", minimum = 0, default = 0 }
+    }
+  ],
+  responses = {
+    "200" = {
+      description = "Search results retrieved successfully",
+      content = {
+        "application/json" = {
+          schema = {
+            type = "object",
+            properties = {
+              results = {
+                type = "array",
+                items = { "$ref" = "#/components/schemas/Proposal" }
+              },
+              total = { type = "integer", description = "Total number of matching proposals" },
+              limit = { type = "integer", description = "Results per page" },
+              offset = { type = "integer", description = "Current offset" }
+            }
+          }
+        }
+      }
+    },
+    "400" = {
+      description = "Invalid search parameters",
+      content = {
+        "application/json" = {
+          schema = { "$ref" = "#/components/schemas/ErrorResponse" }
+        }
+      }
+    },
+    "501" = {
+      description = "Not implemented yet",
+      content = {
+        "application/json" = {
+          schema = { "$ref" = "#/components/schemas/ErrorResponse" }
+        }
+      }
+    }
+  }
+}
+
+[paths."/accounts"]
+get = {
+  summary = "Get Account Information",
+  description = "Retrieve account information by address or ENS name",
+  operationId = "getAccountByAddress",
+  tags = ["Accounts"],
+  parameters = [
+    {
+      name = "address",
+      in = "query",
+      required = false,
+      description = "Ethereum address",
+      schema = { type = "string", pattern = "^0x[a-fA-F0-9]{40}$" }
+    },
+    {
+      name = "ens",
+      in = "query",
+      required = false,
+      description = "ENS name",
+      schema = { type = "string" }
+    }
+  ],
+  responses = {
+    "200" = {
+      description = "Account information retrieved successfully",
+      content = {
+        "application/json" = {
+          schema = { "$ref" = "#/components/schemas/Account" }
+        }
+      }
+    },
+    "400" = {
+      description = "Invalid parameters - must provide either address or ENS",
+      content = {
+        "application/json" = {
+          schema = { "$ref" = "#/components/schemas/ErrorResponse" }
+        }
+      }
+    },
+    "404" = {
+      description = "Account not found",
+      content = {
+        "application/json" = {
+          schema = { "$ref" = "#/components/schemas/ErrorResponse" }
+        }
+      }
+    },
+    "501" = {
+      description = "Not implemented yet",
+      content = {
+        "application/json" = {
+          schema = { "$ref" = "#/components/schemas/ErrorResponse" }
+        }
+      }
+    }
+  }
+}
+
+[paths."/hooks"]
+post = {
+  summary = "Register Webhook",
+  description = "Register a webhook to receive notifications about proposal events",
+  operationId = "registerWebhook",
+  tags = ["Webhooks"],
+  requestBody = {
+    required = true,
+    content = {
+      "application/json" = {
+        schema = { "$ref" = "#/components/schemas/WebhookRegistration" },
+        example = {
+          url = "https://example.com/webhooks/wei",
+          events = ["proposal.created", "proposal.executed"],
+          secret = "my-webhook-secret"
+        }
+      }
+    }
+  },
+  responses = {
+    "201" = {
+      description = "Webhook registered successfully",
+      content = {
+        "application/json" = {
+          schema = { "$ref" = "#/components/schemas/WebhookResponse" }
+        }
+      }
+    },
+    "400" = {
+      description = "Invalid webhook configuration",
+      content = {
+        "application/json" = {
+          schema = { "$ref" = "#/components/schemas/ErrorResponse" }
+        }
+      }
+    },
+    "501" = {
+      description = "Not implemented yet",
+      content = {
+        "application/json" = {
+          schema = { "$ref" = "#/components/schemas/ErrorResponse" }
+        }
+      }
+    }
+  }
+}
+
+[tags]
+[[tags]]
+name = "Health"
+description = "Service health monitoring"
+
+[[tags]]
+name = "Proposals"
+description = "Operations related to governance proposals"
+
+[[tags]]
+name = "Accounts"
+description = "Account and identity information"
+
+[[tags]]
+name = "Webhooks"
+description = "Webhook subscription management"

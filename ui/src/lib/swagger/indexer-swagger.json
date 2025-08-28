@@ -1,0 +1,522 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Wei Indexer Service API",
+    "description": "Data indexing and retrieval service for governance proposals, actors, and protocols across multiple networks.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Wei Team",
+      "url": "https://github.com/NethermindEth/wei"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8001",
+      "description": "Development server"
+    },
+    {
+      "url": "https://wei-indexer.dev-nethermind.xyz/",
+      "description": "Production server"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Check the health status of the indexer service",
+        "operationId": "healthCheck",
+        "tags": ["Health"],
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "OK"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/proposals/{id}": {
+      "get": {
+        "summary": "Get Proposal by ID",
+        "description": "Retrieve a specific governance proposal by its unique identifier",
+        "operationId": "getProposalById",
+        "tags": ["Proposals"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique identifier of the proposal",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Proposal retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Proposal"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Proposal not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/proposals/network/{network}": {
+      "get": {
+        "summary": "Get Proposals by Network",
+        "description": "Retrieve all proposals for a specific network/protocol",
+        "operationId": "getProposalsByNetwork",
+        "tags": ["Proposals"],
+        "parameters": [
+          {
+            "name": "network",
+            "in": "path",
+            "required": true,
+            "description": "Network/protocol identifier",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Proposals retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Proposal"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid network parameter",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/proposals/search": {
+      "get": {
+        "summary": "Search Proposals",
+        "description": "Search proposals by description or title text",
+        "operationId": "searchProposals",
+        "tags": ["Proposals"],
+        "parameters": [
+          {
+            "name": "description",
+            "in": "query",
+            "required": false,
+            "description": "Description text to search for",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "title",
+            "in": "query",
+            "required": false,
+            "description": "Title text to search for",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Search results retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Proposal"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid search parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/accounts": {
+      "get": {
+        "summary": "Get Account by Address",
+        "description": "Retrieve account information by Ethereum address or ENS name",
+        "operationId": "getAccountByAddress",
+        "tags": ["Accounts"],
+        "parameters": [
+          {
+            "name": "address",
+            "in": "query",
+            "required": false,
+            "description": "Ethereum address to look up",
+            "schema": {
+              "type": "string",
+              "pattern": "^0x[a-fA-F0-9]{40}$"
+            }
+          },
+          {
+            "name": "ens",
+            "in": "query",
+            "required": false,
+            "description": "ENS name to look up",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account information retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Account"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid address or ENS parameter",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hooks": {
+      "post": {
+        "summary": "Register Webhook",
+        "description": "Register a new webhook to receive notifications for specific events",
+        "operationId": "registerWebhook",
+        "tags": ["Webhooks"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookRegistration"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Webhook registered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid webhook registration data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Proposal": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier combining protocol and proposal ID"
+          },
+          "title": {
+            "type": "string",
+            "description": "Title of the proposal"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of the proposal"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ProposalStatus"
+          },
+          "protocol_id": {
+            "$ref": "#/components/schemas/ProtocolId"
+          },
+          "choices": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Available choices for voting"
+          },
+          "author": {
+            "type": "string",
+            "description": "Author of the proposal"
+          },
+          "comments": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Comments and discussions"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Creation timestamp"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last update timestamp"
+          }
+        },
+        "required": ["id", "title", "description", "status", "protocol_id", "choices", "author", "created_at", "updated_at"]
+      },
+      "ProposalStatus": {
+        "type": "string",
+        "enum": ["Active", "Accepted", "Rejected", "Pending", "Cancelled", "Executed"],
+        "description": "Status of a proposal"
+      },
+      "ProtocolId": {
+        "type": "string",
+        "description": "Protocol/network identifier",
+        "example": "ethereum"
+      },
+      "Account": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string",
+            "description": "Ethereum address",
+            "pattern": "^0x[a-fA-F0-9]{40}$"
+          },
+          "ens": {
+            "type": "string",
+            "description": "ENS name if available"
+          },
+          "balance": {
+            "type": "string",
+            "description": "Account balance in wei"
+          },
+          "proposals_created": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of proposal IDs created by this account"
+          },
+          "voting_history": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VoteRecord"
+            },
+            "description": "Voting history for this account"
+          }
+        },
+        "required": ["address"]
+      },
+      "VoteRecord": {
+        "type": "object",
+        "properties": {
+          "proposal_id": {
+            "type": "string",
+            "description": "ID of the proposal voted on"
+          },
+          "choice": {
+            "type": "string",
+            "description": "Vote choice"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Vote timestamp"
+          }
+        },
+        "required": ["proposal_id", "choice", "timestamp"]
+      },
+      "WebhookRegistration": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL to send webhook notifications to"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["proposal_created", "proposal_updated", "proposal_executed", "vote_cast"]
+            },
+            "description": "List of event types to subscribe to"
+          }
+        },
+        "required": ["url", "events"]
+      },
+      "WebhookResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "ID of the registered webhook"
+          },
+          "status": {
+            "type": "string",
+            "description": "Status of the registration",
+            "enum": ["active", "pending", "failed"]
+          }
+        },
+        "required": ["id", "status"]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Error message describing what went wrong"
+          },
+          "status": {
+            "type": "integer",
+            "description": "HTTP status code"
+          }
+        },
+        "required": ["message", "status"]
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Health",
+      "description": "Health check endpoints"
+    },
+    {
+      "name": "Proposals",
+      "description": "Proposal management and retrieval endpoints"
+    },
+    {
+      "name": "Accounts",
+      "description": "Account lookup and information endpoints"
+    },
+    {
+      "name": "Webhooks",
+      "description": "Webhook registration and management endpoints"
+    }
+  ]
+}

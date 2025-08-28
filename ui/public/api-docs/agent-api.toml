@@ -1,0 +1,341 @@
+# Wei Agent Service API Specification
+# OpenAPI 3.0.3 in TOML format
+
+openapi = "3.0.3"
+
+[info]
+title = "Wei Agent Service API"
+description = """
+The Wei Agent Service provides AI-powered analysis of governance proposals.
+It evaluates proposal quality, identifies potential issues, and provides structured feedback
+to help stakeholders make informed decisions about DAO proposals.
+"""
+version = "1.0.0"
+contact = { name = "Wei Team", email = "support@wei.io" }
+license = { name = "MIT", url = "https://opensource.org/licenses/MIT" }
+
+[servers]
+[[servers]]
+url = "http://localhost:8001"
+description = "Local development server"
+
+[[servers]]
+url = "https://api.wei.io/agent"
+description = "Production server"
+
+[components.securitySchemes.ApiKeyAuth]
+type = "apiKey"
+in = "header"
+name = "x-api-key"
+description = "API key for authentication. Required for all protected endpoints."
+
+[components.schemas.HealthResponse]
+type = "object"
+required = ["status", "timestamp"]
+properties = {
+  status = { type = "string", description = "Service status", example = "ok" },
+  timestamp = { type = "string", format = "date-time", description = "Current timestamp in RFC3339 format", example = "2024-01-15T10:30:00Z" }
+}
+
+[components.schemas.Proposal]
+type = "object"
+required = ["description"]
+properties = {
+  description = { type = "string", description = "Full description of the proposal", example = "This proposal aims to allocate 100,000 tokens from the treasury to fund development of a new DeFi protocol integration..." }
+}
+
+[components.schemas.AnalysisResult]
+type = "string"
+enum = ["Good", "Bad", "Neutral", "NeedsReview"]
+description = "Overall verdict of the proposal analysis"
+
+[components.schemas.ProposalQuality]
+type = "object"
+properties = {
+  clarity_of_goals = { type = "string", description = "Assessment of how clearly the proposal states its goals" },
+  completeness_of_sections = { type = "string", description = "Evaluation of whether all necessary sections are present" },
+  level_of_detail = { type = "string", description = "Assessment of the detail level provided" },
+  assumptions_made = { type = "array", items = { type = "string" }, description = "List of assumptions identified in the proposal" },
+  missing_elements = { type = "array", items = { type = "string" }, description = "List of missing but expected elements" },
+  community_adaptability = { type = "string", description = "Assessment of how well the proposal can adapt to community feedback" }
+}
+
+[components.schemas.SubmitterIntentions]
+type = "object"
+properties = {
+  submitter_identity = { type = "string", description = "Information about the proposal submitter" },
+  inferred_interests = { type = "array", items = { type = "string" }, description = "Potential interests of the submitter based on analysis" },
+  social_activity = { type = "array", items = { type = "string" }, description = "Notable social activities of the submitter" },
+  strategic_positioning = { type = "array", items = { type = "string" }, description = "Strategic positioning of the submitter in the ecosystem" }
+}
+
+[components.schemas.StructuredAnalysisResponse]
+type = "object"
+required = ["verdict", "conclusion", "proposal_quality", "submitter_intentions"]
+properties = {
+  verdict = { type = "string", description = "Overall verdict (good or bad)", enum = ["good", "bad", "neutral"] },
+  conclusion = { type = "string", description = "Conclusion summary (1-3 sentences)" },
+  proposal_quality = { "$ref" = "#/components/schemas/ProposalQuality" },
+  submitter_intentions = { "$ref" = "#/components/schemas/SubmitterIntentions" }
+}
+
+[components.schemas.Analysis]
+type = "object"
+required = ["id", "proposal_id", "result", "confidence", "details", "created_at"]
+properties = {
+  id = { type = "string", format = "uuid", description = "Unique identifier for the analysis" },
+  proposal_id = { type = "string", description = "ID of the analyzed proposal" },
+  result = { "$ref" = "#/components/schemas/AnalysisResult" },
+  confidence = { type = "number", format = "float", minimum = 0.0, maximum = 1.0, description = "Confidence score of the analysis" },
+  details = { type = "string", description = "Detailed analysis text" },
+  created_at = { type = "string", format = "date-time", description = "Analysis creation timestamp" },
+  structured_response = { "$ref" = "#/components/schemas/StructuredAnalysisResponse" }
+}
+
+[components.schemas.ErrorResponse]
+type = "object"
+required = ["message", "status"]
+properties = {
+  message = { type = "string", description = "Error message" },
+  status = { type = "integer", description = "HTTP status code" }
+}
+
+[paths."/health"]
+get = {
+  summary = "Health Check",
+  description = "Check if the service is running and healthy",
+  operationId = "healthCheck",
+  tags = ["Health"],
+  responses = {
+    "200" = {
+      description = "Service is healthy",
+      content = {
+        "application/json" = {
+          schema = { "$ref" = "#/components/schemas/HealthResponse" }
+        }
+      }
+    }
+  }
+}
+
+[paths."/analyze"]
+post = {
+  summary = "Analyze Proposal",
+  description = "Submit a proposal for AI-powered analysis. Returns structured analysis including quality assessment and submitter intentions.",
+  operationId = "analyzeProposal",
+  tags = ["Analysis"],
+  security = [{ ApiKeyAuth = [] }],
+  requestBody = {
+    required = true,
+    content = {
+      "application/json" = {
+        schema = { "$ref" = "#/components/schemas/Proposal" },
+        example = {
+          description = "This proposal requests 50,000 USDC from the DAO treasury to fund the development of a new governance dashboard. The dashboard will provide real-time analytics, voting history, and proposal tracking features. Development timeline is 3 months with monthly milestone reviews."
+        }
+      }
+    }
+  },
+  responses = {
+    "200" = {
+      description = "Analysis completed successfully",
+      content = {
+        "application/json" = {
+          schema = { "$ref" = "#/components/schemas/StructuredAnalysisResponse" }
+        }
+      }
+    },
+    "400" = {
+      description = "Invalid request body",
+      content = {
+        "application/json" = {
+          schema = { "$ref" = "#/components/schemas/ErrorResponse" }
+        }
+      }
+    },
+    "401" = {
+      description = "Missing or invalid API key",
+      content = {
+        "application/json" = {
+          schema = { "$ref" = "#/components/schemas/ErrorResponse" }
+        }
+      }
+    },
+    "500" = {
+      description = "Internal server error",
+      content = {
+        "application/json" = {
+          schema = { "$ref" = "#/components/schemas/ErrorResponse" }
+        }
+      }
+    }
+  }
+}
+
+[paths."/analyze/{id}"]
+get = {
+  summary = "Get Analysis by ID",
+  description = "Retrieve a previously completed analysis by its unique identifier",
+  operationId = "getAnalysis",
+  tags = ["Analysis"],
+  security = [{ ApiKeyAuth = [] }],
+  parameters = [
+    {
+      name = "id",
+      in = "path",
+      required = true,
+      description = "Analysis ID",
+      schema = { type = "string", format = "uuid" }
+    }
+  ],
+  responses = {
+    "200" = {
+      description = "Analysis retrieved successfully",
+      content = {
+        "application/json" = {
+          schema = { "$ref" = "#/components/schemas/Analysis" }
+        }
+      }
+    },
+    "401" = {
+      description = "Missing or invalid API key",
+      content = {
+        "application/json" = {
+          schema = { "$ref" = "#/components/schemas/ErrorResponse" }
+        }
+      }
+    },
+    "404" = {
+      description = "Analysis not found",
+      content = {
+        "application/json" = {
+          schema = { "$ref" = "#/components/schemas/ErrorResponse" }
+        }
+      }
+    },
+    "501" = {
+      description = "Not implemented yet",
+      content = {
+        "application/json" = {
+          schema = { "$ref" = "#/components/schemas/ErrorResponse" }
+        }
+      }
+    }
+  }
+}
+
+[paths."/analyses/{id}"]
+get = {
+  summary = "Get Analysis by ID (Alias)",
+  description = "Alternative endpoint to retrieve analysis by ID",
+  operationId = "getAnalysisAlias",
+  tags = ["Analysis"],
+  security = [{ ApiKeyAuth = [] }],
+  parameters = [
+    {
+      name = "id",
+      in = "path",
+      required = true,
+      description = "Analysis ID",
+      schema = { type = "string", format = "uuid" }
+    }
+  ],
+  responses = {
+    "200" = {
+      description = "Analysis retrieved successfully",
+      content = {
+        "application/json" = {
+          schema = { "$ref" = "#/components/schemas/Analysis" }
+        }
+      }
+    },
+    "401" = {
+      description = "Missing or invalid API key",
+      content = {
+        "application/json" = {
+          schema = { "$ref" = "#/components/schemas/ErrorResponse" }
+        }
+      }
+    },
+    "404" = {
+      description = "Analysis not found",
+      content = {
+        "application/json" = {
+          schema = { "$ref" = "#/components/schemas/ErrorResponse" }
+        }
+      }
+    },
+    "501" = {
+      description = "Not implemented yet",
+      content = {
+        "application/json" = {
+          schema = { "$ref" = "#/components/schemas/ErrorResponse" }
+        }
+      }
+    }
+  }
+}
+
+[paths."/analyses/proposal/{proposal_id}"]
+get = {
+  summary = "Get Analyses for Proposal",
+  description = "Retrieve all analyses performed for a specific proposal",
+  operationId = "getProposalAnalyses",
+  tags = ["Analysis"],
+  security = [{ ApiKeyAuth = [] }],
+  parameters = [
+    {
+      name = "proposal_id",
+      in = "path",
+      required = true,
+      description = "Proposal ID",
+      schema = { type = "string" }
+    }
+  ],
+  responses = {
+    "200" = {
+      description = "Analyses retrieved successfully",
+      content = {
+        "application/json" = {
+          schema = {
+            type = "array",
+            items = { "$ref" = "#/components/schemas/Analysis" }
+          }
+        }
+      }
+    },
+    "401" = {
+      description = "Missing or invalid API key",
+      content = {
+        "application/json" = {
+          schema = { "$ref" = "#/components/schemas/ErrorResponse" }
+        }
+      }
+    },
+    "404" = {
+      description = "No analyses found for this proposal",
+      content = {
+        "application/json" = {
+          schema = { "$ref" = "#/components/schemas/ErrorResponse" }
+        }
+      }
+    },
+    "501" = {
+      description = "Not implemented yet",
+      content = {
+        "application/json" = {
+          schema = { "$ref" = "#/components/schemas/ErrorResponse" }
+        }
+      }
+    }
+  }
+}
+
+[tags]
+[[tags]]
+name = "Health"
+description = "Health check endpoints"
+
+[[tags]]
+name = "Analysis"
+description = "Proposal analysis operations"
