@@ -2,7 +2,7 @@
 
 pub fn get_proposals() -> Vec<&'static str> {
 // Proposal 1 - Arbitrum Hackathon Continuation Program
-let proposal_1 = r#"Abstract
+let proposal_1: &'static str = r#"Abstract
 Arbitrum lacks an efficient mechanism to swap funds for projects, which has led to multiple challenges for service providers around token price changes. Specifically, the Hackathon Continuation Program is currently underfunded by $89,980 USD due to token price drop before RnDAO received any funds.
 
 Beyond usual market risks, the program faced prolonged market risks due to delays as we worked with the Arbitrum Foundation on an improved fund management system for DAO-led investments, creating a valuable process template for the Arbitrum ecosystem, but exposing us to this situation.

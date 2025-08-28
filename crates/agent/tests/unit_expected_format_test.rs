@@ -1,4 +1,4 @@
-use agent::models::analysis::{ProposalQuality, StructuredAnalysisResponse, SubmitterIntentions};
+use agent::models::analysis::{StructuredAnalysisResponse, EvaluationCategory};
 use agent::models::Proposal;
 use agent::utils::error::Result;
 use serde_json::{json, Value};
@@ -96,31 +96,30 @@ async fn test_expected_format() {
 
     // Create a response with the expected format
     let response = StructuredAnalysisResponse {
-        verdict: "Approve".to_string(),
-        conclusion:
-            "This proposal addresses a funding shortfall for the Hackathon Continuation Program."
-                .to_string(),
-        proposal_quality: ProposalQuality {
-            clarity_of_goals: "The proposal clearly states its goal.".to_string(),
-            completeness_of_sections: "The proposal includes an abstract and rationale."
-                .to_string(),
-            level_of_detail: "The proposal provides specific details about the funding shortfall."
-                .to_string(),
-            assumptions_made: vec![
-                "The Domain Allocator funds are available for reallocation.".to_string()
-            ],
-            missing_elements: vec!["Detailed timeline for fund transfer.".to_string()],
-            community_adaptability: "The proposal addresses a community need.".to_string(),
+        goals_and_motivation: EvaluationCategory {
+            status: "pass".to_string(),
+            justification: "The proposal clearly states its goal to address funding shortfall.".to_string(),
+            suggestions: vec![],
         },
-        submitter_intentions: SubmitterIntentions {
-            submitter_identity: "The submitter appears to be associated with RnDAO.".to_string(),
-            inferred_interests: vec![
-                "Ensuring the continuation of the Hackathon Continuation Program.".to_string(),
-            ],
-            social_activity: vec![
-                "Working with the Arbitrum Foundation on fund management systems.".to_string(),
-            ],
-            strategic_positioning: vec!["Positioning this as a one-time solution.".to_string()],
+        measurable_outcomes: EvaluationCategory {
+            status: "pass".to_string(),
+            justification: "The proposal specifies the exact amount needed ($89,980 USD).".to_string(),
+            suggestions: vec![],
+        },
+        budget: EvaluationCategory {
+            status: "pass".to_string(),
+            justification: "The budget is clearly specified with exact amounts.".to_string(),
+            suggestions: vec![],
+        },
+        technical_specifications: EvaluationCategory {
+            status: "n/a".to_string(),
+            justification: "This proposal is about fund reallocation, not technical implementation.".to_string(),
+            suggestions: vec![],
+        },
+        language_quality: EvaluationCategory {
+            status: "pass".to_string(),
+            justification: "The proposal is well-written and clearly communicates the need.".to_string(),
+            suggestions: vec![],
         },
     };
 
@@ -141,46 +140,63 @@ async fn test_expected_format() {
 
     // Define the expected JSON structure
     let expected_structure = json!({
-        "verdict": "",
-        "conclusion": "",
-        "proposal_quality": {
-            "clarity_of_goals": "",
-            "completeness_of_sections": "",
-            "level_of_detail": "",
-            "assumptions_made": [],
-            "missing_elements": [],
-            "community_adaptability": ""
+        "goals_and_motivation": {
+            "status": "",
+            "justification": "",
+            "suggestions": []
         },
-        "submitter_intentions": {
-            "submitter_identity": "",
-            "inferred_interests": [],
-            "social_activity": [],
-            "strategic_positioning": []
+        "measurable_outcomes": {
+            "status": "",
+            "justification": "",
+            "suggestions": []
+        },
+        "budget": {
+            "status": "",
+            "justification": "",
+            "suggestions": []
+        },
+        "technical_specifications": {
+            "status": "",
+            "justification": "",
+            "suggestions": []
+        },
+        "language_quality": {
+            "status": "",
+            "justification": "",
+            "suggestions": []
         }
     });
 
     // Check that the analysis matches the expected structure
     assert!(check_json_structure(&analysis_json, &expected_structure));
 
-    // Check that specific fields are non-empty
-    assert!(!analysis.verdict.is_empty());
-    assert!(!analysis.conclusion.is_empty());
-    assert!(!analysis.proposal_quality.clarity_of_goals.is_empty());
-    assert!(!analysis
-        .proposal_quality
-        .completeness_of_sections
-        .is_empty());
-    assert!(!analysis.proposal_quality.level_of_detail.is_empty());
-    assert!(!analysis.proposal_quality.community_adaptability.is_empty());
-    assert!(!analysis.submitter_intentions.submitter_identity.is_empty());
+    // Validate each evaluation category
+    validate_category(&analysis.goals_and_motivation, "Goals and motivation");
+    validate_category(&analysis.measurable_outcomes, "Measurable outcomes");
+    validate_category(&analysis.budget, "Budget");
+    validate_category(&analysis.technical_specifications, "Technical specifications");
+    validate_category(&analysis.language_quality, "Language quality");
+}
 
-    // Check that array fields have at least one item
-    assert!(!analysis.proposal_quality.assumptions_made.is_empty());
-    assert!(!analysis.proposal_quality.missing_elements.is_empty());
-    assert!(!analysis.submitter_intentions.inferred_interests.is_empty());
-    assert!(!analysis.submitter_intentions.social_activity.is_empty());
-    assert!(!analysis
-        .submitter_intentions
-        .strategic_positioning
-        .is_empty());
+// Helper function to validate an evaluation category
+fn validate_category(category: &EvaluationCategory, name: &str) {
+    assert!(!category.status.is_empty(), "{} status should not be empty", name);
+    
+    // If status is "fail", there should be suggestions
+    if category.status == "fail" {
+        assert!(!category.suggestions.is_empty(), "{} should have suggestions when failing", name);
+    }
+    
+    // If status is "n/a", there should be a justification
+    if category.status == "n/a" {
+        assert!(!category.justification.is_empty(), "{} should have justification when n/a", name);
+    }
+    
+    println!("{} status: {}", name, category.status);
+    if !category.justification.is_empty() {
+        println!("{} justification: {}", name, category.justification);
+    }
+    if !category.suggestions.is_empty() {
+        println!("{} suggestions: {:?}", name, category.suggestions);
+    }
 }
