@@ -1,0 +1,42 @@
+name: Feature Request
+description: Suggest a new feature or enhancement
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Description
+        Please describe the feature you'd like to see implemented
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What feature would you like to add?
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: |
+        ## Acceptance Criteria
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: What needs to be implemented for this feature to be complete?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Have you considered any alternative solutions or features?
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: check one
+        - label: check two
