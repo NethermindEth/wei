@@ -14,18 +14,9 @@ body:
     id: description
     attributes:
       label: Description
-      placeholder: |
+      value: |
         ### Description
-        
-        The proposal analysis feature is failing when processing proposals with embedded code blocks. When a user submits a proposal containing ```code``` blocks, the analysis returns a 500 error instead of properly analyzing the content.
-        
-        **Steps to reproduce:**
-        1. Navigate to the proposal analysis page
-        2. Submit a proposal containing markdown code blocks
-        3. Wait for analysis to complete
-        
-        **Expected behavior:** Analysis should complete successfully with proper handling of code blocks
-        **Actual behavior:** Server returns 500 error and analysis fails
+        Summary about the issue explaining motivation/problems and all the features needed.
     validations:
       required: true
   
@@ -33,14 +24,11 @@ body:
     id: acceptance_criteria
     attributes:
       label: Acceptance Criteria
-      placeholder: |
+      value: |
         ### Acceptance Criteria
         
-        * [ ] Fix the parser to properly handle markdown code blocks in proposals
-        * [ ] Add proper escaping of special characters in the analysis pipeline
-        * [ ] Add unit tests for proposals containing various markdown elements
-        * [ ] Ensure the API returns appropriate error messages instead of 500 errors
-        * [ ] Verify fix works with both single and triple backtick code blocks
+        * [ ] Check One
+        * [ ] Check Two
     validations:
       required: true
       
@@ -49,7 +37,7 @@ body:
     attributes:
       label: Additional Information
       description: Any additional context, environment details, or screenshots that might help
-      placeholder: |
+      value: |
         ### Additional Information
         
         * Browser: Chrome 115.0.5790.171

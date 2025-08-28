@@ -14,16 +14,9 @@ body:
     id: description
     attributes:
       label: Description
-      placeholder: |
+      value: |
         ### Description
-        
-        Instead of full OAuth integration, we will add a **very simple authentication flow**:
-        
-        * When a user visits the platform, ask them to enter their **name**.
-        * Use ChatGPT to search and retrieve publicly available information about this user (background, social links, interests).
-        * Generate a **minimal profile** for the user based on that information.
-        * Store this profile in the session so it can be used across the platform.
-        * This approach avoids complex OAuth setup and keeps the flow lightweight.
+        Summary about the issue explaining motivation/problems and all the features needed.
     validations:
       required: true
   
@@ -31,15 +24,11 @@ body:
     id: acceptance_criteria
     attributes:
       label: Acceptance Criteria
-      placeholder: |
-        ### Acceptance Criteria
-        
-        * [ ] Prompt user for their name on first visit.
-        * [ ] Query ChatGPT with the given name to retrieve public information.
-        * [ ] Display a greeting and minimal profile (name, enriched details).
-        * [ ] Store the profile in the session for the duration of the visit.
-        * [ ] Authenticated users (via name input) can access proposal analysis features.
-        * [ ] Handle edge cases (empty input, no info found, multiple matches).
+      value: |
+        ## Acceptance Criteria
+        Description of the tentative solution or ideas you have to discuss or solve the issue.
+        * [ ] check one
+        * [ ] check two
     validations:
       required: true
       
@@ -48,7 +37,7 @@ body:
     attributes:
       label: Alternatives Considered
       description: Have you considered any alternative solutions or features?
-      placeholder: |
+      value: |
         ### Alternatives Considered
         
         * Full OAuth integration was considered but rejected due to complexity and timeline constraints.
