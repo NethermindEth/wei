@@ -10,6 +10,7 @@ export interface AnalysisResponse {
   description?: string;
   protocol_id?: string;
   author?: string;
+  summary: string;
   goals_and_motivation: {
     status: 'pass' | 'fail' | 'n/a';
     justification: string;

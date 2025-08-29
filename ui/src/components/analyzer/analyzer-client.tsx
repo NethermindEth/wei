@@ -84,8 +84,8 @@ export function AnalyzerClient() {
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 max-w-full overflow-hidden h-full">
-      <div className="grid gap-4 content-start">
+    <div className="grid gap-4 md:grid-cols-2 max-w-full h-screen" style={{ gridTemplateRows: '1fr' }}>
+      <div className="grid gap-4 h-full overflow-hidden" style={{ gridTemplateRows: 'auto 1fr auto', maxHeight: '100vh' }}>
         <ProposalList 
           onSelectProposal={handleSelectProposal} 
           selectedProposalId={proposalId || undefined}
@@ -103,12 +103,20 @@ export function AnalyzerClient() {
         </div>
       </div>
 
-      <div className="grid gap-4 content-start overflow-hidden">
+      <div className="grid gap-4 h-full overflow-hidden" style={{ gridTemplateRows: 'auto 1fr', maxHeight: '100vh' }}>
         <h2 className="text-lg font-semibold mb-2">Analysis Result</h2>
           
-        {backendResult && (
-          <div className="rounded-md border border-white/10 bg-white/5 p-4 overflow-hidden">
+        <div className="flex-1 overflow-hidden">
+          {backendResult && (
+            <div className="rounded-md border border-white/10 bg-white/5 p-4 h-full overflow-y-auto">
             <div className="grid gap-4 break-words">
+              {/* Summary */}
+              {backendResult.summary && (
+                <div className="border-b border-white/10 pb-3">
+                  <h3 className="text-md font-semibold mb-2">Summary</h3>
+                  <p className="text-white/90">{backendResult.summary}</p>
+                </div>
+              )}
               {/* Goals & Motivation */}
               <div className="border-b border-white/10 pb-3">
                 <h3 className="text-md font-semibold mb-2">Goals & Motivation</h3>
@@ -268,18 +276,19 @@ export function AnalyzerClient() {
           </div>
         )}
 
-        {!backendResult && !result && !isLoading && (
-          <div className="flex items-center mt-4">
-            <p className="text-white/70 text-sm italic">Select a proposal to see analysis results</p>
-          </div>
-        )}
+          {!backendResult && !result && !isLoading && (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-white/70 text-sm italic">Select a proposal to see analysis results</p>
+            </div>
+          )}
 
-        {isLoading && (
-          <div className="flex items-center mt-4">
-            <div className="h-4 w-4 border-2 border-t-[--color-accent] border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin mr-2"></div>
-            <p className="text-white/70 text-sm">Analyzing proposal...</p>
-          </div>
-        )}
+          {isLoading && (
+            <div className="flex items-center justify-center h-full">
+              <div className="h-4 w-4 border-2 border-t-[--color-accent] border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin mr-2"></div>
+              <p className="text-white/70 text-sm">Analyzing proposal...</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

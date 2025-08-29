@@ -91,6 +91,7 @@ impl AgentServiceTrait for AgentService {
                 };
 
                 let fallback = StructuredAnalysisResponse {
+                    summary: "Unable to generate summary due to parsing error".to_string(),
                     goals_and_motivation: default_category.clone(),
                     measurable_outcomes: default_category.clone(),
                     budget: default_category.clone(),
