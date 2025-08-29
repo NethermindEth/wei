@@ -38,6 +38,8 @@ pub enum AnalysisResult {
 /// Structured response from the AI model based on standardized evaluation criteria
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct StructuredAnalysisResponse {
+    /// Brief summary of the proposal's main objective and approach
+    pub summary: String,
     /// Goals and motivation evaluation
     pub goals_and_motivation: EvaluationCategory,
     /// Measurable outcomes evaluation
