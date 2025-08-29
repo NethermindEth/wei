@@ -15,7 +15,6 @@ body:
     attributes:
       label: Description
       value: |
-        ### Description
         Summary about the issue explaining motivation/problems and all the features needed.
     validations:
       required: true
@@ -25,7 +24,6 @@ body:
     attributes:
       label: Acceptance Criteria
       value: |
-        ## Acceptance Criteria
         Description of the tentative solution or ideas you have to discuss or solve the issue.
         * [ ] check one
         * [ ] check two
