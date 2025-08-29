@@ -53,7 +53,7 @@ export function useProposals(initialPageSize = 20, spaceId?: string): UseProposa
           setAllProposals(prev => {
             // Create a map for O(1) lookup and ensure uniqueness
             const proposalMap = new Map(prev.map(p => [p.id, p]));
-            result.data.proposals.forEach(p => {
+            result.data?.proposals?.forEach(p => {
               if (!proposalMap.has(p.id)) {
                 proposalMap.set(p.id, p);
               }
