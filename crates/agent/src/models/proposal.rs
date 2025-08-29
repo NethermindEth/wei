@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Simplified proposal model for agent analysis
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Proposal {
     // /// Unique identifier
     // pub id: String,
