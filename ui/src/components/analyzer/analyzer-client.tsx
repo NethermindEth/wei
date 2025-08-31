@@ -5,7 +5,7 @@ import { useQueryState } from "nuqs";
 import { ApiService } from "../../services/api";
 import { Proposal, LocalAnalysisResult, AnalysisResponse } from "../../types/proposal";
 import { ProposalList } from "../proposals/proposal-list";
-import { Proposal as GraphQLProposal } from "../../hooks/useProposals";
+import type { Proposal as GraphQLProposal } from "../../types/graphql";
 
 // Status badge component for consistent styling
 const StatusBadge = ({ status }: { status?: string }) => {
@@ -84,8 +84,8 @@ export function AnalyzerClient() {
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 max-w-full h-screen" style={{ gridTemplateRows: '1fr' }}>
-      <div className="grid gap-4 h-full overflow-hidden" style={{ gridTemplateRows: 'auto 1fr auto', maxHeight: '100vh' }}>
+    <div className="grid gap-4 md:grid-cols-[500px_1fr] max-w-full h-screen grid-rows-[1fr] w-full">
+      <div className="grid gap-4 h-full overflow-hidden grid-rows-[auto_1fr_auto] max-h-screen min-h-screen w-full min-w-full">
         <ProposalList 
           onSelectProposal={handleSelectProposal} 
           selectedProposalId={proposalId || undefined}
@@ -103,13 +103,13 @@ export function AnalyzerClient() {
         </div>
       </div>
 
-      <div className="grid gap-4 h-full overflow-hidden" style={{ gridTemplateRows: 'auto 1fr', maxHeight: '100vh' }}>
+      <div className="grid gap-4 h-full overflow-hidden grid-rows-[auto_1fr] max-h-screen min-h-screen w-full min-w-full">
         <h2 className="text-lg font-semibold mb-2">Analysis Result</h2>
           
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden w-full min-w-full max-w-full">
           {backendResult && (
-            <div className="rounded-md border border-white/10 bg-white/5 p-4 h-full overflow-y-auto">
-            <div className="grid gap-4 break-words">
+            <div className="rounded-md border border-white/10 bg-white/5 p-4 h-full overflow-y-auto w-full min-w-full max-w-full">
+            <div className="grid gap-4 break-words w-full min-w-full max-w-full">
               {/* Summary */}
               {backendResult.summary && (
                 <div className="border-b border-white/10 pb-3">

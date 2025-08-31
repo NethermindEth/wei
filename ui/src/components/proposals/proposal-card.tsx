@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Proposal } from '../../hooks/useProposals';
+import { Proposal } from '../../types/graphql';
 import { Modal } from '../ui/modal';
 import ReactMarkdown from 'react-markdown';
 import '../ui/markdown-styles.css';
@@ -35,17 +35,16 @@ export function ProposalCard({ proposal, onClick, isSelected }: ProposalCardProp
   return (
     <>
       <div 
-        className={`p-4 rounded-lg border cursor-pointer transition-colors overflow-visible flex flex-col min-h-[120px] w-full ${
+        className={`p-4 rounded-lg border cursor-pointer transition-colors overflow-hidden flex flex-col w-[480px] min-w-[480px] max-w-[480px] h-[140px] min-h-[140px] max-h-[140px] box-border flex-none flex-shrink-0 ${
           isSelected 
             ? 'border-[--color-accent] bg-white/10' 
             : 'border-white/10 bg-white/5 hover:bg-white/8'
         }`}
         onClick={handleCardClick}
-        style={{ boxSizing: 'border-box' }}
       >
-        <h3 className="font-medium text-white/90 mb-2 break-words">{proposal.title}</h3>
-        <p className="text-sm text-white/70 mb-3 break-words">{truncatedPreview}</p>
-        <div className="flex items-center justify-between mt-auto flex-wrap gap-2">
+        <h3 className="font-medium text-white/90 mb-2 break-words line-clamp-2 overflow-hidden">{proposal.title}</h3>
+        <p className="text-sm text-white/70 mb-3 break-words line-clamp-2 overflow-hidden flex-1">{truncatedPreview}</p>
+        <div className="flex items-center justify-between flex-wrap gap-2 mt-auto">
           <span className="text-xs text-[#9fb5cc] truncate">{proposal.author ? `By: ${proposal.author}` : ''}</span>
           <button 
             onClick={handleViewFullContent}

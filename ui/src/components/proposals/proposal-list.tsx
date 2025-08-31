@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
-import { useProposals, Proposal } from '../../hooks/useProposals';
-import { useSpaces, Space } from '../../hooks/useSpaces';
+import { useProposals } from '../../hooks/useProposals';
+import { Proposal } from '../../types/graphql';
+import { useSpaces } from '../../hooks/useSpaces';
+import { Space } from '../../types/graphql';
 import { ProposalCard } from './proposal-card';
-import { SpaceSelector } from '../ui/space-selector';
+import { SpaceDropdown } from '../ui/space-dropdown';
 
 interface ProposalListProps {
   onSelectProposal: (proposal: Proposal) => void;
@@ -14,7 +16,7 @@ interface ProposalListProps {
 export function ProposalList({ onSelectProposal, selectedProposalId }: ProposalListProps) {
   const [selectedSpace, setSelectedSpace] = useState<Space | null>(null);
   const [isChangingSpace, setIsChangingSpace] = useState(false);
-  const { spaces, loading: spacesLoading, loadMore: loadMoreSpaces, hasMore: hasMoreSpaces } = useSpaces();
+  const { spaces, loading: spacesLoading } = useSpaces();
   const { proposals, loading, error, loadMore, hasMore } = useProposals(20, selectedSpace?.id);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -64,24 +66,24 @@ export function ProposalList({ onSelectProposal, selectedProposalId }: ProposalL
   }
 
   return (
-    <div className="grid gap-3 h-full overflow-hidden" style={{ gridTemplateRows: 'auto auto 1fr' }}>
+    <div className="grid gap-3 h-full overflow-hidden grid-rows-[auto_auto_1fr] w-[500px] min-w-[500px] max-w-[500px]">
       <h2 className="text-lg font-medium text-white/90 break-words">Select a Proposal</h2>
       
       {/* Space/Project Filter */}
-      <div>
-        <SpaceSelector
+      <div className="w-[500px] min-w-[500px] max-w-[500px]">
+        <SpaceDropdown
           spaces={spaces}
           selectedSpace={selectedSpace}
           onSpaceSelect={handleSpaceSelect}
           loading={spacesLoading}
           placeholder="All Projects"
-          hasMore={hasMoreSpaces}
-          onLoadMore={loadMoreSpaces}
         />
       </div>
       
       {/* Fixed height container to prevent layout shifts */}
-      <div className="flex-1 overflow-hidden" style={{ width: '100%', boxSizing: 'border-box', minHeight: '0' }}>
+      <div 
+        className="flex-1 overflow-hidden w-full min-w-full max-w-full box-border min-h-0 h-full"
+      >
         {proposals.length === 0 && (loading || isChangingSpace) ? (
           <div className="flex items-center justify-center h-full">
             <p className="text-[#9fb5cc]">
@@ -95,15 +97,21 @@ export function ProposalList({ onSelectProposal, selectedProposalId }: ProposalL
             </p>
           </div>
         ) : (
-          <div className="grid gap-4 h-full overflow-y-auto overflow-x-hidden pr-2">
-            {proposals.map(proposal => (
-              <ProposalCard
-                key={proposal.id}
-                proposal={proposal}
-                onClick={onSelectProposal}
-                isSelected={proposal.id === selectedProposalId}
-              />
-            ))}
+          <div 
+            className="h-full overflow-y-auto overflow-x-hidden pr-2 w-[500px] min-w-[500px] max-w-[500px]"
+          >
+            <div 
+              className="grid gap-4 grid-cols-1 auto-rows-[140px] w-[480px] min-w-[480px] max-w-[480px] box-border table-fixed flex-shrink-0"
+            >
+              {proposals.map(proposal => (
+                <ProposalCard
+                  key={proposal.id}
+                  proposal={proposal}
+                  onClick={onSelectProposal}
+                  isSelected={proposal.id === selectedProposalId}
+                />
+              ))}
+            </div>
             
             <div ref={loadMoreRef} className="py-2 text-center">
               {loading && hasMore && (
