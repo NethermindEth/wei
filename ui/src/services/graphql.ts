@@ -4,7 +4,7 @@ import { RetryLink } from "@apollo/client/link/retry";
 
 const maxRetries = Number(process.env.NEXT_PUBLIC_GRAPHQL_MAX_QUERY_RETRIES || 5);
 const delayBetweenRetries = Number(process.env.NEXT_PUBLIC_GRAPHQL_DELAY_BETWEEN_QUERY_RETRIES || 15000);
-const snapshotGraphqlUrl = process.env.NEXT_PUBLIC_SNAPSHOT_GRAPHQL_URL || 'https://hub.snapshot.org/graphql';
+const snapshotGraphqlUrl = process.env.NEXT_PUBLIC_SNAPSHOT_GRAPHQL_URL || process.env.SNAPSHOT_GRAPHQL_URL || 'https://hub.snapshot.org/graphql';
 
 
 
@@ -24,7 +24,7 @@ const retryLink = new RetryLink({
                 error.message.includes("network")
             );
 
-            console.warn(`Attempt failed: ${error.message}. Retrying: ${shouldRetry}`);
+            console.warn(`GraphQL attempt failed: ${error.message}. Retrying: ${shouldRetry}`);
             return shouldRetry;
         }
     }

@@ -5,7 +5,10 @@ import { useQueryState } from "nuqs";
 import { ApiService } from "../../services/api";
 import { Proposal, LocalAnalysisResult, AnalysisResponse } from "../../types/proposal";
 import { ProposalList } from "../proposals/proposal-list";
-import { Proposal as GraphQLProposal } from "../../hooks/useProposals";
+import { Proposal as GraphQLProposal, useProposals } from "../../hooks/useProposals";
+import { Header, Protocol } from "../ui/header";
+import { SearchModal } from "../ui/search-modal";
+import { useSpaces } from "../../hooks/useSpaces";
 
 // Status badge component for consistent styling
 const StatusBadge = ({ status }: { status?: string }) => {
@@ -36,11 +39,23 @@ export function AnalyzerClient() {
     shallow: true,
     clearOnDefault: true,
   });
+  const [selectedSpaceId, setSelectedSpaceId] = useQueryState("space", {
+    history: "push",
+    shallow: true,
+    clearOnDefault: true,
+  });
   const [isLoading, setIsLoading] = React.useState(false);
   const [result, setResult] = React.useState<LocalAnalysisResult | null>(null);
   const [backendResult, setBackendResult] = React.useState<AnalysisResponse | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [selectedProposal, setSelectedProposal] = React.useState<GraphQLProposal | null>(null);
+  const [isSearchModalOpen, setIsSearchModalOpen] = React.useState(false);
+  
+  // Fetch spaces for the protocol dropdown
+  const { spaces, loading: spacesLoading } = useSpaces();
+  
+  // Fetch proposals for search functionality
+  const { proposals: allProposals } = useProposals(1000); // Get more proposals for search
 
   const handleSelectProposal = async (proposal: GraphQLProposal) => {
     setSelectedProposal(proposal);
@@ -83,13 +98,44 @@ export function AnalyzerClient() {
     await analyzeProposal(selectedProposal);
   }
 
+  // Convert spaces to protocols for the header
+  const protocols: Protocol[] = spaces.map(space => ({
+    id: space.id,
+    name: space.name,
+    avatar: space.avatar,
+    verified: space.verified
+  }));
+
+  const handleProtocolChange = (protocolId: string | null) => {
+    setSelectedSpaceId(protocolId);
+  };
+
+  const handleSearch = () => {
+    setIsSearchModalOpen(true);
+  };
+
+  const handleSelectProtocolFromSearch = (protocolId: string) => {
+    setSelectedSpaceId(protocolId);
+  };
+
   return (
-    <div className="grid gap-4 md:grid-cols-2 max-w-full overflow-hidden h-full">
-      <div className="grid gap-4 content-start">
-        <ProposalList 
-          onSelectProposal={handleSelectProposal} 
-          selectedProposalId={proposalId || undefined}
-        />
+    <div className="min-h-screen flex flex-col bg-[#0b0f14]">
+      <Header
+        selectedProtocol={selectedSpaceId}
+        onProtocolChange={handleProtocolChange}
+        onSearch={handleSearch}
+        protocols={protocols}
+        loading={spacesLoading}
+      />
+      
+      <main className="flex-1 container mx-auto px-4 py-6">
+        <div className="grid gap-4 md:grid-cols-2 max-w-full overflow-hidden h-full">
+          <div className="grid gap-4 content-start">
+            <ProposalList 
+              onSelectProposal={handleSelectProposal} 
+              selectedProposalId={proposalId || undefined}
+              spaceId={selectedSpaceId}
+            />
 
         <div className="flex items-center gap-2">
           <button
@@ -280,7 +326,18 @@ export function AnalyzerClient() {
             <p className="text-white/70 text-sm">Analyzing proposal...</p>
           </div>
         )}
-      </div>
+          </div>
+        </div>
+      </main>
+
+      <SearchModal
+        isOpen={isSearchModalOpen}
+        onClose={() => setIsSearchModalOpen(false)}
+        proposals={allProposals}
+        protocols={protocols}
+        onSelectProposal={handleSelectProposal}
+        onSelectProtocol={handleSelectProtocolFromSearch}
+      />
     </div>
   );
 } 

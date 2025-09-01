@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@apollo/client": "4.0.1",
+    "@heroicons/react": "^2.2.0",
     "@radix-ui/react-label": "2.1.7",
     "next": "15.4.6",
     "nuqs": "2.4.3",
