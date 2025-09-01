@@ -36,10 +36,6 @@ pub async fn create_agent_service() -> Result<AgentService> {
         ),
     };
 
-    println!(
-        "Using OpenRouter API key: {}...",
-        &api_key[0..min(8, api_key.len())]
-    );
 
     // Create config with API key
     let args = vec![
