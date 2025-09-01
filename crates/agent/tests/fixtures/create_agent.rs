@@ -1,4 +1,3 @@
-use std::cmp::min;
 use std::env;
 
 use agent::models::analysis::StructuredAnalysisResponse;

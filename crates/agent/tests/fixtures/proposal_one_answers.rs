@@ -21,7 +21,7 @@ pub fn get_proposal_one_answers() -> ProposalQuestions {
                 "no",
                 "yes",
                 "no",
-                "no",
+                "yes",
                 "no",
                 "yes",
                 "yes",

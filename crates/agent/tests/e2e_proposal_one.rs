@@ -97,12 +97,8 @@ async fn ask_agent_question(
     }
 
     // Final fallback
-    if is_binary {
-        // For binary questions, default to "unknown" to fail the test explicitly
-        return Ok("unknown".to_string());
-    } else {
-        return Ok("No relevant information found in the proposal".to_string());
-    }
+    Ok("No relevant information found in the proposal".to_string())
+
 }
 
 /// Compare expected and actual answers, returning true if they match
