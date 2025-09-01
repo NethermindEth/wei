@@ -1,15 +1,4 @@
-pub struct ProposalQuestions {
-    pub binary_questions: BinaryQuestions,
-    pub reasoning_questions: ReasoningQuestions,
-}
-
-pub struct BinaryQuestions {
-    pub proposal: Vec<&'static str>,
-}
-
-pub struct ReasoningQuestions {
-    pub proposal: Vec<&'static str>,
-}
+use crate::fixtures::proposals_questions::{ProposalQuestions, BinaryQuestions, ReasoningQuestions};
 
 pub fn get_proposal_one_answers() -> ProposalQuestions {
     ProposalQuestions {
