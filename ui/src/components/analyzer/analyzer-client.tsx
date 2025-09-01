@@ -9,6 +9,7 @@ import { Proposal as GraphQLProposal, useProposals } from "../../hooks/usePropos
 import { Header, Protocol } from "../ui/header";
 import { SearchModal } from "../ui/search-modal";
 import { useSpaces } from "../../hooks/useSpaces";
+import { Tabs } from "../ui/tabs";
 
 // Status badge component for consistent styling
 const StatusBadge = ({ status }: { status?: string }) => {
@@ -50,6 +51,7 @@ export function AnalyzerClient() {
   const [error, setError] = React.useState<string | null>(null);
   const [selectedProposal, setSelectedProposal] = React.useState<GraphQLProposal | null>(null);
   const [isSearchModalOpen, setIsSearchModalOpen] = React.useState(false);
+  const [activeTab, setActiveTab] = React.useState("proposals");
   
   // Fetch spaces for the protocol dropdown
   const { spaces, loading: spacesLoading } = useSpaces();
@@ -63,6 +65,7 @@ export function AnalyzerClient() {
     setResult(null);
     setBackendResult(null);
     setError(null);
+    setActiveTab("proposals"); // Switch to proposals tab when a proposal is selected
     
     await analyzeProposal(proposal);
   };
@@ -116,6 +119,7 @@ export function AnalyzerClient() {
 
   const handleSelectProtocolFromSearch = (protocolId: string) => {
     setSelectedSpaceId(protocolId);
+    // Don't change tab when selecting a protocol from search
   };
 
   return (
@@ -129,28 +133,54 @@ export function AnalyzerClient() {
       />
       
       <main className="flex-1 container mx-auto px-4 py-6">
-        <div className="grid gap-4 md:grid-cols-2 max-w-full overflow-hidden h-full">
-          <div className="grid gap-4 content-start">
-            <ProposalList 
-              onSelectProposal={handleSelectProposal} 
-              selectedProposalId={proposalId || undefined}
-              spaceId={selectedSpaceId}
-            />
+        <Tabs
+          tabs={[
+            { id: "protocol", label: "Protocol" },
+            { id: "stakeholders", label: "Stakeholders" },
+            { id: "proposals", label: "Proposals" }
+          ]}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+        />
+        
+        <div className="mt-6">
+          {activeTab === "protocol" && (
+            <div className="text-center py-12">
+              <h2 className="text-xl font-semibold text-white/90 mb-2">Protocol Information</h2>
+              <p className="text-white/60">Protocol overview and details will be displayed here.</p>
+            </div>
+          )}
+          
+          {activeTab === "stakeholders" && (
+            <div className="text-center py-12">
+              <h2 className="text-xl font-semibold text-white/90 mb-2">Stakeholders</h2>
+              <p className="text-white/60">Stakeholder information and analysis will be displayed here.</p>
+            </div>
+          )}
+          
+          {activeTab === "proposals" && (
+            <div className="grid gap-4 md:grid-cols-2 max-w-full overflow-hidden h-full">
+              <div className="grid gap-4 content-start">
+                <ProposalList 
+                  onSelectProposal={handleSelectProposal} 
+                  selectedProposalId={proposalId || undefined}
+                  spaceId={selectedSpaceId}
+                />
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onAnalyze}
-            disabled={isLoading || !selectedProposal}
-            className="inline-flex h-9 items-center justify-center rounded-md bg-[--color-accent] px-4 py-2 text-sm font-medium text-white shadow transition-colors hover:bg-[--color-accent]/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[--color-accent] disabled:pointer-events-none disabled:opacity-50"
-          >
-            {isLoading ? "Analyzing..." : "Analyze Selected"}
-          </button>
-          {error && <div className="text-red-500 text-sm">{error}</div>}
-        </div>
-      </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={onAnalyze}
+                    disabled={isLoading || !selectedProposal}
+                    className="inline-flex h-9 items-center justify-center rounded-md bg-[--color-accent] px-4 py-2 text-sm font-medium text-white shadow transition-colors hover:bg-[--color-accent]/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[--color-accent] disabled:pointer-events-none disabled:opacity-50"
+                  >
+                    {isLoading ? "Analyzing..." : "Analyze Selected"}
+                  </button>
+                  {error && <div className="text-red-500 text-sm">{error}</div>}
+                </div>
+              </div>
 
-      <div className="grid gap-4 content-start overflow-hidden">
-        <h2 className="text-lg font-semibold mb-2">Analysis Result</h2>
+              <div className="grid gap-4 content-start overflow-hidden">
+                <h2 className="text-lg font-semibold mb-2">Analysis Result</h2>
           
         {backendResult && (
           <div className="rounded-md border border-white/10 bg-white/5 p-4 overflow-hidden">
@@ -320,13 +350,15 @@ export function AnalyzerClient() {
           </div>
         )}
 
-        {isLoading && (
-          <div className="flex items-center mt-4">
-            <div className="h-4 w-4 border-2 border-t-[--color-accent] border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin mr-2"></div>
-            <p className="text-white/70 text-sm">Analyzing proposal...</p>
-          </div>
-        )}
-          </div>
+                {isLoading && (
+                  <div className="flex items-center mt-4">
+                    <div className="h-4 w-4 border-2 border-t-[--color-accent] border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin mr-2"></div>
+                    <p className="text-white/70 text-sm">Analyzing proposal...</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </main>
 
