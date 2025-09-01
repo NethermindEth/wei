@@ -67,6 +67,11 @@ export function AnalyzerClient() {
     setError(null);
     setActiveTab("proposals"); // Switch to proposals tab when a proposal is selected
     
+    // If proposal has a space, switch to that space/protocol
+    if (proposal.space?.id) {
+      setSelectedSpaceId(proposal.space.id);
+    }
+    
     await analyzeProposal(proposal);
   };
   

@@ -14,6 +14,8 @@ export function ProposalList({ onSelectProposal, selectedProposalId, spaceId }: 
   const { proposals, loading, error, loadMore, hasMore } = useProposals(20, spaceId);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const selectedProposalRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (loading) return;
@@ -39,6 +41,20 @@ export function ProposalList({ onSelectProposal, selectedProposalId, spaceId }: 
     };
   }, [loading, hasMore, loadMore]);
 
+  // Scroll to selected proposal when selectedProposalId changes
+  useEffect(() => {
+    if (selectedProposalId && selectedProposalRef.current && scrollContainerRef.current) {
+      // Use requestAnimationFrame to ensure DOM has updated
+      requestAnimationFrame(() => {
+        selectedProposalRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+          inline: 'nearest'
+        });
+      });
+    }
+  }, [selectedProposalId, proposals.length]);
+
   if (error) {
     return (
       <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
@@ -60,14 +76,18 @@ export function ProposalList({ onSelectProposal, selectedProposalId, spaceId }: 
           <p className="text-[#9fb5cc]">No proposals found.</p>
         </div>
       ) : (
-        <div className="grid gap-4 h-[400px] overflow-y-auto overflow-x-hidden pr-2" style={{ width: '100%', boxSizing: 'border-box' }}>
+        <div ref={scrollContainerRef} className="grid gap-4 h-[400px] overflow-y-auto overflow-x-hidden pr-2" style={{ width: '100%', boxSizing: 'border-box' }}>
           {proposals.map(proposal => (
-            <ProposalCard
+            <div
               key={proposal.id}
-              proposal={proposal}
-              onClick={onSelectProposal}
-              isSelected={proposal.id === selectedProposalId}
-            />
+              ref={proposal.id === selectedProposalId ? selectedProposalRef : null}
+            >
+              <ProposalCard
+                proposal={proposal}
+                onClick={onSelectProposal}
+                isSelected={proposal.id === selectedProposalId}
+              />
+            </div>
           ))}
           
           <div ref={loadMoreRef} className="py-2 text-center">
