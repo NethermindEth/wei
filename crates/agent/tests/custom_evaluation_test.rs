@@ -3,10 +3,28 @@ use serde_json::{json, Value};
 use std::env;
 
 #[tokio::test]
+#[ignore = "Requires environment variables to be set"]
 async fn test_custom_evaluation_endpoint() {
     // Get the API URL and key from environment variables
     let api_url = env::var("API_URL").unwrap_or_else(|_| "http://localhost:8000".to_string());
-    let api_key = env::var("API_KEY").expect("API_KEY environment variable must be set");
+    
+    // Check if the API keys environment variable is set
+    let api_keys = match env::var("WEI_AGENT_API_KEYS") {
+        Ok(keys) => keys,
+        Err(_) => {
+            println!("Skipping test: WEI_AGENT_API_KEYS environment variable not set");
+            return;
+        }
+    };
+    
+    // Get the first API key from the comma-separated list
+    let api_key = match api_keys.split(',').next() {
+        Some(key) => key.trim(),
+        None => {
+            println!("Skipping test: WEI_AGENT_API_KEYS is empty");
+            return;
+        }
+    };
 
     let client = Client::new();
 
