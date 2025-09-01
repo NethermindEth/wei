@@ -26,25 +26,18 @@ pub async fn create_agent_service() -> Result<AgentService> {
     // Load environment variables from .env file
     dotenv().ok();
 
-    // Get OpenRouter API key from environment
-    let api_key: String = match env::var("WEI_AGENT_OPEN_ROUTER_API_KEY") {
-        Ok(key) if !key.trim().is_empty() => key,
-        _ => panic!(
+    // Check if OpenRouter API key is set in environment
+    if env::var("WEI_AGENT_OPEN_ROUTER_API_KEY").unwrap_or_default().trim().is_empty() {
+        panic!(
             "WEI_AGENT_OPEN_ROUTER_API_KEY environment variable must be set and non-empty for e2e tests.\n\n\
             Make sure your .env file contains WEI_AGENT_OPEN_ROUTER_API_KEY and WEI_AGENT_AI_MODEL_NAME\n\n\
             Get an API key from https://openrouter.ai/"
-        ),
-    };
+        );
+    }
 
-
-    // Create config with API key
-    let args = vec![
-        "".to_string(),
-        "--ai-model-api-key".to_string(),
-        api_key.clone(),
-    ];
-    let mut config = Config::parse_from(args);
-
+    // Create config - it will automatically read API key from environment
+    let mut config = Config::parse_from(vec!["".to_string()]);
+    
     // Get AI model name from environment
     config.ai_model_name = match env::var("WEI_AGENT_AI_MODEL_NAME") {
         Ok(key) if !key.trim().is_empty() => key,
