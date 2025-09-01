@@ -54,7 +54,10 @@ async fn main() -> agent::Result<()> {
     let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
     let listener = TcpListener::bind(addr).await.unwrap();
 
-    info!("Wei Agent service started successfully on port {}", config.port);
+    info!(
+        "Wei Agent service started successfully on port {}",
+        config.port
+    );
 
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())

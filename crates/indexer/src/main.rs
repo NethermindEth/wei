@@ -35,7 +35,10 @@ async fn main() -> anyhow::Result<()> {
     // TODO: Start API server
     // TODO: Start background indexing tasks
 
-    info!("Wei Indexer service started successfully on port {}", config.port);
+    info!(
+        "Wei Indexer service started successfully on port {}",
+        config.port
+    );
 
     // Keep the main thread alive
     tokio::signal::ctrl_c()
