@@ -1,4 +1,6 @@
-use crate::fixtures::proposals_questions::{ProposalQuestions, BinaryQuestions, ReasoningQuestions};
+use crate::fixtures::proposals_questions::{
+    BinaryQuestions, ProposalQuestions, ReasoningQuestions,
+};
 
 pub fn get_proposal_one_answers() -> ProposalQuestions {
     ProposalQuestions {

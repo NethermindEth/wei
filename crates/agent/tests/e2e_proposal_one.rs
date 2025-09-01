@@ -67,7 +67,8 @@ async fn ask_agent_question(
                 && !answer.to_lowercase().starts_with("yes")
                 && !answer.to_lowercase().starts_with("no")
             {
-                if retry < MAX_RETRIES - 1 { // Check if we have more retries left
+                if retry < MAX_RETRIES - 1 {
+                    // Check if we have more retries left
                     println!(
                         "Invalid binary response format on attempt {}. Retrying...",
                         retry + 1
@@ -82,14 +83,14 @@ async fn ask_agent_question(
 
         // Store the last answer we received
         last_answer = answer;
-        
+
         // Print message about empty response
         println!("Empty response on attempt {}. Retrying...", retry + 1);
-        
+
         // Wait before next iteration
         tokio::time::sleep(Duration::from_millis(2000)).await;
     }
-    
+
     // We've exhausted our retries, return the best answer we have or a fallback
     if !last_answer.trim().is_empty() {
         return Ok(last_answer);
@@ -175,7 +176,7 @@ fn compare_main_problem(expected: &str, actual: &str) -> bool {
         "hackathon",
         "hcp",
     ];
-    
+
     count_matching_keywords(expected, actual, &key_concepts) >= 1
 }
 
@@ -251,7 +252,7 @@ fn compare_total_amount(expected: &str, actual: &str) -> bool {
     }
 
     // Check for dollar amounts
-    (actual.contains("$") || actual.contains("usd")) 
+    (actual.contains("$") || actual.contains("usd"))
         && (actual.contains("89") || actual.contains("200"))
 }
 
@@ -668,7 +669,7 @@ async fn test_e2e_proposal_one_binary_questions() -> Result<()> {
         "Binary proposal questions: {} passed, {} failed",
         passed, failed
     );
-   
+
     // For now, we'll make the test pass regardless of the actual results
     // This is useful during development to see the output without failing the test
     // Later, we can uncomment the assertion below
