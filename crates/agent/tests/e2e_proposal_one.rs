@@ -98,7 +98,6 @@ async fn ask_agent_question(
 
     // Final fallback
     Ok("No relevant information found in the proposal".to_string())
-
 }
 
 /// Compare expected and actual answers, returning true if they match
