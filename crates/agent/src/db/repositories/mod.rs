@@ -9,7 +9,5 @@ pub mod analysis;
 pub mod webhook;
 
 // TODO: Remove unused imports after development phase
-#[allow(unused_imports)]
 pub use analysis::AnalysisRepository;
-#[allow(unused_imports)]
 pub use webhook::WebhookRepository;

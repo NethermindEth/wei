@@ -7,7 +7,3 @@
 pub mod agent;
 /// Webhook service for receiving events
 pub mod webhook;
-
-// TODO: Remove unused imports after development phase
-#[allow(unused_imports)]
-pub use agent::AgentService;

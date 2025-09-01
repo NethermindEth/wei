@@ -9,9 +9,3 @@ pub mod data_sources;
 pub mod indexer;
 /// Webhook service for external notifications
 pub mod webhook;
-
-// TODO: Remove unused imports after development phase
-#[allow(unused_imports)]
-pub use data_sources::DataSource;
-#[allow(unused_imports)]
-pub use indexer::IndexerService;

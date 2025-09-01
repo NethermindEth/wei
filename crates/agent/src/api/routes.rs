@@ -68,6 +68,7 @@ pub fn create_router(config: &Config, agent_service: AgentService) -> Router {
             .allow_methods(AllowMethods::list([
                 Method::GET,
                 Method::POST,
+                Method::PUT,
                 Method::OPTIONS,
             ]))
             .allow_headers([
@@ -94,6 +95,7 @@ pub fn create_router(config: &Config, agent_service: AgentService) -> Router {
             .allow_methods(AllowMethods::list([
                 Method::GET,
                 Method::POST,
+                Method::PUT,
                 Method::OPTIONS,
             ]))
             .allow_headers([
@@ -113,19 +115,9 @@ pub fn create_router(config: &Config, agent_service: AgentService) -> Router {
     let protected_routes = Router::new()
         .route(
             "/pre-filter",
-            post(handlers::analyze_proposal).options(|_: Request| async { "" }),
-        )
-        .route(
-            "/pre-filter/:id",
-            get(handlers::get_analysis).options(|_: Request| async { "" }),
-        )
-        .route(
-            "/pre-filter/proposals/:id",
-            get(handlers::get_analysis).options(|_: Request| async { "" }),
-        )
-        .route(
-            "/pre-filter/proposal/:proposal_id",
-            get(handlers::get_proposal_analyses).options(|_: Request| async { "" }),
+            post(handlers::analyze_proposal)
+                .put(handlers::custom_evaluate_proposal)
+                .options(|_: Request| async { "" }),
         )
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
@@ -146,6 +138,7 @@ pub fn create_router(config: &Config, agent_service: AgentService) -> Router {
         if path_exists
             && method != Method::GET
             && method != Method::POST
+            && method != Method::PUT
             && method != Method::OPTIONS
         {
             // Method Not Allowed (405)

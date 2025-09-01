@@ -1,5 +1,5 @@
 import { getApiUrl, getApiHeaders } from '../config/api';
-import { Proposal, AnalysisResponse } from '../types/proposal';
+import { Proposal, AnalysisResponse, CustomEvaluationRequest, CustomEvaluationResponse } from '../types/proposal';
 
 export class ApiService {
   private static async makeRequest<T>(
@@ -9,13 +9,16 @@ export class ApiService {
     const url = getApiUrl(endpoint);
     
     try {
-      const response = await fetch(url, {
-        headers: {
-          ...getApiHeaders(),
-          ...options.headers,
-        },
-        ...options,
-      });
+      // Create a new options object to avoid header overrides
+      const mergedOptions = { ...options };
+      
+      // Ensure headers are properly merged
+      mergedOptions.headers = {
+        ...getApiHeaders(),
+        ...(options.headers || {})
+      };
+      
+      const response = await fetch(url, mergedOptions);
 
       if (!response.ok) {
         throw new Error(`API request failed: ${response.status} ${response.statusText}`);
@@ -32,6 +35,16 @@ export class ApiService {
     return this.makeRequest<AnalysisResponse>('/pre-filter', {
       method: 'POST',
       body: JSON.stringify(proposal),
+    });
+  }
+  
+  static async customEvaluateProposal(request: CustomEvaluationRequest): Promise<CustomEvaluationResponse> {
+    return this.makeRequest<CustomEvaluationResponse>('/pre-filter', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(request),
     });
   }
 }

@@ -38,6 +38,24 @@ export interface AnalysisResponse {
   };
 }
 
+// Custom evaluation request interface
+export interface CustomEvaluationRequest {
+  content: string;
+  custom_criteria: string;
+}
+
+// Custom evaluation response interface
+export interface CustomEvaluationResponse {
+  summary: string;
+  response_map: {
+    [key: string]: {
+      status: 'pass' | 'fail' | 'n/a';
+      justification: string;
+      suggestions: string[];
+    };
+  };
+}
+
 // Local analysis result for fallback
 export interface LocalAnalysisResult {
   summary: string;

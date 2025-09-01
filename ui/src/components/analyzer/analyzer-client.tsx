@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useQueryState } from "nuqs";
 import { ApiService } from "../../services/api";
-import { Proposal, LocalAnalysisResult, AnalysisResponse } from "../../types/proposal";
+import { Proposal, LocalAnalysisResult, AnalysisResponse, CustomEvaluationRequest, CustomEvaluationResponse } from "../../types/proposal";
 import { ProposalList } from "../proposals/proposal-list";
 import type { Proposal as GraphQLProposal } from "../../types/graphql";
 
@@ -39,8 +39,11 @@ export function AnalyzerClient() {
   const [isLoading, setIsLoading] = React.useState(false);
   const [result, setResult] = React.useState<LocalAnalysisResult | null>(null);
   const [backendResult, setBackendResult] = React.useState<AnalysisResponse | null>(null);
+  const [customResult, setCustomResult] = React.useState<CustomEvaluationResponse | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [selectedProposal, setSelectedProposal] = React.useState<GraphQLProposal | null>(null);
+  const [customCriteria, setCustomCriteria] = React.useState<string>("");
+  const [isCustomEvaluating, setIsCustomEvaluating] = React.useState(false);
 
   const handleSelectProposal = async (proposal: GraphQLProposal) => {
     setSelectedProposal(proposal);
@@ -83,6 +86,50 @@ export function AnalyzerClient() {
     await analyzeProposal(selectedProposal);
   }
 
+  const handleCustomCriteriaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setCustomCriteria(e.target.value);
+  };
+
+  const handleCustomEvaluate = async () => {
+    if (!selectedProposal) {
+      setError("Please select a proposal to evaluate");
+      return;
+    }
+
+    if (!customCriteria.trim()) {
+      setError("Please enter custom criteria");
+      return;
+    }
+
+    setIsCustomEvaluating(true);
+    setError(null);
+    setCustomResult(null);
+
+    try {
+      const content = `${selectedProposal.title}\n\n${selectedProposal.body}`;
+      const request: CustomEvaluationRequest = {
+        content,
+        custom_criteria: customCriteria
+      };
+
+      console.log('Custom evaluation request:', request);
+      const response = await ApiService.customEvaluateProposal(request);
+      console.log('Custom evaluation response:', response);
+      
+      // Validate the response structure
+      if (!response.summary || !response.response_map || typeof response.response_map !== 'object') {
+        throw new Error('Invalid response format from custom evaluation');
+      }
+      
+      setCustomResult(response);
+    } catch (err) {
+      console.error('Custom evaluation failed:', err);
+      setError(err instanceof Error ? err.message : 'Custom evaluation failed');
+    } finally {
+      setIsCustomEvaluating(false);
+    }
+  };
+
   return (
     <div className="grid gap-4 md:grid-cols-[500px_1fr] max-w-full h-screen grid-rows-[1fr] w-full">
       <div className="grid gap-4 h-full overflow-hidden grid-rows-[auto_1fr_auto] max-h-screen min-h-screen w-full min-w-full">
@@ -103,12 +150,14 @@ export function AnalyzerClient() {
         </div>
       </div>
 
-      <div className="grid gap-4 h-full overflow-hidden grid-rows-[auto_1fr] max-h-screen min-h-screen w-full min-w-full">
+      <div className="grid gap-4 h-full grid-rows-[auto_1fr_auto] max-h-screen min-h-screen w-full min-w-full">
         <h2 className="text-lg font-semibold mb-2">Analysis Result</h2>
           
-        <div className="flex-1 overflow-hidden w-full min-w-full max-w-full">
+        {/* Results Area - Scrollable Content */}
+        <div className="flex-1 overflow-y-auto w-full min-w-full max-w-full pr-2">
+          {/* Standard Analysis Results */}
           {backendResult && (
-            <div className="rounded-md border border-white/10 bg-white/5 p-4 h-full overflow-y-auto w-full min-w-full max-w-full">
+            <div className="rounded-md border border-white/10 bg-white/5 p-4 mb-4 w-full min-w-full max-w-full">
             <div className="grid gap-4 break-words w-full min-w-full max-w-full">
               {/* Summary */}
               {backendResult.summary && (
@@ -244,11 +293,63 @@ export function AnalyzerClient() {
             </div>
           </div>
         )}
+
+        {/* Custom Evaluation Results */}
+        {customResult && (
+          <div className="rounded-md border border-white/10 bg-white/5 p-4 mb-4 w-full min-w-full max-w-full">
+            <div className="grid gap-4 break-words w-full min-w-full max-w-full">
+              <h3 className="text-lg font-semibold mb-2">Custom Evaluation Results</h3>
+              
+              {/* Summary */}
+              {customResult.summary && (
+                <div className="border-b border-white/10 pb-3">
+                  <h4 className="text-md font-semibold mb-2">Summary</h4>
+                  <p className="text-white/90">{customResult.summary}</p>
+                </div>
+              )}
+              
+              {/* Custom Criteria Results */}
+              {customResult.response_map && Object.entries(customResult.response_map).map(([criteriaName, evaluation]) => (
+                <div key={criteriaName} className="border-b border-white/10 pb-3">
+                  <h4 className="text-md font-semibold mb-2">{criteriaName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h4>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-medium">Status:</span>
+                    <StatusBadge status={evaluation.status} />
+                  </div>
+                  {evaluation.justification && (
+                    <div className="mb-1">
+                      <span className="font-medium">Justification:</span>{" "}
+                      <span>{evaluation.justification}</span>
+                    </div>
+                  )}
+                  {evaluation.suggestions?.length > 0 && (
+                    <div>
+                      <span className="font-medium">Suggestions:</span>
+                      <ul className="list-disc pl-5">
+                        {evaluation.suggestions.map((suggestion, index) => (
+                          <li key={index}>{suggestion}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              ))}
+              
+              {/* Show message if no criteria in response_map */}
+              {customResult.response_map && Object.keys(customResult.response_map).length === 0 && (
+                <div className="text-amber-400">
+                  No evaluation criteria were found in the response.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        
         {result && (
-          <div className="grid gap-4 overflow-hidden">
+          <div className="grid gap-4 mb-4">
             <div className="grid gap-2">
               <h2 className="text-lg font-semibold">Local Analysis Result</h2>
-              <div className="rounded-md border border-white/10 bg-white/5 p-4 overflow-hidden">
+              <div className="rounded-md border border-white/10 bg-white/5 p-4 overflow-y-auto">
                 <div className="grid gap-2 break-words">
                   <div>
                     <span className="font-medium">Summary:</span>{" "}
@@ -276,7 +377,7 @@ export function AnalyzerClient() {
           </div>
         )}
 
-          {!backendResult && !result && !isLoading && (
+          {!backendResult && !result && !customResult && !isLoading && !isCustomEvaluating && (
             <div className="flex items-center justify-center h-full">
               <p className="text-white/70 text-sm italic">Select a proposal to see analysis results</p>
             </div>
@@ -288,6 +389,40 @@ export function AnalyzerClient() {
               <p className="text-white/70 text-sm">Analyzing proposal...</p>
             </div>
           )}
+          
+          {isCustomEvaluating && (
+            <div className="flex items-center justify-center h-full mt-4">
+              <div className="h-4 w-4 border-2 border-t-[--color-accent] border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin mr-2"></div>
+              <p className="text-white/70 text-sm">Running custom evaluation...</p>
+            </div>
+          )}
+        </div>
+        
+        {/* Custom Evaluation Input - Fixed at Bottom */}
+        <div className="border-t border-white/10 pt-4 mt-2">
+          <h3 className="text-md font-semibold mb-2">Custom Evaluation</h3>
+          <div className="mb-3">
+            <label htmlFor="customCriteria" className="block text-sm font-medium mb-1">
+              Enter Custom Criteria
+            </label>
+            <textarea
+              id="customCriteria"
+              className="w-full min-h-[100px] p-2 rounded-md bg-white/5 border border-white/10 text-sm font-mono"
+              placeholder={`Please evaluate this proposal focusing on:
+1. Budget justification - Is the budget well justified and detailed?
+2. Milestone clarity - Are there clear, measurable milestones?
+3. Technical feasibility - Is the proposal technically sound?`}
+              value={customCriteria}
+              onChange={handleCustomCriteriaChange}
+            />
+          </div>
+          <button
+            onClick={handleCustomEvaluate}
+            disabled={isCustomEvaluating || !selectedProposal || !customCriteria.trim()}
+            className="inline-flex h-9 items-center justify-center rounded-md bg-[--color-accent] px-4 py-2 text-sm font-medium text-white shadow transition-colors hover:bg-[--color-accent]/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[--color-accent] disabled:pointer-events-none disabled:opacity-50"
+          >
+            {isCustomEvaluating ? "Evaluating..." : "Run Custom Evaluation"}
+          </button>
         </div>
       </div>
     </div>
