@@ -12,6 +12,7 @@ pub mod db;
 pub mod models;
 pub mod prompts;
 pub mod services;
+pub mod swagger;
 pub mod utils;
 
 // Re-export commonly used types

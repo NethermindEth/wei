@@ -1,16 +1,17 @@
+use crate::swagger::descriptions;
+use crate::swagger::examples;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 /// Simplified proposal model for agent analysis
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[schema(description = descriptions::PROPOSAL_DESCRIPTION)]
 pub struct Proposal {
-    // /// Unique identifier
-    // pub id: String,
-    // /// Title of the proposal
-    // pub title: String,
     /// Description of the proposal
+    #[schema(
+        example = examples::PROPOSAL_DESCRIPTION_EXAMPLE,
+        min_length = 10,
+        max_length = 10000
+    )]
     pub description: String,
-    // /// Protocol ID
-    // pub protocol_id: String,
-    // /// Author address
-    // pub author: String,
 }
