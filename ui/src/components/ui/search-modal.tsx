@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { Proposal } from '../../hooks/useProposals';
 import { Protocol } from './header';
@@ -124,6 +124,15 @@ export function SearchModal({
     }
   }, [isOpen]);
   
+  const handleSelectResult = useCallback((result: SearchResult) => {
+    if (result.type === 'proposal') {
+      onSelectProposal(result.item as Proposal);
+    } else {
+      onSelectProtocol((result.item as Protocol).id);
+    }
+    onClose();
+  }, [onSelectProposal, onSelectProtocol, onClose]);
+
   // Reset selected index when query changes
   useEffect(() => {
     setSelectedIndex(0);
@@ -176,16 +185,7 @@ export function SearchModal({
     
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, results, selectedIndex, onClose]);
-  
-  const handleSelectResult = (result: SearchResult) => {
-    if (result.type === 'proposal') {
-      onSelectProposal(result.item as Proposal);
-    } else {
-      onSelectProtocol((result.item as Protocol).id);
-    }
-    onClose();
-  };
+  }, [isOpen, results, selectedIndex, onClose, handleSelectResult]);
   
   if (!isOpen) return null;
   
@@ -224,7 +224,7 @@ export function SearchModal({
             <div ref={resultsContainerRef} className="max-h-96 overflow-y-auto">
               {query.trim() && results.length === 0 && (
                 <div className="px-4 py-8 text-center text-white/60">
-                  No results found for "{query}"
+                  No results found for &ldquo;{query}&rdquo;
                 </div>
               )}
               
@@ -236,7 +236,7 @@ export function SearchModal({
               
               {results.map((result, index) => (
                 <button
-                  key={`${result.type}-${(result.item as any).id}`}
+                  key={`${result.type}-${(result.item as Proposal | Protocol).id}`}
                   ref={index === selectedIndex ? selectedItemRef : null}
                   onClick={() => handleSelectResult(result)}
                   className={`w-full text-left px-4 py-3 hover:bg-white/5 transition-colors border-l-2 ${

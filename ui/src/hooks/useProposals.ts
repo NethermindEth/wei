@@ -25,7 +25,7 @@ interface UseProposalsResult {
   error: Error | null;
   loadMore: () => void;
   hasMore: boolean;
-  refetch: (spaceId?: string | null) => void;
+  refetch: () => void;
 }
 
 export function useProposals(initialPageSize = 20, spaceId: string | null = null): UseProposalsResult {
@@ -102,7 +102,7 @@ export function useProposals(initialPageSize = 20, spaceId: string | null = null
     }
   };
 
-  const refetch = (newSpaceId?: string | null) => {
+  const refetch = () => {
     setAllProposals([]);
     setSkip(0);
     setHasMore(true);
