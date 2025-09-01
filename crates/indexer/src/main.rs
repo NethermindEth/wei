@@ -14,7 +14,7 @@ mod utils;
 async fn main() -> anyhow::Result<()> {
     dotenv::dotenv().ok();
 
-    let _config = Config::parse();
+    let config = Config::parse();
 
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "info");
@@ -35,7 +35,7 @@ async fn main() -> anyhow::Result<()> {
     // TODO: Start API server
     // TODO: Start background indexing tasks
 
-    info!("Wei Indexer service started successfully");
+    info!("Wei Indexer service started successfully on port {}", config.port);
 
     // Keep the main thread alive
     tokio::signal::ctrl_c()

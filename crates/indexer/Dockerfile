@@ -41,14 +41,14 @@ RUN useradd -r -s /bin/false -m -d /app appuser && \
 USER appuser
 
 # Expose the default port
-EXPOSE 8000
+EXPOSE 3002
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:3002/health || exit 1
 
 # Set default environment variables
-ENV WEI_indexer_PORT=8000
+ENV WEI_INDEXER_PORT=3002
 ENV RUST_LOG=info
 
 # Run the indexer
