@@ -7,10 +7,11 @@ import { ProposalCard } from './proposal-card';
 interface ProposalListProps {
   onSelectProposal: (proposal: Proposal) => void;
   selectedProposalId?: string;
+  spaceId?: string | null;
 }
 
-export function ProposalList({ onSelectProposal, selectedProposalId }: ProposalListProps) {
-  const { proposals, loading, error, loadMore, hasMore } = useProposals();
+export function ProposalList({ onSelectProposal, selectedProposalId, spaceId }: ProposalListProps) {
+  const { proposals, loading, error, loadMore, hasMore } = useProposals(20, spaceId);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 

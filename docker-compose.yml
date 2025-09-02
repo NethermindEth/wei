@@ -32,7 +32,7 @@ services:
       agent-migrations:
         condition: service_completed_successfully
     environment:
-      - WEI_AGENT_PORT=3000
+      - WEI_AGENT_PORT=3001
       - WEI_AGENT_DATABASE_URL=postgresql://postgres:postgres@postgres:5432/wei_agent
       - WEI_AGENT_AI_MODEL_PROVIDER=${WEI_AGENT_AI_MODEL_PROVIDER:-openai}
       - WEI_AGENT_AI_MODEL_NAME=${WEI_AGENT_AI_MODEL_NAME:-gpt-4o-mini}
@@ -41,7 +41,7 @@ services:
       - RUST_ENV=${RUST_ENV:-development}
       - RUST_BACKTRACE=${RUST_BACKTRACE:-1}
     ports:
-      - "3000:3000"
+      -   "${WEI_AGENT_PORT}:${WEI_AGENT_PORT}"
     command: ["/app/agent"]
     restart: unless-stopped
     
@@ -73,22 +73,22 @@ services:
       indexer-migrations:
         condition: service_completed_successfully
     environment:
-      - INDEXER__SERVER__HOST=0.0.0.0
-      - INDEXER__SERVER__PORT=3001
-      - INDEXER__DATABASE__URL=postgresql://postgres:postgres@postgres:5432/wei_indexer
-      - INDEXER__DATABASE__MAX_CONNECTIONS=10
-      - INDEXER__DATA_SOURCES__SNAPSHOT__BASE_URL=${INDEXER__DATA_SOURCES__SNAPSHOT__BASE_URL:-https://hub.snapshot.org/api}
-      - INDEXER__DATA_SOURCES__SNAPSHOT__API_KEY=${INDEXER__DATA_SOURCES__SNAPSHOT__API_KEY}
-      - INDEXER__DATA_SOURCES__TALLY__BASE_URL=${INDEXER__DATA_SOURCES__TALLY__BASE_URL:-https://api.tally.xyz}
-      - INDEXER__DATA_SOURCES__TALLY__API_KEY=${INDEXER__DATA_SOURCES__TALLY__API_KEY}
-      - INDEXER__WEBHOOK__SECRET=${INDEXER__WEBHOOK__SECRET}
-      - INDEXER__WEBHOOK__MAX_RETRIES=${INDEXER__WEBHOOK__MAX_RETRIES:-3}
+      - WEI_INDEXER_HOST=0.0.0.0
+      - WEI_INDEXER_PORT=3002
+      - WEI_INDEXER_DATABASE_URL=postgresql://postgres:postgres@postgres:5432/wei_indexer
+      - WEI_INDEXER_MAX_CONNECTIONS=10
+      - WEI_INDEXER_SNAPSHOT_BASE_URL=${WEI_INDEXER_SNAPSHOT_BASE_URL:-https://hub.snapshot.org/api}
+      - WEI_INDEXER_SNAPSHOT_API_KEY=${WEI_INDEXER_SNAPSHOT_API_KEY}
+      - WEI_INDEXER_TALLY_BASE_URL=${WEI_INDEXER_TALLY_BASE_URL:-https://api.tally.xyz}
+      - WEI_INDEXER_TALLY_API_KEY=${WEI_INDEXER_TALLY_API_KEY}
+      - WEI_INDEXER_WEBHOOK_SECRET=${WEI_INDEXER_WEBHOOK_SECRET}
+      - WEI_INDEXER_MAX_RETRIES=${WEI_INDEXER_MAX_RETRIES:-3}
       - RUST_LOG=${RUST_LOG:-info}
       - RUST_ENV=${RUST_ENV:-development}
       - RUST_BACKTRACE=${RUST_BACKTRACE:-1}
     ports:
-      - "3001:3001"
-    command: ["/app/indexer", "--webhook-secret", "${INDEXER__WEBHOOK__SECRET:-default_webhook_secret}"]
+      - "3002:3002"
+    command: ["/app/indexer", "--webhook-secret", "${WEI_INDEXER_WEBHOOK_SECRET:-default_webhook_secret}"]
     restart: unless-stopped
     
   # Indexer migrations
