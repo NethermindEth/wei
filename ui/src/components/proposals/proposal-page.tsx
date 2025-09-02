@@ -48,6 +48,7 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
   // Fetch proposals for search functionality
   const { proposals: allProposals } = useProposals(1000);
 
+<<<<<<< HEAD
   // Find the specific proposal by ID
   React.useEffect(() => {
     if (allProposals.length > 0) {
@@ -62,6 +63,9 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
   }, [allProposals, proposalId]);
 
   const analyzeProposal = async (proposal: Proposal, forceRefresh = false) => {
+=======
+  const analyzeProposal = React.useCallback(async (proposal: Proposal) => {
+>>>>>>> develop
     setIsLoading(true);
     setError(null);
     
@@ -83,7 +87,24 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  // Find the specific proposal by ID
+  React.useEffect(() => {
+    if (allProposals.length > 0) {
+      const proposal = allProposals.find(p => p.id === proposalId);
+      
+      if (proposal) {
+        setSelectedProposal(proposal);
+        // Auto-set the space if proposal has one
+        if (proposal.space?.id && !selectedSpaceId) {
+          setSelectedSpaceId(proposal.space.id);
+        }
+        // Auto-analyze the proposal when it's loaded
+        analyzeProposal(proposal);
+      }
+    }
+  }, [allProposals, proposalId, selectedSpaceId, setSelectedSpaceId, analyzeProposal]);
 
   const handleRefreshAnalysis = async () => {
     if (selectedProposal) {
@@ -92,6 +113,37 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
   };
 
 
+<<<<<<< HEAD
+=======
+  const handleSelectProposalFromSearch = (proposal: Proposal) => {
+    router.push(`/proposals/${proposal.id}`);
+  };
+
+  const handleSelectProtocolFromSearch = (protocolId: string) => {
+    setSelectedSpaceId(protocolId);
+  };
+
+  const buildUrlWithParams = (baseUrl: string, params: Record<string, string | null>) => {
+  const searchParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) searchParams.set(key, value);
+  });
+  const queryString = searchParams.toString();
+  return `${baseUrl}${queryString ? `?${queryString}` : ''}`;
+};
+
+const handleBackClick = () => {
+  const url = buildUrlWithParams('/', {
+    space: selectedSpaceId,
+    tab: activeTab
+  });
+  router.push(url);
+};
+
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+  };
+>>>>>>> develop
 
   if (!selectedProposal) {
     return (

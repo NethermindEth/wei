@@ -22,6 +22,7 @@ use crate::{
     },
     config::Config,
     services::cache::CacheService,
+    swagger::handlers::{openapi_handler, swagger_ui_handler},
     AgentService,
 };
 
@@ -115,7 +116,10 @@ pub fn create_router(
     };
 
     // Public routes that don't require authentication
-    let public_routes = Router::new().route("/health", get(handlers::health));
+    let public_routes = Router::new()
+        .route("/health", get(handlers::health))
+        .route("/api-docs/openapi.json", get(openapi_handler))
+        .route("/api-docs", get(swagger_ui_handler));
 
     // Protected routes that require API key authentication
     let protected_routes = Router::new()

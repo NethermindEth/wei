@@ -49,7 +49,7 @@ async fn main() -> agent::Result<()> {
         }
     };
 
-let agent_service = AgentService::new(Arc::clone(&db), config.clone());
+    let agent_service = AgentService::new(db.clone(), config.clone());
 
     // Initialize cache service
     let cache_repo = CacheRepository::new(db);

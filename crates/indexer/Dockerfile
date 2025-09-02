@@ -45,7 +45,7 @@ EXPOSE 3002
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:3002/health || exit 1
+    CMD curl -f http://localhost:${WEI_AGENT_PORT}/health || exit 1
 
 # Set default environment variables
 ENV WEI_INDEXER_PORT=3002

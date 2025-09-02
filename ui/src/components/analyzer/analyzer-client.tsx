@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useMemo } from "react";
 import { useQueryState } from "nuqs";
 
 import { ProposalList } from "../proposals/proposal-list";
@@ -52,6 +53,7 @@ export function AnalyzerClient() {
 
 
   // Convert spaces to protocols for the header
+<<<<<<< HEAD
   const protocols: Protocol[] = spaces.map(space => ({
     id: space.id,
     name: space.name,
@@ -59,6 +61,17 @@ export function AnalyzerClient() {
     verified: space.verified,
     domain: space.domain
   }));
+=======
+  const protocols: Protocol[] = useMemo(
+    () => spaces.map(space => ({
+      id: space.id,
+      name: space.name,
+      avatar: space.avatar,
+      verified: space.verified
+    })),
+    [spaces]
+  );
+>>>>>>> develop
 
   const handleProtocolChange = (protocolId: string | null) => {
     setSelectedSpaceId(protocolId);

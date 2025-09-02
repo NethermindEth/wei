@@ -26,6 +26,8 @@ uuid.workspace = true
 clap.workspace = true
 dotenv.workspace = true
 openrouter-rs.workspace = true
+utoipa.workspace = true
+utoipa-axum.workspace = true
 
 # Additional dependencies specific to agent
 async-trait = "0.1"
