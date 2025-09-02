@@ -1,21 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
-
-interface RelatedProposal {
-  url: string;
-  title: string;
-  summary?: string;
-  published_date?: string;
-  relevance_score?: number;
-  source: string;
-}
-
-interface RelatedProposalsResponse {
-  related_proposals: RelatedProposal[];
-  query: string;
-}
+import { ArrowTopRightOnSquareIcon, ArrowPathIcon, ClockIcon } from "@heroicons/react/24/outline";
+import { 
+  searchRelatedProposals, 
+  getCachedRelatedProposals, 
+  refreshRelatedProposals,
+  RelatedProposalsResponse 
+} from "@/services/related-proposals";
 
 interface RelatedProposalsProps {
   proposalText: string;
@@ -23,7 +15,7 @@ interface RelatedProposalsProps {
 }
 
 export function RelatedProposals({ proposalText, proposalTitle }: RelatedProposalsProps) {
-  const [relatedProposals, setRelatedProposals] = React.useState<RelatedProposal[]>([]);
+  const [result, setResult] = React.useState<RelatedProposalsResponse | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -43,7 +35,7 @@ export function RelatedProposals({ proposalText, proposalTitle }: RelatedProposa
     return words.slice(0, 10).join(' ');
   }, []);
 
-  const searchRelatedProposals = React.useCallback(async () => {
+  const searchRelatedProposalsInternal = React.useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -51,31 +43,17 @@ export function RelatedProposals({ proposalText, proposalTitle }: RelatedProposa
       // Create a search query from the proposal title and key phrases from the text
       const query = `${proposalTitle} ${extractKeyPhrases(proposalText)}`.trim();
       
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const apiKey = process.env.NEXT_PUBLIC_API_KEY;
-      
-      if (!apiKey) {
-        throw new Error('API key not configured');
+      // First try to get cached results
+      const cachedResult = await getCachedRelatedProposals(query, 5);
+      if (cachedResult) {
+        setResult(cachedResult);
+        setLoading(false);
+        return;
       }
 
-      const response = await fetch(
-        `${apiUrl}/related-proposals?query=${encodeURIComponent(query)}&limit=5`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.message || `HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data: RelatedProposalsResponse = await response.json();
-      setRelatedProposals(data.related_proposals);
+      // If no cache, perform fresh search
+      const freshResult = await searchRelatedProposals(query, 5);
+      setResult(freshResult);
     } catch (err) {
       console.error('Failed to fetch related proposals:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch related proposals');
@@ -86,9 +64,27 @@ export function RelatedProposals({ proposalText, proposalTitle }: RelatedProposa
 
   React.useEffect(() => {
     if (proposalText && proposalTitle) {
-      searchRelatedProposals();
+      searchRelatedProposalsInternal();
     }
-  }, [proposalText, proposalTitle, searchRelatedProposals]);
+  }, [proposalText, proposalTitle, searchRelatedProposalsInternal]);
+
+  const handleRefresh = async () => {
+    if (!proposalText || !proposalTitle) return;
+    
+    setLoading(true);
+    setError(null);
+
+    try {
+      const query = `${proposalTitle} ${extractKeyPhrases(proposalText)}`.trim();
+      const freshResult = await refreshRelatedProposals(query, 5);
+      setResult(freshResult);
+    } catch (err) {
+      console.error('Failed to refresh related proposals:', err);
+      setError(err instanceof Error ? err.message : 'Failed to refresh related proposals');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const formatDate = (dateString?: string): string => {
     if (!dateString) return '';
@@ -134,21 +130,75 @@ export function RelatedProposals({ proposalText, proposalTitle }: RelatedProposa
     );
   }
 
-  if (relatedProposals.length === 0) {
+  if (result && result.related_proposals.length === 0) {
     return (
       <div className="rounded-lg border border-white/10 bg-white/5 p-6">
-        <h2 className="text-lg font-semibold mb-4 text-white/90">Related Proposals</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-white/90">Related Proposals</h2>
+          
+          <div className="flex items-center gap-4">
+            {/* Cache metadata */}
+            <div className="flex items-center gap-4 text-sm text-white/60">
+              {result.from_cache && (
+                <div className="flex items-center gap-1">
+                  <ClockIcon className="w-4 h-4" />
+                  <span>Cached result</span>
+                </div>
+              )}
+            </div>
+            
+            {/* Refresh button */}
+            <button
+              onClick={handleRefresh}
+              disabled={loading}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-white/70 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
+            >
+              <ArrowPathIcon className="w-4 h-4" />
+              Refresh
+            </button>
+          </div>
+        </div>
         <p className="text-white/60 text-sm">No related proposals found.</p>
       </div>
     );
   }
 
+  if (!result) {
+    return null;
+  }
+
   return (
     <div className="rounded-lg border border-white/10 bg-white/5 p-6">
-      <h2 className="text-lg font-semibold mb-4 text-white/90">Related Proposals</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-white/90">Related Proposals</h2>
+        
+        {result && !loading && (
+          <div className="flex items-center gap-4">
+            {/* Cache metadata */}
+            <div className="flex items-center gap-4 text-sm text-white/60">
+              {result.from_cache && (
+                <div className="flex items-center gap-1">
+                  <ClockIcon className="w-4 h-4" />
+                  <span>Cached result</span>
+                </div>
+              )}
+            </div>
+            
+            {/* Refresh button */}
+            <button
+              onClick={handleRefresh}
+              disabled={loading}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-white/70 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
+            >
+              <ArrowPathIcon className="w-4 h-4" />
+              Refresh
+            </button>
+          </div>
+        )}
+      </div>
       
       <div className="space-y-4">
-        {relatedProposals.map((proposal, index) => (
+        {result?.related_proposals.map((proposal, index) => (
           <div
             key={index}
             className="border border-white/10 rounded-lg p-4 bg-white/5 hover:bg-white/10 transition-colors"

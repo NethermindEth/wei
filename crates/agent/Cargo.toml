@@ -33,6 +33,7 @@ futures = "0.3"
 url = "2.4"
 base64 = "0.21"
 hex = "0.4"
+sha2 = "0.10"
 
 [dev-dependencies]
 tokio-test = "0.4"

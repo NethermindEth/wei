@@ -21,6 +21,7 @@ use crate::{
         middleware::{api_key_auth, handle_error_middleware},
     },
     config::Config,
+    services::cache::CacheService,
     AgentService,
 };
 
@@ -31,6 +32,8 @@ pub struct AppState {
     pub config: Config,
     /// Agent service for processing requests
     pub agent_service: AgentService,
+    /// Cache service for managing cached responses
+    pub cache_service: CacheService,
 }
 
 impl FromRef<AppState> for Config {
@@ -40,7 +43,11 @@ impl FromRef<AppState> for Config {
 }
 
 /// Create the API router
-pub fn create_router(config: &Config, agent_service: AgentService) -> Router {
+pub fn create_router(
+    config: &Config,
+    agent_service: AgentService,
+    cache_service: CacheService,
+) -> Router {
     let tracing_layer = TraceLayer::new_for_http()
         .make_span_with(DefaultMakeSpan::new().include_headers(true))
         .on_response(
@@ -52,6 +59,7 @@ pub fn create_router(config: &Config, agent_service: AgentService) -> Router {
     let state = AppState {
         config: config.clone(),
         agent_service,
+        cache_service,
     };
 
     // Configure CORS
@@ -130,6 +138,33 @@ pub fn create_router(config: &Config, agent_service: AgentService) -> Router {
         .route(
             "/related-proposals",
             get(handlers::search_related_proposals).options(|_: Request| async { "" }),
+        )
+        .route(
+            "/community",
+            get(handlers::get_community_analysis)
+                .post(handlers::analyze_community)
+                .options(|_: Request| async { "" }),
+        )
+        // Cache management routes
+        .route(
+            "/cache",
+            get(handlers::list_cached_queries).options(|_: Request| async { "" }),
+        )
+        .route(
+            "/cache/stats",
+            get(handlers::get_cache_stats).options(|_: Request| async { "" }),
+        )
+        .route(
+            "/cache/invalidate",
+            post(handlers::invalidate_cache).options(|_: Request| async { "" }),
+        )
+        .route(
+            "/cache/refresh",
+            post(handlers::refresh_cache).options(|_: Request| async { "" }),
+        )
+        .route(
+            "/cache/cleanup",
+            post(handlers::cleanup_cache).options(|_: Request| async { "" }),
         )
         .route_layer(middleware::from_fn_with_state(
             state.clone(),

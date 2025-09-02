@@ -13,11 +13,17 @@ use uuid::Uuid;
 
 /// Analysis data model
 pub mod analysis;
+/// Deep research data model
+pub mod deepresearch;
 /// Proposal data model
 pub mod proposal;
 /// Webhook event data model
 pub mod webhook;
 
 pub use analysis::{Analysis, AnalysisResult};
+pub use deepresearch::{
+    DeepResearchApiResponse, DeepResearchRequest, DeepResearchResponse, DeepResearchResult,
+    DiscussionResource,
+};
 pub use proposal::Proposal;
 pub use webhook::WebhookEvent;

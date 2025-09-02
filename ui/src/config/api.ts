@@ -8,6 +8,7 @@ export const API_CONFIG = {
   // API endpoints
   ENDPOINTS: {
     ANALYZE: '/pre-filter',
+    COMMUNITY: '/community',
   },
 } as const;
 

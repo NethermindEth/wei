@@ -61,7 +61,7 @@ pub struct ExaSearchResponse {
 }
 
 /// Related proposal information for the frontend
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RelatedProposal {
     /// URL of the related proposal
     pub url: String,

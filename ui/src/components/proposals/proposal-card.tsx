@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Proposal } from '../../hooks/useProposals';
 import { Modal } from '../ui/modal';
 import ReactMarkdown from 'react-markdown';
@@ -11,11 +10,10 @@ interface ProposalCardProps {
   proposal: Proposal;
   onClick: (proposal: Proposal) => void;
   isSelected: boolean;
-  navigateToPage?: boolean; // If true, navigate to individual page instead of calling onClick
+  navigateToPage?: boolean;
 }
 
-export function ProposalCard({ proposal, onClick, isSelected, navigateToPage = true }: ProposalCardProps) {
-  const router = useRouter();
+export function ProposalCard({ proposal, onClick, isSelected, navigateToPage: _ = true }: ProposalCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   
   const previewText = proposal.body
@@ -27,13 +25,8 @@ export function ProposalCard({ proposal, onClick, isSelected, navigateToPage = t
     : previewText;
 
   const handleCardClick = () => {
-    if (navigateToPage) {
-      // Navigate to the individual proposal page
-      router.push(`/proposals/${proposal.id}`);
-    } else {
-      // Call the onClick handler for analysis on the main page
-      onClick(proposal);
-    }
+    // Always call the onClick handler for analysis on the main page
+    onClick(proposal);
   };
 
   const handleViewFullContent = (e: React.MouseEvent) => {
