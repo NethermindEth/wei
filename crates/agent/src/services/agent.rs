@@ -13,6 +13,7 @@ use crate::models::custom_evaluation::{CustomEvaluationRequest, CustomEvaluation
 use crate::prompts::custom_evaluation::generate_custom_evaluation_prompt;
 use crate::prompts::ANALYZE_PROPOSAL_PROMPT;
 use crate::utils::error::{Error, Result};
+use crate::utils::markdown::extract_json_from_markdown;
 
 use crate::{db::core::Database, models::Proposal, Config};
 
@@ -85,8 +86,11 @@ impl AgentServiceTrait for AgentService {
             .ok_or(Error::Internal("No content in response".to_string()))?
             .to_string();
 
+        // Extract JSON from the response if it's wrapped in markdown code blocks
+        let json_content = extract_json_from_markdown(&content).to_string();
+        
         // Parse the JSON response into our structured format
-        match serde_json::from_str::<StructuredAnalysisResponse>(&content) {
+        match serde_json::from_str::<StructuredAnalysisResponse>(&json_content) {
             Ok(structured_response) => Ok(structured_response),
             Err(e) => {
                 error!("Failed to parse structured response: {}", e);
@@ -143,17 +147,8 @@ impl AgentServiceTrait for AgentService {
         // Log the raw response content for debugging
         info!("Raw AI response: {}", content);
 
-        // Try to extract JSON from the response if it's wrapped in markdown code blocks
-        let json_content = if content.contains("```json") && content.contains("```") {
-            let start = content.find("```json").map(|i| i + 7).unwrap_or(0);
-            let end = content[start..]
-                .find("```")
-                .map(|i| start + i)
-                .unwrap_or(content.len());
-            content[start..end].trim().to_string()
-        } else {
-            content.clone()
-        };
+        // Extract JSON from the response if it's wrapped in markdown code blocks
+        let json_content = extract_json_from_markdown(&content).to_string();
 
         // Parse the JSON response into our custom evaluation format
         match serde_json::from_str::<CustomEvaluationResponse>(&json_content) {
