@@ -1,7 +1,7 @@
 //! API handlers for the agent service
 
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     Json,
 };
 use serde::Serialize;
@@ -9,8 +9,12 @@ use tracing::error;
 
 use crate::{
     api::{error::ApiError, routes::AppState},
-    models::{analysis::StructuredAnalysisResponse, Proposal},
-    services::agent::AgentServiceTrait,
+    models::{
+        analysis::StructuredAnalysisResponse,
+        related_proposals::{RelatedProposalsQuery, RelatedProposalsResponse},
+        Proposal,
+    },
+    services::{agent::AgentServiceTrait, exa::ExaService},
 };
 
 use chrono::Utc;
@@ -81,4 +85,37 @@ pub struct AnalyzeResponse {
     /// Structured analysis response
     #[serde(flatten)]
     pub structured_response: StructuredAnalysisResponse,
+}
+
+/// Search for related proposals using Exa
+pub async fn search_related_proposals(
+    Query(query_params): Query<RelatedProposalsQuery>,
+    State(state): State<AppState>,
+) -> Result<Json<RelatedProposalsResponse>, ApiError> {
+    // Check if Exa API key is configured
+    let exa_api_key = state
+        .config
+        .exa_api_key
+        .as_ref()
+        .ok_or(ApiError::internal_error("Exa API key not configured"))?;
+
+    // Validate limit parameter
+    let limit = query_params.limit.unwrap_or(5).min(10);
+
+    // Create Exa service instance
+    let exa_service = ExaService::new(exa_api_key.clone());
+
+    // Search for related proposals
+    let related_proposals = exa_service
+        .search_related_proposals(query_params.query.clone(), Some(limit))
+        .await
+        .map_err(|e| {
+            error!("Error searching for related proposals: {:?}", e);
+            ApiError::internal_error(format!("Failed to search for related proposals: {}", e))
+        })?;
+
+    Ok(Json(RelatedProposalsResponse {
+        related_proposals,
+        query: query_params.query,
+    }))
 }

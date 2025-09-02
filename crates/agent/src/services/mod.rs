@@ -5,6 +5,8 @@
 
 /// Main agent service implementation
 pub mod agent;
+/// Exa search service for finding related proposals
+pub mod exa;
 /// Webhook service for receiving events
 pub mod webhook;
 

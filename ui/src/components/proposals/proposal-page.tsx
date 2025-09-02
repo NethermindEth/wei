@@ -12,6 +12,7 @@ import { Tabs } from "../ui/tabs";
 import { ApiService } from "../../services/api";
 import { AnalysisResponse } from "../../types/proposal";
 import ReactMarkdown from 'react-markdown';
+import { RelatedProposals } from "./related-proposals";
 
 // Status badge component for consistent styling
 const StatusBadge = ({ status }: { status?: string }) => {
@@ -226,7 +227,19 @@ const handleBackClick = () => {
               {/* Proposal Title */}
               <div className="mb-4">
                 <h1 className="text-2xl font-semibold text-white/90 mb-3 break-words">
-                  {selectedProposal.title}
+                  {selectedProposal.space?.id ? (
+                    <a
+                      href={`https://snapshot.org/#/${selectedProposal.space.id}/proposal/${selectedProposal.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-[--color-accent] transition-colors hover:underline"
+                      title="View original proposal on Snapshot"
+                    >
+                      {selectedProposal.title}
+                    </a>
+                  ) : (
+                    selectedProposal.title
+                  )}
                 </h1>
                 <div className="flex items-center gap-4 text-sm text-white/60">
                   {selectedProposal.author && (
@@ -431,6 +444,12 @@ const handleBackClick = () => {
                   </div>
                 )}
               </div>
+
+              {/* Related Proposals Section */}
+              <RelatedProposals 
+                proposalText={selectedProposal.body || ''}
+                proposalTitle={selectedProposal.title}
+              />
             </div>
           )}
         </div>

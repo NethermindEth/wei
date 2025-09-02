@@ -8,6 +8,7 @@ When asked to create a pr
 - make sure the branch is a working branch (not main or develop) and has a clear name
 - make sure everything compiles correctly (read readme.md s)
 - make sure the ui compiles correctly with no errors
+- run cargo fmt and cargo clippy
 - make sure all formatting checks are done correctly
 - make sure all changes are synced to origin
 - target unless otherwise specified should be develop
