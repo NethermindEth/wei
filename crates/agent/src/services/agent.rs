@@ -1,12 +1,14 @@
 //! Main agent service
 
 use std::future::Future;
+use std::collections::HashMap;
 
 use openrouter_rs::{api::chat::ChatCompletionRequest, types::Role, Message, OpenRouterClient};
 use serde_json;
 use tracing::{error, info};
 
-use crate::models::analysis::{EvaluationCategory, StructuredAnalysisResponse};
+use crate::models::analysis::{ StructuredAnalysisResponse};
+ use crate::models::custom_evaluation::EvaluationResult;
 use crate::models::custom_evaluation::{CustomEvaluationRequest, CustomEvaluationResponse};
 use crate::prompts::custom_evaluation::generate_custom_evaluation_prompt;
 use crate::prompts::ANALYZE_PROPOSAL_PROMPT;
@@ -170,13 +172,12 @@ impl AgentServiceTrait for AgentService {
                     error!("Response parsed as generic JSON: {}", value);
                 }
 
-                // Create a fallback response with default criteria
-                use crate::models::custom_evaluation::EvaluationResult;
+               
                 let default_evaluation = EvaluationResult::na("Could not parse response");
 
                 // Create a fallback response with default fields
                 // We always include the three default criteria
-                let mut response_map = std::collections::HashMap::new();
+                let mut response_map: HashMap<String, EvaluationResult> = HashMap::new();
 
                 // Add the default criteria
                 response_map.insert(
