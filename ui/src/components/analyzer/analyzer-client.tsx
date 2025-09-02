@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useMemo } from "react";
 import { useQueryState } from "nuqs";
 import { ApiService } from "../../services/api";
 import { Proposal, LocalAnalysisResult, AnalysisResponse } from "../../types/proposal";
