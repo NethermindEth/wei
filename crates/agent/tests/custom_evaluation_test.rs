@@ -48,9 +48,9 @@ async fn test_custom_evaluation_endpoint() {
         "custom_criteria": "I want to evaluate the team background and the deliverable dates"
     });
 
-    // Send the request to the custom evaluation endpoint using PUT method
+    // Send the request to the custom evaluation endpoint using POST method
     let response = client
-        .put(format!("{}/pre-filter", api_url))
+        .post(format!("{}/pre-filter/custom", api_url))
         .header("x-api-key", &api_key)
         .header("Content-Type", "application/json")
         .json(&request_body)

@@ -39,8 +39,8 @@ export class ApiService {
   }
   
   static async customEvaluateProposal(request: CustomEvaluationRequest): Promise<CustomEvaluationResponse> {
-    return this.makeRequest<CustomEvaluationResponse>('/pre-filter', {
-      method: 'PUT',
+    return this.makeRequest<CustomEvaluationResponse>('/pre-filter/custom', {
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
