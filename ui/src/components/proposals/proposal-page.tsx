@@ -84,7 +84,7 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
         analyzeProposal(proposal);
       }
     }
-  }, [allProposals, proposalId, selectedSpaceId, setSelectedSpaceId]);
+  }, [analyzeProposal, allProposals, proposalId, selectedSpaceId, setSelectedSpaceId]);
 
   const analyzeProposal = async (proposal: Proposal) => {
     setIsLoading(true);
