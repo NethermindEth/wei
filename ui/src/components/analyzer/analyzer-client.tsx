@@ -99,12 +99,15 @@ export function AnalyzerClient() {
   }
 
   // Convert spaces to protocols for the header
-  const protocols: Protocol[] = spaces.map(space => ({
-    id: space.id,
-    name: space.name,
-    avatar: space.avatar,
-    verified: space.verified
-  }));
+  const protocols: Protocol[] = useMemo(
+    () => spaces.map(space => ({
+      id: space.id,
+      name: space.name,
+      avatar: space.avatar,
+      verified: space.verified
+    })),
+    [spaces]
+  );
 
   const handleProtocolChange = (protocolId: string | null) => {
     setSelectedSpaceId(protocolId);
