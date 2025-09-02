@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 use std::future::Future;
+use crate::models::analysis::EvaluationCategory;
 
 use openrouter_rs::{api::chat::ChatCompletionRequest, types::Role, Message, OpenRouterClient};
 use serde_json;
@@ -41,7 +42,7 @@ impl AgentService {
         let openrouter: OpenRouterClient = OpenRouterClient::builder()
             .api_key(config.ai_model_api_key.clone())
             .build()
-            .map_err(|e| Error::Internal(e.to_string()))?;
+            .map_err(|  e: openrouter_rs::error::OpenRouterError(e.to_string()))?;
 
         Ok(openrouter)
     }
@@ -97,7 +98,6 @@ impl AgentServiceTrait for AgentService {
                 error!("Raw response: {}", content);
 
                 // Create a fallback response with the new structure
-                use crate::models::analysis::EvaluationCategory;
                 let default_category = EvaluationCategory::na("Could not parse response");
 
                 let fallback = StructuredAnalysisResponse {
@@ -135,7 +135,7 @@ impl AgentServiceTrait for AgentService {
                 Message::new(Role::User, proposal.description.as_str()),
             ])
             .build()
-            .map_err(|e| Error::ChatBuilder(e.to_string()))?;
+            .map_err(|e| Error::ChatBuilder(e))?;
 
         let response = self.openrouter.send_chat_completion(&chat_request).await?;
 
