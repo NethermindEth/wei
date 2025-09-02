@@ -69,24 +69,7 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
   // Fetch proposals for search functionality
   const { proposals: allProposals } = useProposals(1000);
 
-  // Find the specific proposal by ID
-  React.useEffect(() => {
-    if (allProposals.length > 0) {
-      const proposal = allProposals.find(p => p.id === proposalId);
-      
-      if (proposal) {
-        setSelectedProposal(proposal);
-        // Auto-set the space if proposal has one
-        if (proposal.space?.id && !selectedSpaceId) {
-          setSelectedSpaceId(proposal.space.id);
-        }
-        // Auto-analyze the proposal when it's loaded
-        analyzeProposal(proposal);
-      }
-    }
-  }, [analyzeProposal, allProposals, proposalId, selectedSpaceId, setSelectedSpaceId]);
-
-  const analyzeProposal = async (proposal: Proposal) => {
+  const analyzeProposal = React.useCallback(async (proposal: Proposal) => {
     setIsLoading(true);
     setError(null);
     
@@ -104,7 +87,24 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  // Find the specific proposal by ID
+  React.useEffect(() => {
+    if (allProposals.length > 0) {
+      const proposal = allProposals.find(p => p.id === proposalId);
+      
+      if (proposal) {
+        setSelectedProposal(proposal);
+        // Auto-set the space if proposal has one
+        if (proposal.space?.id && !selectedSpaceId) {
+          setSelectedSpaceId(proposal.space.id);
+        }
+        // Auto-analyze the proposal when it's loaded
+        analyzeProposal(proposal);
+      }
+    }
+  }, [allProposals, proposalId, selectedSpaceId, setSelectedSpaceId, analyzeProposal]);
 
   // Convert spaces to protocols for the header
   const protocols: Protocol[] = spaces.map(space => ({
