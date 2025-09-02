@@ -162,6 +162,25 @@ The Wei Agent now features automatic database creation and migration management.
 
 See the `env.example` file for a complete list of environment variables. Copy this file to `.env` and update the values as needed.
 
+### API Documentation
+
+The Agent service provides interactive API documentation through Swagger UI:
+
+- **Access the API documentation**:
+  - Start the agent service: `cargo run -p agent`
+  - Open your browser and navigate to: [https://wei-agent.dev-nethermind.xyz/api-docs](https://wei-agent.dev-nethermind.xyz/api-docs)
+  - The Swagger UI provides an interactive interface to explore and test all available endpoints
+
+- **Available endpoints**:
+  - **Health Check**: `GET /health` - Check service status (public)
+  - **Analyze Proposal**: `POST /pre-filter` - Analyze a DAO/Governance proposal (protected)
+  - **Get Analysis**: `GET /pre-filter/{id}` - Retrieve analysis by ID (protected)
+  - **Get Proposal Analyses**: `GET /pre-filter` - List all analyses (protected)
+
+- **API Specification**:
+  - OpenAPI JSON: [https://wei-agent.dev-nethermind.xyz/api-docs/openapi.json](https://wei-agent.dev-nethermind.xyz/api-docs/openapi.json)
+  - The specification includes detailed descriptions, request/response schemas, and examples
+
 ### API Authentication
 
 The Agent service includes API key authentication for protected endpoints:
@@ -176,7 +195,7 @@ The Agent service includes API key authentication for protected endpoints:
   ```
 
 - **Usage**:
-  - Public endpoints (e.g., `/health`) are accessible without authentication
+  - Public endpoints (e.g., `/health`, `/api-docs`) are accessible without authentication
   - Protected endpoints require an API key in the `x-api-key` header
   - Invalid requests receive `401 Unauthorized` or `403 Forbidden` responses
 
