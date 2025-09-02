@@ -74,7 +74,7 @@ export function Header({
             />
           </div>
           <h1 className="text-lg font-semibold text-white/90">
-            Wei – Proposal Analyzer
+            Wei
           </h1>
         </div>
 
