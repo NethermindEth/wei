@@ -68,7 +68,6 @@ pub fn create_router(config: &Config, agent_service: AgentService) -> Router {
             .allow_methods(AllowMethods::list([
                 Method::GET,
                 Method::POST,
-                Method::PUT,
                 Method::OPTIONS,
             ]))
             .allow_headers([
@@ -95,7 +94,6 @@ pub fn create_router(config: &Config, agent_service: AgentService) -> Router {
             .allow_methods(AllowMethods::list([
                 Method::GET,
                 Method::POST,
-                Method::PUT,
                 Method::OPTIONS,
             ]))
             .allow_headers([
@@ -147,7 +145,6 @@ pub fn create_router(config: &Config, agent_service: AgentService) -> Router {
         if path_exists
             && method != Method::GET
             && method != Method::POST
-            && method != Method::PUT
             && method != Method::OPTIONS
         {
             // Method Not Allowed (405)
