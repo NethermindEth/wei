@@ -50,6 +50,10 @@ pub enum Error {
     #[allow(dead_code)] // TODO: Remove after development phase
     OpenRouter(Box<openrouter_rs::error::OpenRouterError>),
 
+    /// ChatCompletionRequest builder error
+    #[error("ChatCompletionRequest builder error: {0}")]
+    ChatBuilder(String),
+
     /// Internal service error
     #[error("Internal error: {0}")]
     Internal(String),

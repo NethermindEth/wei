@@ -65,20 +65,20 @@ pub trait AgentServiceTrait {
 impl AgentServiceTrait for AgentService {
     /// Analyze a proposal
     async fn analyze_proposal(&self, proposal: &Proposal) -> Result<StructuredAnalysisResponse> {
-        let request = ChatCompletionRequest::builder()
+        let request: ChatCompletionRequest = ChatCompletionRequest::builder()
             .model(self.config.ai_model_name.clone())
             .messages(vec![
                 Message::new(Role::System, ANALYZE_PROPOSAL_PROMPT),
                 Message::new(Role::User, serde_json::to_string(&proposal)?.as_str()),
             ])
             .build()
-            .map_err(|e| Error::Internal(e.to_string()))?;
+            .map_err(|e| Error::ChatBuilder(e.to_string()))?;
 
         let response = self
             .openrouter
             .send_chat_completion(&request)
             .await
-            .map_err(|e| Error::Internal(e.to_string()))?;
+            .map_err(Error::from)?;
 
         let content = response.choices[0]
             .content()
@@ -131,13 +131,9 @@ impl AgentServiceTrait for AgentService {
                 Message::new(Role::User, proposal.description.as_str()),
             ])
             .build()
-            .map_err(|e| Error::Internal(e.to_string()))?;
+            .map_err(|e| Error::ChatBuilder(e.to_string()))?;
 
-        let response = self
-            .openrouter
-            .send_chat_completion(&chat_request)
-            .await
-            .map_err(|e| Error::Internal(e.to_string()))?;
+        let response = self.openrouter.send_chat_completion(&chat_request).await?;
 
         let content = response.choices[0]
             .content()
