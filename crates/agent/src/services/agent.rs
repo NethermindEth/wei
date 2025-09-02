@@ -88,7 +88,7 @@ impl AgentServiceTrait for AgentService {
 
         // Extract JSON from the response if it's wrapped in markdown code blocks
         let json_content = extract_json_from_markdown(&content).to_string();
-        
+
         // Parse the JSON response into our structured format
         match serde_json::from_str::<StructuredAnalysisResponse>(&json_content) {
             Ok(structured_response) => Ok(structured_response),

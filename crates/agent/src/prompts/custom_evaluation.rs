@@ -61,7 +61,8 @@ pub fn generate_custom_evaluation_prompt(request: &CustomEvaluationRequest) -> S
         4. Ensure all JSON keys and values are properly quoted with double quotes\n\
         5. Arrays must be properly formatted with square brackets and comma-separated values\n\
         6. Do not use trailing commas in arrays or objects\n\
-        7. Ensure all special characters are properly escaped in strings\n\n".to_string();
+        7. Ensure all special characters are properly escaped in strings\n\n"
+        .to_string();
 
     let custom_prompt = custom_prompt + &json_rules;
 

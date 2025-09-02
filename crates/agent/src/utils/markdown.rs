@@ -14,7 +14,7 @@
 pub fn extract_json_from_markdown(content: &str) -> &str {
     const JSON_MARKER_START: &str = "```json";
     const JSON_MARKER_END: &str = "```";
-    
+
     if let Some(start_idx) = content.find(JSON_MARKER_START) {
         let json_start = start_idx + JSON_MARKER_START.len();
         if let Some(end_idx) = content[json_start..].find(JSON_MARKER_END) {
@@ -37,11 +37,11 @@ mod tests {
 }
 ```
 Some text after"#;
-        
+
         let expected = r#"{
   "key": "value"
 }"#;
-        
+
         assert_eq!(extract_json_from_markdown(markdown), expected);
     }
 
@@ -57,7 +57,7 @@ Some text after"#;
 {
   "key": "value"
 }"#;
-        
+
         assert_eq!(extract_json_from_markdown(markdown), markdown);
     }
 }
