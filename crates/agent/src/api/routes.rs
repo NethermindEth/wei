@@ -127,6 +127,10 @@ pub fn create_router(config: &Config, agent_service: AgentService) -> Router {
             "/pre-filter/proposal/:proposal_id",
             get(handlers::get_proposal_analyses).options(|_: Request| async { "" }),
         )
+        .route(
+            "/related-proposals",
+            get(handlers::search_related_proposals).options(|_: Request| async { "" }),
+        )
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             api_key_auth::<AppState>,

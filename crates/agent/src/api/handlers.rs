@@ -1,16 +1,19 @@
 //! API handlers for the agent service
 
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     Json,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tracing::error;
 
 use crate::{
     api::{error::ApiError, routes::AppState},
     models::{analysis::StructuredAnalysisResponse, Proposal},
-    services::agent::AgentServiceTrait,
+    services::{
+        agent::AgentServiceTrait,
+        exa::{ExaService, RelatedProposal},
+    },
 };
 
 use chrono::Utc;
@@ -81,4 +84,55 @@ pub struct AnalyzeResponse {
     /// Structured analysis response
     #[serde(flatten)]
     pub structured_response: StructuredAnalysisResponse,
+}
+
+/// Query parameters for related proposals search
+#[derive(Deserialize)]
+pub struct RelatedProposalsQuery {
+    /// The search query or proposal text to find related proposals for
+    pub query: String,
+    /// Maximum number of results to return (default: 5, max: 10)
+    pub limit: Option<u8>,
+}
+
+/// Response payload for related proposals request
+#[derive(Serialize)]
+pub struct RelatedProposalsResponse {
+    /// List of related proposals found
+    pub related_proposals: Vec<RelatedProposal>,
+    /// The query that was used for the search
+    pub query: String,
+}
+
+/// Search for related proposals using Exa
+pub async fn search_related_proposals(
+    Query(query_params): Query<RelatedProposalsQuery>,
+    State(state): State<AppState>,
+) -> Result<Json<RelatedProposalsResponse>, ApiError> {
+    // Check if Exa API key is configured
+    let exa_api_key = state
+        .config
+        .exa_api_key
+        .as_ref()
+        .ok_or_else(|| ApiError::internal_error("Exa API key not configured"))?;
+
+    // Validate limit parameter
+    let limit = query_params.limit.unwrap_or(5).min(10);
+
+    // Create Exa service instance
+    let exa_service = ExaService::new(exa_api_key.clone());
+
+    // Search for related proposals
+    let related_proposals = exa_service
+        .search_related_proposals(query_params.query.clone(), Some(limit))
+        .await
+        .map_err(|e| {
+            error!("Error searching for related proposals: {:?}", e);
+            ApiError::internal_error(format!("Failed to search for related proposals: {}", e))
+        })?;
+
+    Ok(Json(RelatedProposalsResponse {
+        related_proposals,
+        query: query_params.query,
+    }))
 }
