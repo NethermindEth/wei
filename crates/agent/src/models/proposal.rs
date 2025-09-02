@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 /// Simplified proposal model for agent analysis
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
 #[schema(description = descriptions::PROPOSAL_DESCRIPTION)]
 pub struct Proposal {
     /// Description of the proposal
