@@ -2,6 +2,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::models::EvaluationStatus;
+
 /// Represents an analysis of a proposal
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Analysis {
@@ -56,7 +58,7 @@ pub struct StructuredAnalysisResponse {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct EvaluationCategory {
     /// Status of the evaluation: pass, fail, or n/a
-    pub status: String,
+    pub status: EvaluationStatus,
     /// Justification for the status (empty for pass/fail, explanation for n/a)
     pub justification: String,
     /// Suggestions for improvement (only provided for fail status)
@@ -64,10 +66,10 @@ pub struct EvaluationCategory {
 }
 
 impl EvaluationCategory {
-    /// Creates a new EvaluationCategory with status "n/a" and a default suggestion
+    /// Creates a new EvaluationCategory with status NotApplicable and a default suggestion
     pub fn na(justification: &str) -> Self {
         Self {
-            status: "n/a".to_string(),
+            status: EvaluationStatus::NotApplicable,
             justification: justification.to_string(),
             suggestions: vec!["Please try again".to_string()],
         }

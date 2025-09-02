@@ -14,7 +14,24 @@ pub mod proposal;
 /// Webhook event data model
 pub mod webhook;
 
+/// Status of an evaluation
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum EvaluationStatus {
+    /// The evaluation passed the criteria
+    Pass,
+    /// The evaluation failed the criteria
+    Fail,
+    /// The evaluation criteria is not applicable
+    #[default]
+    #[serde(rename = "n/a")]
+    NotApplicable,
+}
+
+/// Re-export common types
+pub use custom_evaluation::CustomEvaluationRequest;
+pub use custom_evaluation::CustomEvaluationResponse;
+
 pub use analysis::{Analysis, AnalysisResult};
-pub use custom_evaluation::{CustomCriterion, CustomEvaluationRequest, CustomEvaluationResponse};
 pub use proposal::Proposal;
 pub use webhook::WebhookEvent;
