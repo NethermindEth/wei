@@ -1,9 +1,13 @@
 //! Exa API search service for finding related proposals
 
-use anyhow::{anyhow, Result};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use tracing::{error, info};
+
+use crate::{
+    models::related_proposals::RelatedProposal,
+    utils::error::{Error, Result},
+};
 
 /// Exa API client for searching related content
 #[derive(Clone)]
@@ -60,23 +64,6 @@ pub struct ExaSearchResponse {
     pub autoprompt_string: Option<String>,
 }
 
-/// Related proposal information for the frontend
-#[derive(Debug, Serialize)]
-pub struct RelatedProposal {
-    /// URL of the related proposal
-    pub url: String,
-    /// Title of the proposal
-    pub title: String,
-    /// Summary/excerpt of the proposal content
-    pub summary: Option<String>,
-    /// Published date if available
-    pub published_date: Option<String>,
-    /// Relevance score
-    pub relevance_score: Option<f64>,
-    /// Source domain
-    pub source: String,
-}
-
 impl ExaService {
     /// Create a new Exa service instance
     pub fn new(api_key: String) -> Self {
@@ -122,7 +109,7 @@ impl ExaService {
             .json(&search_request)
             .send()
             .await
-            .map_err(|e| anyhow!("Failed to send request to Exa API: {}", e))?;
+            .map_err(Error::HttpRequest)?;
 
         if !response.status().is_success() {
             let status = response.status();
@@ -131,17 +118,14 @@ impl ExaService {
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
             error!("Exa API error {}: {}", status, error_text);
-            return Err(anyhow!(
+            return Err(Error::Internal(format!(
                 "Exa API request failed with status {}: {}",
-                status,
-                error_text
-            ));
+                status, error_text
+            )));
         }
 
-        let exa_response: ExaSearchResponse = response
-            .json()
-            .await
-            .map_err(|e| anyhow!("Failed to parse Exa API response: {}", e))?;
+        let exa_response: ExaSearchResponse =
+            response.json().await.map_err(Error::HttpRequest)?;
 
         info!("Found {} related proposals", exa_response.results.len());
 
@@ -170,12 +154,10 @@ impl ExaService {
 
 /// Extract domain name from URL for display purposes
 fn extract_domain(url: &str) -> String {
-    if let Ok(parsed_url) = url::Url::parse(url) {
-        if let Some(domain) = parsed_url.domain() {
-            return domain.to_string();
-        }
-    }
-    "Unknown".to_string()
+    url::Url::parse(url)
+        .ok()
+        .and_then(|u| u.domain().map(|d| d.to_string()))
+        .unwrap_or_else(|| "Unknown".into())
 }
 
 #[cfg(test)]

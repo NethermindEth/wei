@@ -15,9 +15,12 @@ use uuid::Uuid;
 pub mod analysis;
 /// Proposal data model
 pub mod proposal;
+/// Related proposals data model
+pub mod related_proposals;
 /// Webhook event data model
 pub mod webhook;
 
 pub use analysis::{Analysis, AnalysisResult};
 pub use proposal::Proposal;
+pub use related_proposals::{RelatedProposal, RelatedProposalsQuery, RelatedProposalsResponse};
 pub use webhook::WebhookEvent;

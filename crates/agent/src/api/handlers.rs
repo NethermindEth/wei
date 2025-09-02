@@ -4,16 +4,17 @@ use axum::{
     extract::{Path, Query, State},
     Json,
 };
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use tracing::error;
 
 use crate::{
     api::{error::ApiError, routes::AppState},
-    models::{analysis::StructuredAnalysisResponse, Proposal},
-    services::{
-        agent::AgentServiceTrait,
-        exa::{ExaService, RelatedProposal},
+    models::{
+        analysis::StructuredAnalysisResponse,
+        related_proposals::{RelatedProposalsQuery, RelatedProposalsResponse},
+        Proposal,
     },
+    services::{agent::AgentServiceTrait, exa::ExaService},
 };
 
 use chrono::Utc;
@@ -86,24 +87,6 @@ pub struct AnalyzeResponse {
     pub structured_response: StructuredAnalysisResponse,
 }
 
-/// Query parameters for related proposals search
-#[derive(Deserialize)]
-pub struct RelatedProposalsQuery {
-    /// The search query or proposal text to find related proposals for
-    pub query: String,
-    /// Maximum number of results to return (default: 5, max: 10)
-    pub limit: Option<u8>,
-}
-
-/// Response payload for related proposals request
-#[derive(Serialize)]
-pub struct RelatedProposalsResponse {
-    /// List of related proposals found
-    pub related_proposals: Vec<RelatedProposal>,
-    /// The query that was used for the search
-    pub query: String,
-}
-
 /// Search for related proposals using Exa
 pub async fn search_related_proposals(
     Query(query_params): Query<RelatedProposalsQuery>,
@@ -114,7 +97,7 @@ pub async fn search_related_proposals(
         .config
         .exa_api_key
         .as_ref()
-        .ok_or_else(|| ApiError::internal_error("Exa API key not configured"))?;
+        .ok_or(ApiError::internal_error("Exa API key not configured"))?;
 
     // Validate limit parameter
     let limit = query_params.limit.unwrap_or(5).min(10);
