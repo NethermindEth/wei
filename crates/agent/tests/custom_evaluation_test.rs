@@ -2,30 +2,41 @@ use reqwest::{Client, StatusCode};
 use serde_json::{json, Value};
 use std::env;
 
-#[tokio::test]
-#[ignore = "Requires environment variables to be set"]
-async fn test_custom_evaluation_endpoint() {
-    // Get the API URL and key from environment variables
+/// Get API configuration for tests
+/// Returns (api_url, api_key) if configuration is valid, None otherwise
+fn get_test_api_config() -> Option<(String, String)> {
     let api_url = env::var("API_URL").unwrap_or_else(|_| "http://localhost:8000".to_string());
-
+    
     // Check if the API keys environment variable is set
     let api_keys = match env::var("WEI_AGENT_API_KEYS") {
         Ok(keys) => keys,
         Err(_) => {
             println!("Skipping test: WEI_AGENT_API_KEYS environment variable not set");
-            return;
+            return None;
         }
     };
-
+    
     // Get the first API key from the comma-separated list
     let api_key = match api_keys.split(',').next() {
-        Some(key) => key.trim(),
+        Some(key) => key.trim().to_string(),
         None => {
             println!("Skipping test: WEI_AGENT_API_KEYS is empty");
-            return;
+            return None;
         }
     };
+    
+    Some((api_url, api_key))
+}
 
+#[tokio::test]
+#[ignore = "Requires environment variables to be set"]
+async fn test_custom_evaluation_endpoint() {
+    // Get API configuration for the test
+    let (api_url, api_key) = match get_test_api_config() {
+        Some(config) => config,
+        None => return, // Test will be skipped if config can't be loaded
+    };
+    
     let client = Client::new();
 
     // Sample proposal content
@@ -40,7 +51,7 @@ async fn test_custom_evaluation_endpoint() {
     // Send the request to the custom evaluation endpoint using PUT method
     let response = client
         .put(format!("{}/pre-filter", api_url))
-        .header("x-api-key", api_key)
+        .header("x-api-key", &api_key)
         .header("Content-Type", "application/json")
         .json(&request_body)
         .send()
