@@ -36,7 +36,7 @@ impl AgentService {
     pub fn new(db: Database, config: Config) -> Self {
         let community_repo = CommunityRepository::new(db.clone());
         let cache_repo = CacheRepository::new(db.clone());
-        let cache_service = CacheService::new(cache_repo, None);
+        let cache_service = CacheService::new(cache_repo);
         Self {
             db,
             community_repo,

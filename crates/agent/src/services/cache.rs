@@ -140,10 +140,10 @@ pub struct CachedResponse<T> {
 
 impl CacheService {
     /// Create a new cache service
-    pub fn new(repository: CacheRepository, config: Option<CacheConfig>) -> Self {
+    pub fn new(repository: CacheRepository) -> Self {
         Self {
             repository,
-            config: config.unwrap_or_default(),
+            config: CacheConfig::default(),
         }
     }
 
