@@ -1,12 +1,18 @@
 import { useState, useEffect } from 'react';
 import { apolloClient } from '../services/graphql';
-import { ProposalsQuery } from '../queries/proposals.gql';
+import { ProposalsQuery, AllProposalsQuery } from '../queries/proposals.gql';
 
 export interface Proposal {
   id: string;
   title: string;
   body: string;
   author: string;
+  space?: {
+    id: string;
+    name: string;
+    avatar?: string;
+    verified?: boolean;
+  };
 }
 
 interface ProposalsData {
@@ -19,9 +25,10 @@ interface UseProposalsResult {
   error: Error | null;
   loadMore: () => void;
   hasMore: boolean;
+  refetch: () => void;
 }
 
-export function useProposals(initialPageSize = 20): UseProposalsResult {
+export function useProposals(initialPageSize = 20, spaceId: string | null = null): UseProposalsResult {
   const [pageSize] = useState(initialPageSize);
   const [skip, setSkip] = useState(0);
   const [allProposals, setAllProposals] = useState<Proposal[]>([]);
@@ -33,13 +40,14 @@ export function useProposals(initialPageSize = 20): UseProposalsResult {
     const fetchProposals = async () => {
       setLoading(true);
       try {
+        const query = spaceId ? ProposalsQuery : AllProposalsQuery;
+        const variables = spaceId 
+          ? { first: pageSize, skip: 0, space: spaceId }
+          : { first: pageSize, skip: 0 };
+          
         const result = await apolloClient.query<ProposalsData>({
-          query: ProposalsQuery,
-          variables: {
-            first: pageSize,
-            skip: 0,
-            orderDirection: 'desc'
-          }
+          query,
+          variables
         });
 
         if (result.data?.proposals) {
@@ -48,6 +56,7 @@ export function useProposals(initialPageSize = 20): UseProposalsResult {
         }
         setError(null);
       } catch (err) {
+        console.error('Failed to fetch proposals:', err);
         setError(err instanceof Error ? err : new Error('Failed to fetch proposals'));
       } finally {
         setLoading(false);
@@ -55,7 +64,7 @@ export function useProposals(initialPageSize = 20): UseProposalsResult {
     };
 
     fetchProposals();
-  }, [pageSize]);
+  }, [pageSize, spaceId]);
 
   const loadMore = async () => {
     if (loading || !hasMore) return;
@@ -65,13 +74,14 @@ export function useProposals(initialPageSize = 20): UseProposalsResult {
     setLoading(true);
     
     try {
+      const query = spaceId ? ProposalsQuery : AllProposalsQuery;
+      const variables = spaceId 
+        ? { first: pageSize, skip: newSkip, space: spaceId }
+        : { first: pageSize, skip: newSkip };
+        
       const result = await apolloClient.query<ProposalsData>({
-        query: ProposalsQuery,
-        variables: {
-          first: pageSize,
-          skip: newSkip,
-          orderDirection: 'desc'
-        },
+        query,
+        variables,
         fetchPolicy: 'network-only'
       });
 
@@ -85,10 +95,18 @@ export function useProposals(initialPageSize = 20): UseProposalsResult {
         setAllProposals(prev => [...prev, ...newProposals]);
       }
     } catch (err) {
+      console.error('Failed to load more proposals:', err);
       setError(err instanceof Error ? err : new Error('Failed to load more proposals'));
     } finally {
       setLoading(false);
     }
+  };
+
+  const refetch = () => {
+    setAllProposals([]);
+    setSkip(0);
+    setHasMore(true);
+    // Trigger refetch by changing the spaceId dependency
   };
 
   return {
@@ -96,6 +114,7 @@ export function useProposals(initialPageSize = 20): UseProposalsResult {
     loading,
     error,
     loadMore,
-    hasMore
+    hasMore,
+    refetch
   };
 }

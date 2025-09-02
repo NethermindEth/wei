@@ -21,6 +21,7 @@ use crate::{
         middleware::{api_key_auth, handle_error_middleware},
     },
     config::Config,
+    swagger::handlers::{openapi_handler, swagger_ui_handler},
     AgentService,
 };
 
@@ -107,7 +108,10 @@ pub fn create_router(config: &Config, agent_service: AgentService) -> Router {
     };
 
     // Public routes that don't require authentication
-    let public_routes = Router::new().route("/health", get(handlers::health));
+    let public_routes = Router::new()
+        .route("/health", get(handlers::health))
+        .route("/api-docs/openapi.json", get(openapi_handler))
+        .route("/api-docs", get(swagger_ui_handler));
 
     // Protected routes that require API key authentication
     let protected_routes = Router::new()

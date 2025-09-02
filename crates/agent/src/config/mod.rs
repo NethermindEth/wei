@@ -8,7 +8,7 @@ use std::collections::HashSet;
 #[derive(Debug, Clone, Serialize, Deserialize, Parser)]
 pub struct Config {
     /// Application port
-    #[arg(env = "WEI_AGENT_PORT", long, default_value = "8000")]
+    #[arg(env = "WEI_AGENT_PORT", long, default_value = "3001")]
     pub port: u16,
 
     /// Database URL
