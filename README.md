@@ -168,7 +168,7 @@ The Agent service provides interactive API documentation through Swagger UI:
 
 - **Access the API documentation**:
   - Start the agent service: `cargo run -p agent`
-  - Open your browser and navigate to: [http://localhost:8000/api-docs](http://localhost:8000/api-docs)
+  - Open your browser and navigate to: [https://wei-agent.dev-nethermind.xyz/api-docs](https://wei-agent.dev-nethermind.xyz/api-docs)
   - The Swagger UI provides an interactive interface to explore and test all available endpoints
 
 - **Available endpoints**:
@@ -178,7 +178,7 @@ The Agent service provides interactive API documentation through Swagger UI:
   - **Get Proposal Analyses**: `GET /pre-filter` - List all analyses (protected)
 
 - **API Specification**:
-  - OpenAPI JSON: [http://localhost:8000/api-docs/openapi.json](http://localhost:8000/api-docs/openapi.json)
+  - OpenAPI JSON: [https://wei-agent.dev-nethermind.xyz/api-docs/openapi.json](https://wei-agent.dev-nethermind.xyz/api-docs/openapi.json)
   - The specification includes detailed descriptions, request/response schemas, and examples
 
 ### API Authentication
