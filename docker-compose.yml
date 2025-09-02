@@ -41,7 +41,7 @@ services:
       - RUST_ENV=${RUST_ENV:-development}
       - RUST_BACKTRACE=${RUST_BACKTRACE:-1}
     ports:
-      - "3001:3001"
+      -   "${WEI_AGENT_PORT}:${WEI_AGENT_PORT}"
     command: ["/app/agent"]
     restart: unless-stopped
     
