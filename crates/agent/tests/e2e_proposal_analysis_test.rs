@@ -1,22 +1,14 @@
 use agent::models::Proposal;
 use agent::services::agent::AgentServiceTrait;
 
-// Import the fixtures directly
-mod fixtures {
-    include!("fixtures/proposals.rs");
-}
-
-// Import the agent creation fixture
-mod agent_fixture {
-    include!("fixtures/create_agent.rs");
-}
-
-// Re-export the create_agent_service function and validation for convenience
-use agent_fixture::{create_agent_service, validate_analysis};
+// Import the fixtures as proper modules
+mod fixtures;
+use fixtures::proposals::get_proposals;
+use fixtures::create_agent::{create_agent_service, validate_analysis};
 
 #[tokio::test]
 async fn test_e2e_proposal_analysis() {
-    let proposals_data = fixtures::get_proposals();
+    let proposals_data = get_proposals();
     let proposal = Proposal {
         description: proposals_data[0].to_string(),
     };
@@ -32,7 +24,7 @@ async fn test_e2e_proposal_analysis() {
 
 #[tokio::test]
 async fn test_e2e_multiple_proposals() {
-    let proposals_data = fixtures::get_proposals();
+    let proposals_data = get_proposals();
     let agent_service = create_agent_service().await.unwrap();
 
     let max_proposals = std::cmp::min(3, proposals_data.len());
@@ -49,7 +41,7 @@ async fn test_e2e_multiple_proposals() {
 
 #[tokio::test]
 async fn test_e2e_all_proposals() {
-    let proposals_data = fixtures::get_proposals();
+    let proposals_data = get_proposals();
     let agent_service = create_agent_service().await.unwrap();
 
     println!(
