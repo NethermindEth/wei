@@ -51,7 +51,12 @@ export function AnalyzerClient() {
   const [error, setError] = React.useState<string | null>(null);
   const [selectedProposal, setSelectedProposal] = React.useState<GraphQLProposal | null>(null);
   const [isSearchModalOpen, setIsSearchModalOpen] = React.useState(false);
-  const [activeTab, setActiveTab] = React.useState("proposals");
+  const [activeTab, setActiveTab] = useQueryState("tab", {
+    history: "push",
+    shallow: true,
+    clearOnDefault: true,
+    defaultValue: "proposals"
+  });
   
   // Fetch spaces for the protocol dropdown
   const { spaces, loading: spacesLoading } = useSpaces();
@@ -65,7 +70,6 @@ export function AnalyzerClient() {
     setResult(null);
     setBackendResult(null);
     setError(null);
-    setActiveTab("proposals"); // Switch to proposals tab when a proposal is selected
     
     // If proposal has a space, switch to that space/protocol
     if (proposal.space?.id) {
@@ -163,14 +167,41 @@ export function AnalyzerClient() {
             </div>
           )}
           
-          {activeTab === "proposals" && (
+          {activeTab === "proposals" && !proposalId && (
+            <div className="max-w-2xl mx-auto">
+              <ProposalList 
+                onSelectProposal={handleSelectProposal} 
+                selectedProposalId={proposalId || undefined}
+                spaceId={selectedSpaceId}
+                navigateToPage={true}
+              />
+            </div>
+          )}
+
+          {activeTab === "proposals" && proposalId && selectedProposal && (
             <div className="grid gap-4 md:grid-cols-2 max-w-full overflow-hidden h-full">
               <div className="grid gap-4 content-start">
-                <ProposalList 
-                  onSelectProposal={handleSelectProposal} 
-                  selectedProposalId={proposalId || undefined}
-                  spaceId={selectedSpaceId}
-                />
+                <div className="grid gap-3">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-medium text-white/90">Selected Proposal</h2>
+                    <button
+                      onClick={() => setProposalId(null)}
+                      className="text-sm text-white/60 hover:text-white/80 transition-colors"
+                    >
+                      Back to list
+                    </button>
+                  </div>
+                  
+                  <div className="p-4 rounded-lg border border-[--color-accent] bg-white/10">
+                    <h3 className="font-medium text-white/90 mb-2 break-words">{selectedProposal.title}</h3>
+                    <p className="text-sm text-white/70 mb-3 break-words">
+                      {selectedProposal.body ? (selectedProposal.body.length > 150 ? `${selectedProposal.body.substring(0, 150)}...` : selectedProposal.body) : ''}
+                    </p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-[#9fb5cc]">{selectedProposal.author ? `By: ${selectedProposal.author}` : ''}</span>
+                    </div>
+                  </div>
+                </div>
 
                 <div className="flex items-center gap-2">
                   <button
