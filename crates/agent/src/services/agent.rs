@@ -180,15 +180,11 @@ impl AgentServiceTrait for AgentService {
                 let mut response_map: HashMap<String, EvaluationResult> = HashMap::new();
 
                 // Add the default criteria
-                response_map.insert(
-                    "goals_and_motivation".to_string(),
-                    default_evaluation.clone(),
-                );
-                response_map.insert(
-                    "measurable_outcomes".to_string(),
-                    default_evaluation.clone(),
-                );
-                response_map.insert("budget".to_string(), default_evaluation.clone());
+                response_map.extend([
+                    ("goals_and_motivation".to_string(), default_evaluation.clone()),
+                    ("measurable_outcomes".to_string(), default_evaluation.clone()),
+                    ("budget".to_string(), default_evaluation.clone()),
+                ]);
 
                 // Try to parse custom criteria from the JSON string to add them to the fallback
                 if let Ok(custom_criteria_value) =
