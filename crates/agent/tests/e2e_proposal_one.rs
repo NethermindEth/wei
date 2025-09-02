@@ -73,7 +73,7 @@ async fn ask_agent_question(
                         "Invalid binary response format on attempt {}. Retrying...",
                         retry + 1
                     );
-                    tokio::time::sleep(Duration::from_millis(1000)).await;
+                    tokio::time::sleep(Duration::from_millis(2000)).await;
                     continue;
                 }
             } else {
@@ -657,7 +657,7 @@ async fn test_e2e_proposal_one_binary_questions() -> Result<()> {
         }
 
         // Add a small delay between questions to avoid rate limiting
-        tokio::time::sleep(Duration::from_millis(1000)).await;
+        tokio::time::sleep(Duration::from_millis(2000)).await;
     }
 
     println!(
@@ -735,7 +735,7 @@ async fn test_e2e_proposal_one_reasoning_questions() -> Result<(), Box<dyn std::
         }
 
         // Add a small delay between questions to avoid rate limiting
-        tokio::time::sleep(Duration::from_millis(1000)).await;
+        tokio::time::sleep(Duration::from_millis(2000)).await;
     }
 
     println!(
