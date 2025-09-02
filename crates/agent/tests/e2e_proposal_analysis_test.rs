@@ -3,8 +3,8 @@ use agent::services::agent::AgentServiceTrait;
 
 // Import the fixtures as proper modules
 mod fixtures;
-use fixtures::proposals::get_proposals;
 use fixtures::create_agent::{create_agent_service, validate_analysis};
+use fixtures::proposals::get_proposals;
 
 #[tokio::test]
 async fn test_e2e_proposal_analysis() {

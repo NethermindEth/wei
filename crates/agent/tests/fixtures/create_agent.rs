@@ -2,13 +2,13 @@ use std::env;
 
 use agent::models::analysis::StructuredAnalysisResponse;
 use agent::services::agent::{AgentService, AgentServiceTrait};
+use agent::utils::error::Error::Internal;
 use agent::utils::error::Result;
 use agent::Config;
 use clap::Parser;
 use dotenv::dotenv;
 use openrouter_rs::{api::chat::ChatCompletionRequest, types::Role, Message, OpenRouterClient};
 use sqlx::postgres::PgPoolOptions;
-use agent::utils::error::Error::Internal;
 /// Creates an agent service for e2e testing
 ///
 /// This function creates a real agent service that can be used in e2e tests.
@@ -184,9 +184,8 @@ pub async fn query_agent(agent_service: &AgentService, prompt: &str) -> Result<S
 #[allow(dead_code)]
 pub async fn direct_query_agent(_agent_service: &AgentService, prompt: &str) -> Result<String> {
     // Get the API key and model name from environment variables
-    let api_key = std::env::var("WEI_AGENT_OPEN_ROUTER_API_KEY").map_err(|_| {
-        Internal("Missing OpenRouter API key".to_string())
-    })?;
+    let api_key = std::env::var("WEI_AGENT_OPEN_ROUTER_API_KEY")
+        .map_err(|_| Internal("Missing OpenRouter API key".to_string()))?;
 
     let model_name =
         std::env::var("WEI_AGENT_AI_MODEL_NAME").unwrap_or_else(|_| "openai/gpt-4o".to_string());
@@ -224,9 +223,7 @@ pub async fn direct_query_agent(_agent_service: &AgentService, prompt: &str) -> 
     // Extract the content from the response
     let content = response.choices[0]
         .content()
-        .ok_or(Internal(
-            "No content in response".to_string(),
-        ))?
+        .ok_or(Internal("No content in response".to_string()))?
         .to_string();
 
     Ok(content)
