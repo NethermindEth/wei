@@ -42,13 +42,21 @@ pub async fn create_agent_service() -> Result<AgentService> {
     let mut config = Config::parse_from(vec!["".to_string()]);
 
     // Get AI model name from environment
-    config.ai_model_name = match env::var("WEI_AGENT_AI_MODEL_NAME") {
-        Ok(key) if !key.trim().is_empty() => key,
-        _ => panic!(
-            "WEI_AGENT_AI_MODEL_NAME environment variable must be set and non-empty for e2e tests.\n\n\
-            Make sure your .env file contains WEI_AGENT_OPEN_ROUTER_API_KEY and WEI_AGENT_AI_MODEL_NAME"
-        ),
-    };
+    config.ai_model_name = env::var("WEI_AGENT_AI_MODEL_NAME")
+    .map(|key| {
+        let trimmed = key.trim().to_string();
+        if trimmed.is_empty() {
+            panic!(
+                "WEI_AGENT_AI_MODEL_NAME environment variable must be set and non-empty for e2e tests.\n\n\
+                 Make sure your .env file contains WEI_AGENT_OPEN_ROUTER_API_KEY and WEI_AGENT_AI_MODEL_NAME"
+            )
+        }
+        trimmed
+    })
+    .expect(
+        "WEI_AGENT_AI_MODEL_NAME environment variable must be set and non-empty for e2e tests.\n\n\
+         Make sure your .env file contains WEI_AGENT_OPEN_ROUTER_API_KEY and WEI_AGENT_AI_MODEL_NAME"
+    );
 
     // For testing, we'll use a mock database connection
     // In a real test environment, you would set up a test database
