@@ -8,7 +8,7 @@ use clap::Parser;
 use dotenv::dotenv;
 use openrouter_rs::{api::chat::ChatCompletionRequest, types::Role, Message, OpenRouterClient};
 use sqlx::postgres::PgPoolOptions;
-
+use agent::utils::error::Error::Internal;
 /// Creates an agent service for e2e testing
 ///
 /// This function creates a real agent service that can be used in e2e tests.
@@ -177,7 +177,7 @@ pub async fn query_agent(agent_service: &AgentService, prompt: &str) -> Result<S
 pub async fn direct_query_agent(_agent_service: &AgentService, prompt: &str) -> Result<String> {
     // Get the API key and model name from environment variables
     let api_key = std::env::var("WEI_AGENT_OPEN_ROUTER_API_KEY").map_err(|_| {
-        agent::utils::error::Error::Internal("Missing OpenRouter API key".to_string())
+        Internal("Missing OpenRouter API key".to_string())
     })?;
 
     let model_name =
@@ -187,7 +187,7 @@ pub async fn direct_query_agent(_agent_service: &AgentService, prompt: &str) -> 
     let client = OpenRouterClient::builder()
         .api_key(api_key)
         .build()
-        .map_err(|e| agent::utils::error::Error::Internal(e.to_string()))?;
+        .map_err(|e| Internal(e.to_string()))?;
 
     // Create a system message that instructs the model to answer directly
     let system_message = Message::new(
@@ -205,18 +205,18 @@ pub async fn direct_query_agent(_agent_service: &AgentService, prompt: &str) -> 
         .model(model_name)
         .messages(vec![system_message, user_message])
         .build()
-        .map_err(|e| agent::utils::error::Error::Internal(e.to_string()))?;
+        .map_err(|e| Internal(e.to_string()))?;
 
     // Send the request to the OpenRouter API
     let response = client
         .send_chat_completion(&request)
         .await
-        .map_err(|e| agent::utils::error::Error::Internal(e.to_string()))?;
+        .map_err(|e| Internal(e.to_string()))?;
 
     // Extract the content from the response
     let content = response.choices[0]
         .content()
-        .ok_or(agent::utils::error::Error::Internal(
+        .ok_or(Internal(
             "No content in response".to_string(),
         ))?
         .to_string();
