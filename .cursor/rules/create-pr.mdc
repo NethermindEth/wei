@@ -10,4 +10,7 @@ When asked to create a pr
 - make sure the ui compiles correctly with no errors
 - make sure all formatting checks are done correctly
 - make sure all changes are synced to origin
+- target unless otherwise specified should be develop
 - create the pr with the gh cli tool
+
+NEVER use emojis in commits or prs, keep it professional and succinct (dense, don't skip detail)
