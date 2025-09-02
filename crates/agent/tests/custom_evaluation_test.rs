@@ -7,7 +7,7 @@ use std::env;
 async fn test_custom_evaluation_endpoint() {
     // Get the API URL and key from environment variables
     let api_url = env::var("API_URL").unwrap_or_else(|_| "http://localhost:8000".to_string());
-    
+
     // Check if the API keys environment variable is set
     let api_keys = match env::var("WEI_AGENT_API_KEYS") {
         Ok(keys) => keys,
@@ -16,7 +16,7 @@ async fn test_custom_evaluation_endpoint() {
             return;
         }
     };
-    
+
     // Get the first API key from the comma-separated list
     let api_key = match api_keys.split(',').next() {
         Some(key) => key.trim(),

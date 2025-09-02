@@ -8,8 +8,7 @@ pub fn generate_custom_evaluation_prompt(request: &CustomEvaluationRequest) -> S
         {}\n\n\
         The user has provided the following custom evaluation criteria:\n\
         {}\n\n",
-        request.content,
-        request.custom_criteria
+        request.content, request.custom_criteria
     );
 
     // Instructions for evaluation based on custom criteria
@@ -18,7 +17,7 @@ pub fn generate_custom_evaluation_prompt(request: &CustomEvaluationRequest) -> S
         Ignore any standard evaluation criteria and focus exclusively on what the user has asked for. \
         Your evaluation should directly address the user's specific request.\n\n"
     );
-    
+
     let custom_prompt = custom_prompt + &instructions;
 
     // Request for output format - must match the expected response structure
@@ -42,7 +41,7 @@ pub fn generate_custom_evaluation_prompt(request: &CustomEvaluationRequest) -> S
         }}\n\
         ```\n\n"
     );
-    
+
     let custom_prompt = custom_prompt + &output_format;
     // Instructions for criteria structure
     let criteria_instructions = format!(
@@ -52,14 +51,14 @@ pub fn generate_custom_evaluation_prompt(request: &CustomEvaluationRequest) -> S
         2. Each value must be an object with 'status', 'justification', and 'suggestions' fields\n\
         3. Status must be one of: 'pass', 'fail', or 'n/a'\n\n"
     );
-    
+
     // Emphasize focusing on user's criteria and JSON format
     let focus_instructions = format!(
         "IMPORTANT: Your entire evaluation should be based solely on the user's custom criteria. \
         For example, if they want to focus on budget justification, your analysis should primarily address budget aspects. \
         If they want to check for clear milestones, focus your evaluation on identifying and assessing milestones in the proposal.\n\n"
     );
-    
+
     let custom_prompt = custom_prompt + &criteria_instructions + &focus_instructions;
 
     // Add strict JSON formatting rules
@@ -73,7 +72,7 @@ pub fn generate_custom_evaluation_prompt(request: &CustomEvaluationRequest) -> S
         6. Do not use trailing commas in arrays or objects\n\
         7. Ensure all special characters are properly escaped in strings\n\n"
     );
-    
+
     let custom_prompt = custom_prompt + &json_rules;
 
     // Add more explicit instructions about valid status values
@@ -86,7 +85,7 @@ pub fn generate_custom_evaluation_prompt(request: &CustomEvaluationRequest) -> S
         5. Create criterion keys in the response_map based on the user's custom criteria\n\
         6. Use snake_case for all criterion keys (e.g., 'budget_justification', 'team_experience')\n\n"
     );
-    
+
     let custom_prompt = custom_prompt + &important_instructions;
 
     // Add examples of good criterion keys
@@ -97,12 +96,12 @@ pub fn generate_custom_evaluation_prompt(request: &CustomEvaluationRequest) -> S
         - If user asks about milestones: use 'milestone_clarity' or 'timeline_feasibility'\n\
         - If user asks about technical aspects: use 'technical_feasibility' or 'implementation_approach'\n\n"
     );
-    
+
     // Final reminder
     let reminder = format!(
         "Remember: Each criterion in the response_map must have the exact fields 'status', 'justification', and 'suggestions'\n\n"
     );
-    
+
     // Return the complete prompt
     custom_prompt + &examples + &reminder
 }

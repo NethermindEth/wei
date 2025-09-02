@@ -1,14 +1,14 @@
 //! Main agent service
 
-use std::future::Future;
 use std::collections::HashMap;
+use std::future::Future;
 
 use openrouter_rs::{api::chat::ChatCompletionRequest, types::Role, Message, OpenRouterClient};
 use serde_json;
 use tracing::{error, info};
 
-use crate::models::analysis::{ StructuredAnalysisResponse};
- use crate::models::custom_evaluation::EvaluationResult;
+use crate::models::analysis::StructuredAnalysisResponse;
+use crate::models::custom_evaluation::EvaluationResult;
 use crate::models::custom_evaluation::{CustomEvaluationRequest, CustomEvaluationResponse};
 use crate::prompts::custom_evaluation::generate_custom_evaluation_prompt;
 use crate::prompts::ANALYZE_PROPOSAL_PROMPT;
@@ -172,7 +172,6 @@ impl AgentServiceTrait for AgentService {
                     error!("Response parsed as generic JSON: {}", value);
                 }
 
-               
                 let default_evaluation = EvaluationResult::na("Could not parse response");
 
                 // Create a fallback response with default fields
@@ -181,8 +180,14 @@ impl AgentServiceTrait for AgentService {
 
                 // Add the default criteria
                 response_map.extend([
-                    ("goals_and_motivation".to_string(), default_evaluation.clone()),
-                    ("measurable_outcomes".to_string(), default_evaluation.clone()),
+                    (
+                        "goals_and_motivation".to_string(),
+                        default_evaluation.clone(),
+                    ),
+                    (
+                        "measurable_outcomes".to_string(),
+                        default_evaluation.clone(),
+                    ),
                     ("budget".to_string(), default_evaluation.clone()),
                 ]);
 
@@ -191,16 +196,18 @@ impl AgentServiceTrait for AgentService {
                     serde_json::from_str::<serde_json::Value>(&request.custom_criteria)
                 {
                     if let Some(criteria_array) = custom_criteria_value.as_array() {
-                        for criterion_value in criteria_array {
-                            if let Some(criterion_obj) = criterion_value.as_object() {
-                                if let Some(name) =
-                                    criterion_obj.get("name").and_then(|v| v.as_str())
-                                {
-                                    let field_name = name.to_lowercase().replace(" ", "_");
-                                    response_map.insert(field_name, default_evaluation.clone());
-                                }
-                            }
-                        }
+                        response_map.extend(criteria_array.iter().filter_map(|criterion_value| {
+                            criterion_value
+                                .as_object()?
+                                .get("name")?
+                                .as_str()
+                                .map(|name| {
+                                    (
+                                        name.to_lowercase().replace(' ', "_"),
+                                        default_evaluation.clone(),
+                                    )
+                                })
+                        }));
                     }
                 }
 
