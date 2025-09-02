@@ -62,15 +62,12 @@ export function AnalyzerClient() {
     try {
       const description = `${proposal.title}\n\n${proposal.body}`;
       const proposalData: Proposal = { description };
-      console.log('Analyzing proposal:', proposalData);
       const response = await ApiService.analyzeProposal(proposalData);
-      console.log('Analysis response:', response);
       
       // Set the response directly - it should match our interface
       setBackendResult(response);
       setResult(null);
     } catch (err) {
-      console.error('Analysis failed:', err);
       setError(err instanceof Error ? err.message : 'Analysis failed');
     } finally {
       setIsLoading(false);
@@ -112,9 +109,7 @@ export function AnalyzerClient() {
         custom_criteria: customCriteria
       };
 
-      console.log('Custom evaluation request:', request);
       const response = await ApiService.customEvaluateProposal(request);
-      console.log('Custom evaluation response:', response);
       
       // Validate the response structure
       if (!response.summary || !response.response_map || typeof response.response_map !== 'object') {
@@ -123,7 +118,6 @@ export function AnalyzerClient() {
       
       setCustomResult(response);
     } catch (err) {
-      console.error('Custom evaluation failed:', err);
       setError(err instanceof Error ? err.message : 'Custom evaluation failed');
     } finally {
       setIsCustomEvaluating(false);
