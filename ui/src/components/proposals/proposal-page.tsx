@@ -130,15 +130,22 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
     setSelectedSpaceId(protocolId);
   };
 
-  const handleBackClick = () => {
-    // Navigate back to the main page with current filters
-    const params = new URLSearchParams();
-    if (selectedSpaceId) params.set('space', selectedSpaceId);
-    if (activeTab) params.set('tab', activeTab);
-    
-    const queryString = params.toString();
-    router.push(`/${queryString ? `?${queryString}` : ''}`);
-  };
+  const buildUrlWithParams = (baseUrl: string, params: Record<string, string | null>) => {
+  const searchParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) searchParams.set(key, value);
+  });
+  const queryString = searchParams.toString();
+  return `${baseUrl}${queryString ? `?${queryString}` : ''}`;
+};
+
+const handleBackClick = () => {
+  const url = buildUrlWithParams('/', {
+    space: selectedSpaceId,
+    tab: activeTab
+  });
+  router.push(url);
+};
 
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
