@@ -55,7 +55,7 @@ async fn main() -> agent::Result<()> {
     let cache_repo = CacheRepository::new(db);
     let cache_service = CacheService::new(cache_repo, None);
 
-    let app = create_router(&config, agent_service, cache_service);
+    let app = create_router(&config, agent_service, Some(cache_service));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
     let listener = TcpListener::bind(addr).await.unwrap();

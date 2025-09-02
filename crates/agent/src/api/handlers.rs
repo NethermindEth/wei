@@ -157,41 +157,66 @@ pub async fn search_related_proposals(
     };
 
     // Use cache service to get or compute the result
-    let cached_response = state
-        .cache_service
-        .cache_or_compute(&cache_query, || async {
-            // Create Exa service instance
-            let exa_service = ExaService::new(exa_api_key.clone());
+    let cached_response = if let Some(cache_service) = &state.cache_service {
+        cache_service
+            .cache_or_compute(&cache_query, || async {
+                // Create Exa service instance
+                let exa_service = ExaService::new(exa_api_key.clone());
 
-            // Search for related proposals
-            let related_proposals = exa_service
-                .search_related_proposals(query_params.query.clone(), Some(limit))
-                .await
-                .map_err(|e| {
-                    error!("Error searching for related proposals: {:?}", e);
-                    crate::utils::error::Error::Internal(format!(
-                        "Failed to search for related proposals: {}",
-                        e
-                    ))
-                })?;
+                // Search for related proposals
+                let related_proposals = exa_service
+                    .search_related_proposals(query_params.query.clone(), Some(limit))
+                    .await
+                    .map_err(|e| {
+                        error!("Error searching for related proposals: {:?}", e);
+                        crate::utils::error::Error::Internal(format!(
+                            "Failed to search for related proposals: {}",
+                            e
+                        ))
+                    })?;
 
-            Ok(RelatedProposalsResponse {
+                Ok(RelatedProposalsResponse {
+                    related_proposals,
+                    query: query_params.query.clone(),
+                })
+            })
+            .await
+            .map_err(|e| {
+                error!("Error in related proposals cache operation: {:?}", e);
+                ApiError::internal_error(format!("Failed to search for related proposals: {}", e))
+            })?
+    } else {
+        // No cache service available, compute directly
+        let exa_service = ExaService::new(exa_api_key.clone());
+        let related_proposals = exa_service
+            .search_related_proposals(query_params.query.clone(), Some(limit))
+            .await
+            .map_err(|e| {
+                error!("Error searching for related proposals: {:?}", e);
+                ApiError::internal_error(format!("Failed to search for related proposals: {}", e))
+            })?;
+
+        crate::services::cache::CachedResponse {
+            data: RelatedProposalsResponse {
                 related_proposals,
                 query: query_params.query.clone(),
-            })
-        })
-        .await
-        .map_err(|e| {
-            error!("Error in related proposals cache operation: {:?}", e);
-            ApiError::internal_error(format!("Failed to search for related proposals: {}", e))
-        })?;
+            },
+            from_cache: false,
+            created_at: chrono::Utc::now(),
+            expires_at: chrono::Utc::now() + chrono::Duration::hours(1),
+            cache_key: "no-cache".to_string(),
+            cache_description: "Direct computation without cache".to_string(),
+        }
+    };
 
-    Ok(Json(RelatedProposalsResponseCached {
+    let response = RelatedProposalsResponseCached {
         related_proposals: cached_response.data.related_proposals,
         query: cached_response.data.query,
         from_cache: cached_response.from_cache,
         cache_key: cached_response.cache_key,
-    }))
+    };
+
+    Ok(Json(response))
 }
 
 /// Analyze community discourse for a protocol/topic
@@ -256,14 +281,16 @@ pub async fn get_community_analysis(
 pub async fn list_cached_queries(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<CachedQueryInfo>>, ApiError> {
-    let cached_queries = state
-        .cache_service
-        .list_cached_queries()
-        .await
-        .map_err(|e| {
+    let cached_queries = if let Some(cache_service) = &state.cache_service {
+        cache_service.list_cached_queries().await.map_err(|e| {
             error!("Error listing cached queries: {:?}", e);
             ApiError::internal_error(format!("Failed to list cached queries: {}", e))
-        })?;
+        })?
+    } else {
+        return Err(ApiError::internal_error(
+            "Cache service not available".to_string(),
+        ));
+    };
 
     Ok(Json(cached_queries))
 }
@@ -292,14 +319,19 @@ pub async fn invalidate_cache(
     Json(request): Json<CacheOperationRequest>,
 ) -> Result<Json<CacheOperationResponse>, ApiError> {
     let cache_key = request.query.cache_key();
-    let success = state
-        .cache_service
-        .invalidate_query(&request.query)
-        .await
-        .map_err(|e| {
-            error!("Error invalidating cache: {:?}", e);
-            ApiError::internal_error(format!("Failed to invalidate cache: {}", e))
-        })?;
+    let success = if let Some(cache_service) = &state.cache_service {
+        cache_service
+            .invalidate_query(&request.query)
+            .await
+            .map_err(|e| {
+                error!("Error invalidating cache: {:?}", e);
+                ApiError::internal_error(format!("Failed to invalidate cache: {}", e))
+            })?
+    } else {
+        return Err(ApiError::internal_error(
+            "Cache service not available".to_string(),
+        ));
+    };
 
     let message = if success {
         format!(
@@ -330,14 +362,19 @@ pub async fn refresh_cache(
 
     // For now, we'll just invalidate - the next request will recompute
     // TODO: In the future, we could trigger recomputation here
-    let success = state
-        .cache_service
-        .invalidate_query(&request.query)
-        .await
-        .map_err(|e| {
-            error!("Error refreshing cache: {:?}", e);
-            ApiError::internal_error(format!("Failed to refresh cache: {}", e))
-        })?;
+    let success = if let Some(cache_service) = &state.cache_service {
+        cache_service
+            .invalidate_query(&request.query)
+            .await
+            .map_err(|e| {
+                error!("Error refreshing cache: {:?}", e);
+                ApiError::internal_error(format!("Failed to refresh cache: {}", e))
+            })?
+    } else {
+        return Err(ApiError::internal_error(
+            "Cache service not available".to_string(),
+        ));
+    };
 
     let message = if success {
         format!(
@@ -373,10 +410,16 @@ pub struct CacheStatsResponse {
 pub async fn get_cache_stats(
     State(state): State<AppState>,
 ) -> Result<Json<CacheStatsResponse>, ApiError> {
-    let stats = state.cache_service.get_stats().await.map_err(|e| {
-        error!("Error getting cache stats: {:?}", e);
-        ApiError::internal_error(format!("Failed to get cache stats: {}", e))
-    })?;
+    let stats = if let Some(cache_service) = &state.cache_service {
+        cache_service.get_stats().await.map_err(|e| {
+            error!("Error getting cache stats: {:?}", e);
+            ApiError::internal_error(format!("Failed to get cache stats: {}", e))
+        })?
+    } else {
+        return Err(ApiError::internal_error(
+            "Cache service not available".to_string(),
+        ));
+    };
 
     Ok(Json(CacheStatsResponse {
         total_entries: stats.total_entries,
@@ -398,10 +441,16 @@ pub struct CacheCleanupResponse {
 pub async fn cleanup_cache(
     State(state): State<AppState>,
 ) -> Result<Json<CacheCleanupResponse>, ApiError> {
-    let cleaned_entries = state.cache_service.cleanup_expired().await.map_err(|e| {
-        error!("Error cleaning up cache: {:?}", e);
-        ApiError::internal_error(format!("Failed to cleanup cache: {}", e))
-    })?;
+    let cleaned_entries = if let Some(cache_service) = &state.cache_service {
+        cache_service.cleanup_expired().await.map_err(|e| {
+            error!("Error cleaning up cache: {:?}", e);
+            ApiError::internal_error(format!("Failed to cleanup cache: {}", e))
+        })?
+    } else {
+        return Err(ApiError::internal_error(
+            "Cache service not available".to_string(),
+        ));
+    };
 
     Ok(Json(CacheCleanupResponse {
         cleaned_entries,

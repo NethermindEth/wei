@@ -33,7 +33,7 @@ pub struct AppState {
     /// Agent service for processing requests
     pub agent_service: AgentService,
     /// Cache service for managing cached responses
-    pub cache_service: CacheService,
+    pub cache_service: Option<CacheService>,
 }
 
 impl FromRef<AppState> for Config {
@@ -46,7 +46,7 @@ impl FromRef<AppState> for Config {
 pub fn create_router(
     config: &Config,
     agent_service: AgentService,
-    cache_service: CacheService,
+    cache_service: Option<CacheService>,
 ) -> Router {
     let tracing_layer = TraceLayer::new_for_http()
         .make_span_with(DefaultMakeSpan::new().include_headers(true))

@@ -131,7 +131,6 @@ export function AnalyzerClient() {
                 onSelectProposal={handleSelectProposal} 
                 selectedProposalId={undefined}
                 spaceId={selectedSpaceId}
-                navigateToPage={false}
               />
             </div>
           )}

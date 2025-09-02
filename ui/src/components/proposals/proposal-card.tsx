@@ -10,10 +10,9 @@ interface ProposalCardProps {
   proposal: Proposal;
   onClick: (proposal: Proposal) => void;
   isSelected: boolean;
-  navigateToPage?: boolean;
 }
 
-export function ProposalCard({ proposal, onClick, isSelected, navigateToPage: _ = true }: ProposalCardProps) {
+export function ProposalCard({ proposal, onClick, isSelected }: ProposalCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   
   const previewText = proposal.body
