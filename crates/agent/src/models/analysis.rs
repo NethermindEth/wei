@@ -63,6 +63,17 @@ pub struct EvaluationCategory {
     pub suggestions: Vec<String>,
 }
 
+impl EvaluationCategory {
+    /// Creates a new EvaluationCategory with status "n/a" and a default suggestion
+    pub fn na(justification: &str) -> Self {
+        Self {
+            status: "n/a".to_string(),
+            justification: justification.to_string(),
+            suggestions: vec!["Please try again".to_string()],
+        }
+    }
+}
+
 // Deprecated structs have been removed
 // ProposalQuality and SubmitterIntentions were previously here
 // They have been replaced by the new evaluation categories above

@@ -40,3 +40,14 @@ pub struct EvaluationResult {
     /// Suggestions for improvement (only provided for fail status)
     pub suggestions: Vec<String>,
 }
+
+impl EvaluationResult {
+    /// Creates a new EvaluationResult with status "n/a" and a default suggestion
+    pub fn na(justification: &str) -> Self {
+        Self {
+            status: "n/a".to_string(),
+            justification: justification.to_string(),
+            suggestions: vec!["Please try again".to_string()],
+        }
+    }
+}

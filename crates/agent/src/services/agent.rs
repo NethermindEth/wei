@@ -91,12 +91,8 @@ impl AgentServiceTrait for AgentService {
                 error!("Raw response: {}", content);
 
                 // Create a fallback response with the new structure
-                // Try to extract any valid JSON from the content
-                let default_category = EvaluationCategory {
-                    status: "n/a".to_string(),
-                    justification: "Could not parse response".to_string(),
-                    suggestions: vec!["Please try again".to_string()],
-                };
+                use crate::models::analysis::EvaluationCategory;
+                let default_category = EvaluationCategory::na("Could not parse response");
 
                 let fallback = StructuredAnalysisResponse {
                     summary: "Unable to generate summary due to parsing error".to_string(),
@@ -175,11 +171,8 @@ impl AgentServiceTrait for AgentService {
                 }
 
                 // Create a fallback response with default criteria
-                let default_evaluation = crate::models::custom_evaluation::EvaluationResult {
-                    status: "n/a".to_string(),
-                    justification: "Could not parse response".to_string(),
-                    suggestions: vec!["Please try again".to_string()],
-                };
+                use crate::models::custom_evaluation::EvaluationResult;
+                let default_evaluation = EvaluationResult::na("Could not parse response");
 
                 // Create a fallback response with default fields
                 // We always include the three default criteria
