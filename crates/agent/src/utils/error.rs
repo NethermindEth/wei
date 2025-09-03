@@ -53,6 +53,11 @@ pub enum Error {
     /// ChatCompletionRequest builder error
     #[error("ChatCompletionRequest builder error: {0}")]
     ChatBuilder(openrouter_rs::error::OpenRouterError),
+    
+    /// Response processing errors
+    #[error("Response error: {0}")]
+    #[allow(dead_code)] // TODO: Remove after development phase
+    Response(ResponseError),
 
     /// Internal service error
     #[error("Internal error: {0}")]
@@ -63,6 +68,18 @@ impl From<openrouter_rs::error::OpenRouterError> for Error {
     fn from(error: openrouter_rs::error::OpenRouterError) -> Self {
         Error::OpenRouter(Box::new(error))
     }
+}
+
+/// Response-related errors
+#[derive(Error, Debug)]
+pub enum ResponseError {
+    /// No content in response
+    #[error("No content in response")]
+    NoContent,
+    
+    /// Invalid response format
+    #[error("Invalid response format: {0}")]
+    InvalidFormat(String),
 }
 
 /// Result type for the agent service

@@ -13,7 +13,7 @@ use crate::models::custom_evaluation::EvaluationResult;
 use crate::models::custom_evaluation::{CustomEvaluationRequest, CustomEvaluationResponse};
 use crate::prompts::custom_evaluation::generate_custom_evaluation_prompt;
 use crate::prompts::ANALYZE_PROPOSAL_PROMPT;
-use crate::utils::error::{Error, Result};
+use crate::utils::error::{Error, ResponseError, Result};
 use crate::utils::markdown::extract_json_from_markdown;
 
 use crate::{db::core::Database, models::Proposal, Config};
@@ -84,7 +84,7 @@ impl AgentServiceTrait for AgentService {
 
         let content = response.choices[0]
             .content()
-            .ok_or(Error::Internal("No content in response".to_string()))?
+            .ok_or(Error::Response(ResponseError::NoContent))?
             .to_string();
 
         // Extract JSON from the response if it's wrapped in markdown code blocks
@@ -141,7 +141,7 @@ impl AgentServiceTrait for AgentService {
 
         let content = response.choices[0]
             .content()
-            .ok_or(Error::Internal("No content in response".to_string()))?
+            .ok_or(Error::Response(ResponseError::NoContent))?
             .to_string();
 
         // Log the raw response content for debugging
