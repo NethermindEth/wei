@@ -167,8 +167,6 @@ pub async fn query_agent(agent_service: &AgentService, prompt: &str) -> Result<S
         response = analysis.data.language_quality.justification.clone();
     }
 
-  
-
     // If we still have an empty response, return a default message
     if response.trim().is_empty() {
         response = "No relevant information found".to_string();
