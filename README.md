@@ -35,6 +35,8 @@ This repository is a Rust workspace with two crates: `crates/agent` and `crates/
   - `cargo install sqlx-cli --no-default-features --features native-tls,postgres`
 - **OpenRouter API key**: Required for AI agent functionality
   - Sign up at [OpenRouter](https://openrouter.ai/) and get an API key
+- **Exa API key**: Optional, for related proposals search functionality
+  - Sign up at [Exa](https://exa.ai/) and get an API key
 
 ### Setup
 
@@ -180,6 +182,28 @@ The Agent service provides interactive API documentation through Swagger UI:
 - **API Specification**:
   - OpenAPI JSON: [https://wei-agent.dev-nethermind.xyz/api-docs/openapi.json](https://wei-agent.dev-nethermind.xyz/api-docs/openapi.json)
   - The specification includes detailed descriptions, request/response schemas, and examples
+
+### API Integrations
+
+Wei integrates with several external APIs to provide comprehensive governance data and analysis:
+
+#### Exa Search API
+- **Purpose**: Powers the "Related Proposals" feature to find similar proposals across different governance platforms
+- **Configuration**: Set `WEI_AGENT_EXA_API_KEY` in your environment
+- **Signup**: [exa.ai](https://exa.ai/)
+- **Optional**: The system will work without Exa, but related proposals functionality will be disabled
+
+#### Snapshot API
+- **Purpose**: Fetches governance proposals and voting data from Snapshot
+- **Rate Limiting**: 100 requests per minute without an API key
+- **Configuration**: Set `WEI_INDEXER_SNAPSHOT_API_KEY` (optional) 
+- **Endpoint**: `https://hub.snapshot.org/api`
+- **Note**: Works without authentication but with rate limits
+
+#### Tally API
+- **Purpose**: Fetches on-chain governance data
+- **Configuration**: Set `WEI_INDEXER_TALLY_API_KEY` in your environment
+- **Signup**: [tally.xyz](https://tally.xyz/)
 
 ### API Authentication
 

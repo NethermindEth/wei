@@ -44,6 +44,7 @@ export function useSpaces(): UseSpacesResult {
           const validSpaces = result.data.spaces
             .filter(space => space.name)
             .sort((a, b) => (b.members || 0) - (a.members || 0));
+          
           setSpaces(validSpaces);
         }
         setError(null);

@@ -8,10 +8,9 @@ interface ProposalListProps {
   onSelectProposal: (proposal: Proposal) => void;
   selectedProposalId?: string;
   spaceId?: string | null;
-  navigateToPage?: boolean;
 }
 
-export function ProposalList({ onSelectProposal, selectedProposalId, spaceId, navigateToPage = true }: ProposalListProps) {
+export function ProposalList({ onSelectProposal, selectedProposalId, spaceId }: ProposalListProps) {
   const { proposals, loading, error, loadMore, hasMore } = useProposals(20, spaceId);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -87,7 +86,6 @@ export function ProposalList({ onSelectProposal, selectedProposalId, spaceId, na
                 proposal={proposal}
                 onClick={onSelectProposal}
                 isSelected={proposal.id === selectedProposalId}
-                navigateToPage={navigateToPage}
               />
             </div>
           ))}
