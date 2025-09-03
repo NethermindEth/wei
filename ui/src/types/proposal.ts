@@ -35,6 +35,9 @@ export interface AnalysisResponse {
     justification: string;
     suggestions: string[];
   };
+  // Cache metadata
+  from_cache: boolean;
+  cache_key: string;
 }
 
 // Local analysis result for fallback
