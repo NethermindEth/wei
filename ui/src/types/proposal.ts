@@ -3,6 +3,12 @@ export interface Proposal {
   description: string;
 }
 
+// Arguments for and against a proposal
+export interface ProposalArguments {
+  for_proposal: string[];
+  against: string[];
+}
+
 // Analysis response from the backend
 export interface AnalysisResponse {
   id?: string;
@@ -35,6 +41,8 @@ export interface AnalysisResponse {
     justification: string;
     suggestions: string[];
   };
+  // Arguments for and against the proposal
+  arguments?: ProposalArguments;
   // Cache metadata
   from_cache: boolean;
   cache_key: string;

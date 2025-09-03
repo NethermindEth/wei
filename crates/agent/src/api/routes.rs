@@ -128,6 +128,10 @@ pub fn create_router(
             post(handlers::analyze_proposal).options(|_: Request| async { "" }),
         )
         .route(
+            "/pre-filter/arguments",
+            post(handlers::get_proposal_arguments).options(|_: Request| async { "" }),
+        )
+        .route(
             "/pre-filter/:id",
             get(handlers::get_analysis).options(|_: Request| async { "" }),
         )

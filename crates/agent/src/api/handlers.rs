@@ -6,12 +6,14 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tracing::error;
+use tracing::{error};
+use utoipa::ToSchema;
 
 use crate::{
     api::{error::ApiError, routes::AppState},
     models::{
-        analysis::AnalyzeResponse, DeepResearchApiResponse, DeepResearchRequest, HealthResponse,
+        analysis::{AnalyzeResponse, ProposalArguments}, 
+        DeepResearchApiResponse, DeepResearchRequest, HealthResponse,
         Proposal,
     },
     services::{
@@ -439,5 +441,68 @@ pub async fn cleanup_cache(
     Ok(Json(CacheCleanupResponse {
         cleaned_entries,
         message: format!("Cleaned up {} expired cache entries", cleaned_entries),
+    }))
+}
+
+/// Response for proposal arguments
+#[derive(Serialize, ToSchema)]
+pub struct ProposalArgumentsResponse {
+    /// Arguments for and against the proposal
+    pub arguments: ProposalArguments,
+    /// Whether this response came from cache
+    pub from_cache: bool,
+}
+
+/// Get proposal arguments
+#[utoipa::path(
+    post,
+    path = "/pre-filter/arguments",
+    request_body = Proposal,
+    responses(
+        (status = 200, description = "Arguments retrieved successfully", body = ProposalArgumentsResponse),
+        (status = 400, description = "Invalid request data"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "Analysis",
+    summary = "Get arguments for and against a proposal",
+    description = "Returns a list of arguments for and against the given proposal"
+)]
+pub async fn get_proposal_arguments(
+    State(state): State<AppState>,
+    Json(proposal): Json<Proposal>,
+) -> Result<Json<ProposalArgumentsResponse>, ApiError> {
+    // Validate proposal content
+    if proposal.description.trim().is_empty() {
+        return Err(ApiError::bad_request("Proposal description cannot be empty"));
+    }
+    
+    // Limit proposal size to prevent abuse
+    if proposal.description.len() > 50000 {
+        return Err(ApiError::bad_request("Proposal description is too long (max 50000 characters)"));
+    }
+    
+    let cached_response = state
+        .agent_service
+        .get_proposal_arguments(&proposal)
+        .await
+        .map_err(|e| {
+            error!("Error getting proposal arguments: {:?}", e);
+            ApiError::internal_error(format!("Failed to get proposal arguments: {}", e))
+        })?;
+    
+    // Validate response data
+    let arguments = cached_response.data;
+    let has_for_args = !arguments.for_proposal.is_empty();
+    let has_against_args = !arguments.against.is_empty();
+    
+    if !has_for_args && !has_against_args {
+        error!("No arguments were generated for proposal");
+        // We'll still return the empty arguments rather than an error
+        // but we log it for monitoring purposes
+    }
+
+    Ok(Json(ProposalArgumentsResponse {
+        arguments,
+        from_cache: cached_response.from_cache,
     }))
 }

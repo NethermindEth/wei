@@ -1,5 +1,5 @@
 import { getApiUrl, getApiHeaders } from '../config/api';
-import { Proposal, AnalysisResponse } from '../types/proposal';
+import { Proposal, AnalysisResponse, ProposalArguments } from '../types/proposal';
 import { CacheService } from './cache';
 
 export class ApiService {
@@ -47,5 +47,38 @@ export class ApiService {
     
     // Then get the fresh result
     return this.analyzeProposal(proposal);
+  }
+
+  /**
+   * Get only the arguments for and against a proposal
+   */
+  static async getProposalArguments(proposal: Proposal): Promise<{ arguments?: ProposalArguments, from_cache: boolean }> {
+    try {
+      const response = await this.makeRequest<{ arguments?: ProposalArguments, from_cache: boolean }>('/pre-filter/arguments', {
+        method: 'POST',
+        body: JSON.stringify(proposal),
+      });
+      
+      // Additional validation to ensure we have valid arguments data
+      if (response.arguments) {
+        // Ensure both arrays exist and have content
+        if (!Array.isArray(response.arguments.for_proposal)) {
+          response.arguments.for_proposal = [];
+        }
+        if (!Array.isArray(response.arguments.against)) {
+          response.arguments.against = [];
+        }
+      }
+      
+      return response;
+    } catch (error) {
+      console.error('Error in getProposalArguments:', error);
+      // Re-throw with more context
+      throw new Error(
+        error instanceof Error 
+          ? `Failed to fetch proposal arguments: ${error.message}` 
+          : 'Failed to fetch proposal arguments'
+      );
+    }
   }
 }

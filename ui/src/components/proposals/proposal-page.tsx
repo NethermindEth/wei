@@ -2,11 +2,11 @@
 
 import * as React from "react";
 
-import { ChevronDownIcon, ChevronUpIcon, ArrowPathIcon, ClockIcon } from "@heroicons/react/24/outline";
+import { ChevronDownIcon, ChevronUpIcon, ArrowPathIcon, ClockIcon, CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import { CommunityAnalysis } from "../community/CommunityAnalysis";
 import { Proposal, useProposals } from "../../hooks/useProposals";
 import { ApiService } from "../../services/api";
-import { AnalysisResponse } from "../../types/proposal";
+import { AnalysisResponse, ProposalArguments } from "../../types/proposal";
 import ReactMarkdown from 'react-markdown';
 import { RelatedProposals } from "./related-proposals";
 
@@ -41,9 +41,12 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
   const [isLoading, setIsLoading] = React.useState(false);
   const [backendResult, setBackendResult] = React.useState<AnalysisResponse | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const [proposalArguments, setProposalArguments] = React.useState<ProposalArguments | null>(null);
+  const [isLoadingArguments, setIsLoadingArguments] = React.useState(false);
+  const [argumentsError, setArgumentsError] = React.useState<string | null>(null);
   const [selectedProposal, setSelectedProposal] = React.useState<Proposal | null>(null);
   const [isProposalExpanded, setIsProposalExpanded] = React.useState(false);
-  const [activeSection, setActiveSection] = React.useState<'feedback' | 'discussion' | 'related'>('feedback');
+  const [activeSection, setActiveSection] = React.useState<'feedback' | 'discussion' | 'related' | 'arguments'>('feedback');
 
   // Fetch proposals for search functionality
   const { proposals: allProposals } = useProposals(1000);
@@ -71,6 +74,28 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
       setIsLoading(false);
     }
   }, []);
+  
+  const fetchProposalArguments = React.useCallback(async (proposal: Proposal) => {
+    setIsLoadingArguments(true);
+    setArgumentsError(null);
+    
+    try {
+      const description = `${proposal.title}\n\n${proposal.body}`;
+      const proposalData = { description };
+      
+      const result = await ApiService.getProposalArguments(proposalData);
+      
+      setProposalArguments(result.arguments || null);
+      if (!result.arguments) {
+        setArgumentsError('No arguments data received from analysis');
+      }
+    } catch (err) {
+      console.error('Error fetching proposal arguments:', err);
+      setArgumentsError('Failed to fetch proposal arguments. Please try again.');
+    } finally {
+      setIsLoadingArguments(false);
+    }
+  }, []);
 
   // Find the specific proposal by ID
   React.useEffect(() => {
@@ -81,28 +106,21 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
         setSelectedProposal(proposal);
         // Auto-analyze the proposal when it's loaded
         analyzeProposal(proposal);
+        // Fetch proposal arguments separately
+        fetchProposalArguments(proposal);
       }
     }
-  }, [allProposals, proposalId, analyzeProposal]);
+  }, [allProposals, proposalId, analyzeProposal, fetchProposalArguments]);
 
   const handleRefreshAnalysis = async () => {
     if (selectedProposal) {
-      await analyzeProposal(selectedProposal, true);
+      await Promise.all([
+        analyzeProposal(selectedProposal, true),
+        fetchProposalArguments(selectedProposal)
+      ]);
     }
   };
 
-  const buildUrlWithParams = (baseUrl: string, params: Record<string, string | null>) => {
-  const searchParams = new URLSearchParams();
-  Object.entries(params).forEach(([key, value]) => {
-    if (value) searchParams.set(key, value);
-  });
-  const queryString = searchParams.toString();
-  return `${baseUrl}${queryString ? `?${queryString}` : ''}`;
-};
-
-  const handleBackClick = () => {
-    window.history.back();
-  };
 
   if (!selectedProposal) {
     return (
@@ -155,6 +173,16 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
                       }`}
                     >
                       Related Proposals
+                    </button>
+                    <button
+                      onClick={() => setActiveSection('arguments')}
+                      className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                        activeSection === 'arguments'
+                          ? 'bg-blue-600 text-white'
+                          : 'text-white/70 hover:text-white hover:bg-white/10'
+                      }`}
+                    >
+                      Proposal Arguments
                     </button>
                   </nav>
                 </div>
@@ -378,7 +406,7 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
                         </div>
 
                         {/* Language Quality */}
-                        <div>
+                        <div className="border-b border-white/10 pb-4">
                           <h3 className="text-md font-semibold mb-2 text-white/90">Language Quality</h3>
                           <div className="flex items-center gap-2 mb-2">
                             <span className="font-medium text-white/80">Status:</span>
@@ -401,6 +429,8 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
                             </div>
                           )}
                         </div>
+
+            
                       </div>
                     )}
 
@@ -427,6 +457,88 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
                       proposalText={selectedProposal.body || ''}
                       proposalTitle={selectedProposal.title}
                     />
+                  </div>
+                )}
+                
+                {activeSection === 'arguments' && (
+                  <div className="rounded-lg border border-white/10 bg-white/5 p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-lg font-semibold text-white/90">Proposal Arguments</h2>
+                      <button
+                        onClick={() => selectedProposal && fetchProposalArguments(selectedProposal)}
+                        className="flex items-center gap-1 text-sm text-white/60 hover:text-white transition-colors"
+                        disabled={isLoadingArguments}
+                      >
+                        <ArrowPathIcon className={`w-4 h-4 ${isLoadingArguments ? 'animate-spin' : ''}`} />
+                        <span>Refresh</span>
+                      </button>
+                    </div>
+                    
+                    {isLoadingArguments ? (
+                      <div className="flex items-center justify-center py-12">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white/30"></div>
+                        <span className="ml-3 text-white/60">Analyzing arguments...</span>
+                      </div>
+                    ) : proposalArguments ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Arguments For */}
+                        <div className="bg-green-500/10 rounded-lg p-4 border border-green-500/20 shadow-sm">
+                          <h4 className="font-medium text-green-400 mb-3 flex items-center">
+                            <CheckCircleIcon className="w-5 h-5 mr-2" />
+                            Supporting Arguments
+                          </h4>
+                          {proposalArguments.for_proposal?.length > 0 ? (
+                            <ul className="space-y-2 text-white/80">
+                              {proposalArguments.for_proposal.map((arg, index) => (
+                                <li key={index} className="flex items-start">
+                                  <span className="text-green-400 mr-2">•</span>
+                                  <span>{arg}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="text-white/50 italic">No supporting arguments found.</p>
+                          )}
+                        </div>
+                        
+                        {/* Arguments Against */}
+                        <div className="bg-red-500/10 rounded-lg p-4 border border-red-500/20 shadow-sm">
+                          <h4 className="font-medium text-red-400 mb-3 flex items-center">
+                            <XCircleIcon className="w-5 h-5 mr-2" />
+                            Opposing Arguments
+                          </h4>
+                          {proposalArguments.against?.length > 0 ? (
+                            <ul className="space-y-2 text-white/80">
+                              {proposalArguments.against.map((arg, index) => (
+                                <li key={index} className="flex items-start">
+                                  <span className="text-red-400 mr-2">•</span>
+                                  <span>{arg}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="text-white/50 italic">No opposing arguments found.</p>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        {argumentsError ? (
+                          <div className="mb-4">
+                            <p className="text-red-400 mb-2">{argumentsError}</p>
+                            <p className="text-white/60">Please try again or check the proposal content.</p>
+                          </div>
+                        ) : (
+                          <p className="text-white/60 mb-4">No arguments analysis available</p>
+                        )}
+                        <button
+                          onClick={() => selectedProposal && fetchProposalArguments(selectedProposal)}
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                        >
+                          {argumentsError ? 'Retry Analysis' : 'Analyze Arguments'}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

@@ -63,6 +63,15 @@ pub struct StructuredAnalysisResponse {
     pub language_quality: EvaluationCategory,
 }
 
+/// Arguments for and against the proposal
+#[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema)]
+pub struct ProposalArguments {
+    /// List of arguments supporting the proposal
+    pub for_proposal: Vec<String>,
+    /// List of arguments against the proposal
+    pub against: Vec<String>,
+}
+
 /// Evaluation category with status, justification and suggestions
 #[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema)]
 #[schema(description = descriptions::EVALUATION_CATEGORY_DESCRIPTION)]
