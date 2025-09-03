@@ -145,28 +145,29 @@ pub async fn query_agent(agent_service: &AgentService, prompt: &str) -> Result<S
 
     // Extract the most relevant text from the analysis
     // Start with the justification from goals_and_motivation
-    let mut response = analysis.goals_and_motivation.justification.clone();
+    let mut response = analysis.data.goals_and_motivation.justification.clone();
 
     // If that's empty, try other fields
     if response.trim().is_empty() {
-        response = analysis.goals_and_motivation.suggestions.join(". ");
+        response = analysis.data.goals_and_motivation.suggestions.join(". ");
     }
 
     if response.trim().is_empty() {
-        response = analysis.measurable_outcomes.justification.clone();
+        response = analysis.data.measurable_outcomes.justification.clone();
+    }
+    if response.trim().is_empty() {
+        response = analysis.data.budget.justification.clone();
     }
 
     if response.trim().is_empty() {
-        response = analysis.budget.justification.clone();
+        response = analysis.data.technical_specifications.justification.clone();
     }
 
     if response.trim().is_empty() {
-        response = analysis.technical_specifications.justification.clone();
+        response = analysis.data.language_quality.justification.clone();
     }
 
-    if response.trim().is_empty() {
-        response = analysis.language_quality.justification.clone();
-    }
+  
 
     // If we still have an empty response, return a default message
     if response.trim().is_empty() {

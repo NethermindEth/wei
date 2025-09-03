@@ -17,7 +17,7 @@ async fn test_e2e_proposal_analysis() {
 
     println!("Running analysis on first proposal...");
     let analysis = agent_service.analyze_proposal(&proposal).await.unwrap();
-    validate_analysis(&analysis);
+    validate_analysis(&analysis.data);
 
     println!("E2E test passed for proposal 1");
 }
@@ -33,7 +33,7 @@ async fn test_e2e_multiple_proposals() {
             description: proposal_text.to_string(),
         };
         let analysis = agent_service.analyze_proposal(&proposal).await.unwrap();
-        validate_analysis(&analysis);
+        validate_analysis(&analysis.data);
 
         println!("E2E test passed for proposal {}", i + 1);
     }
@@ -56,7 +56,7 @@ async fn test_e2e_all_proposals() {
 
         println!("Running analysis on proposal {}...", i + 1);
         let analysis = agent_service.analyze_proposal(&proposal).await.unwrap();
-        validate_analysis(&analysis);
+        validate_analysis(&analysis.data);
 
         println!("Proposal {} analysis completed", i + 1);
         println!("---");
