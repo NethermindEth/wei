@@ -11,3 +11,12 @@ pub mod proposal;
 pub mod protocol;
 /// Webhook data repository
 pub mod webhook;
+// TODO: Remove unused imports after development phase
+#[allow(unused_imports)]
+pub use actor::ActorRepository;
+#[allow(unused_imports)]
+pub use proposal::ProposalRepository;
+#[allow(unused_imports)]
+pub use protocol::ProtocolRepository;
+#[allow(unused_imports)]
+pub use webhook::WebhookRepository;

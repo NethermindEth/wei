@@ -6,7 +6,7 @@ use crate::models::analysis::EvaluationCategory;
 
 use openrouter_rs::{api::chat::ChatCompletionRequest, types::Role, Message, OpenRouterClient};
 use serde_json;
-use tracing::{error, info};
+use tracing::{error, info,debug};
 
 use crate::models::analysis::StructuredAnalysisResponse;
 use crate::models::custom_evaluation::EvaluationResult;
@@ -145,7 +145,7 @@ impl AgentServiceTrait for AgentService {
             .to_string();
 
         // Log the raw response content for debugging
-        info!("Raw AI response: {}", content);
+        debug!("Raw AI response: {}", content);
 
         // Extract JSON from the response if it's wrapped in markdown code blocks
         let json_content = extract_json_from_markdown(&content).to_string();

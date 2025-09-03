@@ -9,3 +9,6 @@ pub mod handlers;
 pub mod middleware;
 /// Route definitions and router creation
 pub mod routes;
+// TODO: Remove unused import after development phase
+#[allow(unused_imports)]
+pub use routes::create_router;

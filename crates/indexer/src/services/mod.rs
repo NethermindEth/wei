@@ -9,3 +9,7 @@ pub mod data_sources;
 pub mod indexer;
 /// Webhook service for external notifications
 pub mod webhook;
+#[allow(unused_imports)]
+pub use data_sources::DataSource;
+#[allow(unused_imports)]
+pub use indexer::IndexerService;
