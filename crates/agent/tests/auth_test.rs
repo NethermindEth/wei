@@ -18,9 +18,15 @@ struct TestDatabase {
 impl TestDatabase {
     /// Create a new test database with migrations
     async fn new() -> Self {
-        let test_db_name = format!("wei_agent_test_{}", Uuid::new_v4().to_string().replace('-', ""));
+        let test_db_name = format!(
+            "wei_agent_test_{}",
+            Uuid::new_v4().to_string().replace('-', "")
+        );
         let postgres_url = "postgresql://postgres:postgres@localhost:5432/postgres";
-        let test_db_url = format!("postgresql://postgres:postgres@localhost:5432/{}", test_db_name);
+        let test_db_url = format!(
+            "postgresql://postgres:postgres@localhost:5432/{}",
+            test_db_name
+        );
 
         // Connect to postgres system database to create test database
         let postgres_pool = PgPoolOptions::new()

@@ -214,33 +214,33 @@ impl AuthService {
         if email.len() < 5 || email.len() > 255 {
             return false;
         }
-        
+
         // Must contain exactly one @ symbol
         let at_count = email.matches('@').count();
         if at_count != 1 {
             return false;
         }
-        
+
         // Split by @ and check both parts
         let parts: Vec<&str> = email.split('@').collect();
         let local_part = parts[0];
         let domain_part = parts[1];
-        
+
         // Local part cannot be empty
         if local_part.is_empty() {
             return false;
         }
-        
+
         // Domain part cannot be empty
         if domain_part.is_empty() {
             return false;
         }
-        
+
         // Domain must contain at least one dot
         if !domain_part.contains('.') {
             return false;
         }
-        
+
         true
     }
 
@@ -300,7 +300,7 @@ mod tests {
         // with a dummy user repository since we're not actually using the database
         use crate::db::repositories::UserRepository;
         use sqlx::postgres::PgPoolOptions;
-        
+
         // Create a dummy database connection (won't be used for validation tests)
         let dummy_url = "postgresql://postgres:postgres@localhost:5432/postgres";
         let dummy_pool = PgPoolOptions::new()
@@ -308,7 +308,7 @@ mod tests {
             .connect(dummy_url)
             .await
             .expect("Failed to create dummy database connection");
-        
+
         let user_repo = UserRepository::new(dummy_pool);
         AuthService::new(user_repo, "test_secret".to_string())
     }

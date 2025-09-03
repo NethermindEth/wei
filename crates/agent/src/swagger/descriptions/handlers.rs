@@ -24,4 +24,5 @@ pub const HANDLER_USER_LOGIN_DESCRIPTION: &str = "Authenticate a user with email
 pub const HANDLER_TOKEN_REFRESH_DESCRIPTION: &str = "Exchange a valid refresh token for a new access token. This allows users to maintain authentication without re-entering credentials.";
 
 /// Description of the get current user profile handler
-pub const HANDLER_GET_CURRENT_USER_PROFILE_DESCRIPTION: &str = "Get the profile information of the currently authenticated user.";
+pub const HANDLER_GET_CURRENT_USER_PROFILE_DESCRIPTION: &str =
+    "Get the profile information of the currently authenticated user.";
