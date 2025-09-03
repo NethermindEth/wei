@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM cache_entries WHERE cache_key LIKE $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "56858ff3a8ecb555be5e4004389f741cd6c900c70fdce6d80f0e8d5b201162b5"
+}

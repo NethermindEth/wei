@@ -11,6 +11,7 @@ export interface Protocol {
   name: string;
   avatar?: string;
   verified?: boolean;
+  domain?: string;
 }
 
 interface HeaderProps {
@@ -56,7 +57,11 @@ export function Header({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onSearch]);
 
-  const selectedProtocolData = protocols.find(p => p.id === selectedProtocol);
+  // Find protocol by ID or domain
+  const selectedProtocolData = protocols.find(p => 
+    p.id === selectedProtocol || 
+    p.domain === selectedProtocol
+  );
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-[#0b0f14]/95 backdrop-blur supports-[backdrop-filter]:bg-[#0b0f14]/60">
@@ -140,7 +145,7 @@ export function Header({
                       setIsDropdownOpen(false);
                     }}
                     className={`w-full flex items-center gap-2 px-4 py-2 text-left hover:bg-white/5 transition-colors ${
-                      selectedProtocol === protocol.id ? 'bg-white/10' : ''
+                      selectedProtocol === protocol.id || selectedProtocol === protocol.domain ? 'bg-white/10' : ''
                     }`}
                   >
                     <Avatar

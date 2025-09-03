@@ -46,6 +46,10 @@ pub struct Config {
         default_value = "http://localhost:3000"
     )]
     cors_allowed_urls_raw: String,
+
+    /// Exa API key for search functionality
+    #[arg(env = "WEI_AGENT_EXA_API_KEY", long)]
+    pub exa_api_key: Option<String>,
 }
 
 impl Config {
