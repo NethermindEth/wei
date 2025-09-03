@@ -128,7 +128,6 @@ pub async fn init_db_with_migrations(database_url: &str) -> Result<Database, Dat
     // Run migrations only if the database was newly created
     run_migrations(&pool).await?;
 
-
     Ok(pool)
 }
 
@@ -144,7 +143,7 @@ pub async fn init_db_pool(database_url: &str) -> Result<Database, DbError> {
 /// Run migrations
 pub async fn run_migrations(pool: &sqlx::Pool<sqlx::Postgres>) -> Result<(), DatabaseError> {
     info!("Run  migrations...");
-    
+
     sqlx::migrate!("./migrations")
         .run(pool)
         .await
