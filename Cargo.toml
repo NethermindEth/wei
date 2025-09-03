@@ -20,7 +20,7 @@ tower = "0.4"
 tower-http = { version = "0.5", features = ["cors", "trace"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chrono"] }
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }
 reqwest = { version = "0.11", features = ["json"] }
 graphql_client = "0.13"
 anyhow = "1.0"
@@ -32,6 +32,8 @@ uuid = { version = "1.0", features = ["v4", "serde"] }
 dotenv = "0.15"
 clap = { version = "4.5", features = ["env","derive"] }
 openrouter-rs = "0.4.5"
+utoipa = { version = "5.4.0", features = ["axum_extras", "chrono", "uuid"] }
+utoipa-axum = "0.2.0"
 
 [workspace.metadata]
 # Workspace metadata for documentation and tooling 

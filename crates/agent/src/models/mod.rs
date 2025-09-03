@@ -3,21 +3,22 @@
 //! This module contains the core data structures used by the agent service
 //! for representing analyses, proposals, and webhook events.
 
-// TODO: Remove unused imports after development phase
-#[allow(unused_imports)]
-use chrono::{DateTime, Utc};
-#[allow(unused_imports)]
-use serde::{Deserialize, Serialize};
-#[allow(unused_imports)]
-use uuid::Uuid;
-
 /// Analysis data model
 pub mod analysis;
+/// Deep research data model
+pub mod deepresearch;
+/// Health check response model
+pub mod health;
 /// Proposal data model
 pub mod proposal;
 /// Webhook event data model
 pub mod webhook;
 
-pub use analysis::{Analysis, AnalysisResult};
+pub use analysis::{Analysis, AnalysisResult, AnalyzeResponse, StructuredAnalysisResponse};
+pub use deepresearch::{
+    DeepResearchApiResponse, DeepResearchRequest, DeepResearchResponse, DeepResearchResult,
+    DiscussionResource,
+};
+pub use health::HealthResponse;
 pub use proposal::Proposal;
 pub use webhook::WebhookEvent;

@@ -11,7 +11,9 @@ use tokio::signal;
 use tokio::signal::unix::{signal, SignalKind};
 
 use agent::config::Config;
+use agent::db::repositories::CacheRepository;
 use agent::services::agent::AgentService;
+use agent::services::cache::CacheService;
 
 #[tokio::main]
 async fn main() -> agent::Result<()> {
@@ -47,14 +49,21 @@ async fn main() -> agent::Result<()> {
         }
     };
 
-    info!("Wei Agent service started successfully");
+    let agent_service = AgentService::new(db.clone(), config.clone());
 
-    let agent_service = AgentService::new(db, config.clone());
+    // Initialize cache service
+    let cache_repo = CacheRepository::new(db);
+    let cache_service = CacheService::new(cache_repo);
 
-    let app = create_router(&config, agent_service);
+    let app = create_router(&config, agent_service, cache_service);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
     let listener = TcpListener::bind(addr).await.unwrap();
+
+    info!(
+        "Wei Agent service started successfully on port {}",
+        config.port
+    );
 
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())

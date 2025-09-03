@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO community_analyses (id, topic, response_data, created_at, expires_at)\n            VALUES ($1, $2, $3, $4, $5)\n            ON CONFLICT (topic) \n            DO UPDATE SET \n                response_data = EXCLUDED.response_data,\n                created_at = EXCLUDED.created_at,\n                expires_at = EXCLUDED.expires_at\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar",
+        "Jsonb",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "768725c70875076ebe7b23f4a4c7323696b16a0e65a8adcaba5e7a9a6e2fea02"
+}

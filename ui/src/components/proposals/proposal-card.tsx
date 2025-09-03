@@ -24,6 +24,7 @@ export function ProposalCard({ proposal, onClick, isSelected }: ProposalCardProp
     : previewText;
 
   const handleCardClick = () => {
+    // Always call the onClick handler for analysis on the main page
     onClick(proposal);
   };
 

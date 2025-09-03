@@ -41,14 +41,14 @@ RUN useradd -r -s /bin/false -m -d /app appuser && \
 USER appuser
 
 # Expose the default port
-EXPOSE 8000
+EXPOSE 3001
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:3001/health || exit 1
 
 # Set default environment variables
-ENV WEI_AGENT_PORT=8000
+ENV WEI_AGENT_PORT=3001
 ENV RUST_LOG=info
 
 # Run the agent

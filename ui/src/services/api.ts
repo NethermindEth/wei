@@ -1,5 +1,6 @@
 import { getApiUrl, getApiHeaders } from '../config/api';
 import { Proposal, AnalysisResponse } from '../types/proposal';
+import { CacheService } from './cache';
 
 export class ApiService {
   private static async makeRequest<T>(
@@ -33,5 +34,18 @@ export class ApiService {
       method: 'POST',
       body: JSON.stringify(proposal),
     });
+  }
+
+  /**
+   * Refresh the cache for a proposal analysis and get fresh results
+   */
+  static async refreshProposalAnalysis(proposal: Proposal): Promise<AnalysisResponse> {
+    const query = CacheService.createProposalAnalysisQuery(proposal);
+    
+    // Refresh the cache first
+    await CacheService.refreshCache(query);
+    
+    // Then get the fresh result
+    return this.analyzeProposal(proposal);
   }
 }
