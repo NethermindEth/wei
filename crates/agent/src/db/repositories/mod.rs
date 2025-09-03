@@ -9,6 +9,8 @@ pub mod analysis;
 pub mod cache;
 /// Community analysis repository
 pub mod community;
+/// User authentication repository
+pub mod user;
 /// Webhook event repository
 pub mod webhook;
 
@@ -19,5 +21,7 @@ pub use analysis::AnalysisRepository;
 pub use cache::CacheRepository;
 #[allow(unused_imports)]
 pub use community::CommunityRepository;
+#[allow(unused_imports)]
+pub use user::UserRepository;
 #[allow(unused_imports)]
 pub use webhook::WebhookRepository;

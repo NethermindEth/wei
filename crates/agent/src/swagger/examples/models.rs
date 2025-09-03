@@ -77,3 +77,64 @@ pub fn EVALUATION_CATEGORY_JUSTIFICATION_EXAMPLE() -> &'static str {
 pub fn EVALUATION_CATEGORY_SUGGESTIONS_EXAMPLE() -> &'static str {
     "[\"Add specific metrics\", \"Include timeline\"]"
 }
+
+// User authentication examples
+/// Example of user email
+#[allow(non_snake_case)]
+pub fn USER_EMAIL_EXAMPLE() -> &'static str {
+    "user@example.com"
+}
+
+/// Example of user password
+#[allow(non_snake_case)]
+pub fn USER_PASSWORD_EXAMPLE() -> &'static str {
+    "SecurePassword123"
+}
+
+/// Example of user first name
+#[allow(non_snake_case)]
+pub fn USER_FIRST_NAME_EXAMPLE() -> &'static str {
+    "John"
+}
+
+/// Example of user last name
+#[allow(non_snake_case)]
+pub fn USER_LAST_NAME_EXAMPLE() -> &'static str {
+    "Doe"
+}
+
+/// Example of user username
+#[allow(non_snake_case)]
+pub fn USER_USERNAME_EXAMPLE() -> &'static str {
+    "johndoe"
+}
+
+/// Example of user ID
+#[allow(non_snake_case)]
+pub fn USER_ID_EXAMPLE() -> &'static str {
+    "550e8400-e29b-41d4-a716-446655440000"
+}
+
+/// Example of JWT access token
+#[allow(non_snake_case)]
+pub fn JWT_ACCESS_TOKEN_EXAMPLE() -> &'static str {
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1NTBlODQwMC1lMjliLTQxZDQtYTcxNi00NDY2NTU0NDAwMDAiLCJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20iLCJleHAiOjE3MDUzMjQ2MDAsImlhdCI6MTcwNTMyMTAwMCwianRpIjoiNTUwZTg0MDAtZTI5Yi00MWQ0LWE3MTYtNDQ2NjU1NDQwMDAwIn0.example_signature"
+}
+
+/// Example of refresh token
+#[allow(non_snake_case)]
+pub fn REFRESH_TOKEN_EXAMPLE() -> &'static str {
+    "550e8400-e29b-41d4-a716-446655440000"
+}
+
+/// Example of token expiry time
+#[allow(non_snake_case)]
+pub fn TOKEN_EXPIRY_EXAMPLE() -> u64 {
+    3600
+}
+
+/// Example of registration success message
+#[allow(non_snake_case)]
+pub fn REGISTRATION_SUCCESS_MESSAGE_EXAMPLE() -> &'static str {
+    "User registered successfully"
+}

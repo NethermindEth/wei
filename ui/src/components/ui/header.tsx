@@ -2,8 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { ChevronDownIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { ChevronDownIcon, MagnifyingGlassIcon, UserIcon } from '@heroicons/react/24/outline';
 import { Avatar, DefaultAvatar } from './avatar';
+import { useAuth } from '../../contexts/auth-context';
+
 
 // Protocol/Space interface
 export interface Protocol {
@@ -20,6 +22,7 @@ interface HeaderProps {
   onSearch: () => void;
   protocols: Protocol[];
   loading?: boolean;
+  onAuthModalOpen?: () => void;
 }
 
 export function Header({ 
@@ -27,16 +30,22 @@ export function Header({
   onProtocolChange, 
   onSearch, 
   protocols, 
-  loading = false 
+  loading = false,
+  onAuthModalOpen
 }: HeaderProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const { user, isAuthenticated, logout } = useAuth();
 
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
       if (!target.closest('[data-dropdown]')) {
         setIsDropdownOpen(false);
+      }
+      if (!target.closest('[data-user-menu]')) {
+        setIsUserMenuOpen(false);
       }
     };
 
@@ -173,8 +182,8 @@ export function Header({
           </div>
         </div>
 
-        {/* Right: Search Button */}
-        <div className="flex items-center">
+        {/* Right: Search and Auth */}
+        <div className="flex items-center gap-3">
           <button
             onClick={onSearch}
             className="flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/10 rounded-lg hover:bg-white/8 transition-colors focus:outline-none focus:ring-2 focus:ring-[--color-accent]/50"
@@ -187,8 +196,66 @@ export function Header({
               <span className="text-xs">⌘</span>K
             </kbd>
           </button>
+
+          {/* Authentication Section */}
+          {isAuthenticated && user ? (
+            <div className="relative" data-user-menu>
+              <button
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                className="flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/10 rounded-lg hover:bg-white/8 transition-colors focus:outline-none focus:ring-2 focus:ring-[--color-accent]/50"
+              >
+                <Avatar
+                  src={undefined}
+                  alt={user.first_name || user.email}
+                  size={20}
+                  fallback={<DefaultAvatar name={user.first_name || user.email} size={20} />}
+                />
+                <span className="text-sm text-white/90 hidden sm:inline">
+                  {user.first_name || user.email.split('@')[0]}
+                </span>
+                <ChevronDownIcon className="w-3 h-3 text-white/60" />
+              </button>
+
+              {/* User Menu Dropdown */}
+              {isUserMenuOpen && (
+                <div className="absolute top-full right-0 mt-1 w-48 bg-[#1a1f26] border border-white/10 rounded-lg shadow-lg z-50">
+                  <div className="px-4 py-3 border-b border-white/10">
+                    <p className="text-sm font-medium text-white/90">
+                      {user.first_name && user.last_name 
+                        ? `${user.first_name} ${user.last_name}`
+                        : user.first_name || user.email.split('@')[0]
+                      }
+                    </p>
+                    <p className="text-xs text-white/60">{user.email}</p>
+                  </div>
+                  
+                  <div className="py-1">
+                    <button
+                      onClick={() => {
+                        logout();
+                        setIsUserMenuOpen(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-white/90 hover:bg-white/5 transition-colors"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={() => onAuthModalOpen?.()}
+              className="flex items-center gap-2 px-3 py-2 bg-accent hover:bg-accent/90 text-black font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-accent/50"
+            >
+              <UserIcon className="w-4 h-4" />
+              <span className="text-sm hidden sm:inline">Sign In</span>
+            </button>
+          )}
         </div>
       </div>
+
+
     </header>
   );
 }

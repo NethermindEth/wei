@@ -39,14 +39,14 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
       <div 
-        className="absolute inset-0 bg-black/70" 
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm" 
         onClick={onClose}
       />
       
-      <div className="relative z-10 w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-lg bg-[#121212] border border-white/10 shadow-xl">
-        <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+      <div className="relative z-10 w-full max-w-md sm:max-w-lg max-h-[95vh] sm:max-h-[90vh] overflow-hidden rounded-lg bg-[#121212] border border-white/10 shadow-xl">
+        <div className="flex items-center justify-between border-b border-white/10 px-4 sm:px-6 py-3 sm:py-4">
           <h3 className="text-lg font-medium text-white">{title}</h3>
           <button 
             onClick={onClose}
@@ -59,7 +59,7 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
           </button>
         </div>
         
-        <div className="p-6 overflow-y-auto overflow-x-hidden max-h-[calc(90vh-120px)]">
+        <div className="p-4 sm:p-6 overflow-y-auto overflow-x-hidden max-h-[calc(95vh-120px)] sm:max-h-[calc(90vh-140px)]">
           {children}
         </div>
       </div>

@@ -50,6 +50,10 @@ pub struct Config {
     /// Exa API key for search functionality
     #[arg(env = "WEI_AGENT_EXA_API_KEY", long)]
     pub exa_api_key: Option<String>,
+
+    /// JWT secret for token signing
+    #[arg(env = "WEI_AGENT_JWT_SECRET", long)]
+    pub jwt_secret: String,
 }
 
 impl Config {

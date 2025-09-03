@@ -104,3 +104,5 @@ test-output/
 
 # Rust specific
 **/target/
+
+.sqlx

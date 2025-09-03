@@ -5,6 +5,8 @@
 
 /// Main agent service implementation
 pub mod agent;
+/// Authentication service for user management
+pub mod auth;
 /// Cache service for all API endpoints
 pub mod cache;
 /// Exa search service for finding related proposals

@@ -1,7 +1,7 @@
 //! API handlers for the agent service
 
 use axum::{
-    extract::{Path, Query, State},
+    extract::{Path, Query, Request, State},
     Json,
 };
 use serde::{Deserialize, Serialize};
@@ -11,8 +11,9 @@ use tracing::error;
 use crate::{
     api::{error::ApiError, routes::AppState},
     models::{
-        analysis::AnalyzeResponse, DeepResearchApiResponse, DeepResearchRequest, HealthResponse,
-        Proposal,
+        analysis::AnalyzeResponse, user::UserProfile, CreateUserRequest, DeepResearchApiResponse,
+        DeepResearchRequest, HealthResponse, LoginRequest, LoginResponse, Proposal,
+        RefreshTokenRequest, RegisterResponse,
     },
     services::{
         agent::AgentServiceTrait,
@@ -440,4 +441,131 @@ pub async fn cleanup_cache(
         cleaned_entries,
         message: format!("Cleaned up {} expired cache entries", cleaned_entries),
     }))
+}
+
+/// Register a new user
+#[utoipa::path(
+    post,
+    path = "/auth/register",
+    request_body = CreateUserRequest,
+    responses(
+        (status = 201, description = "User registered successfully", body = RegisterResponse),
+        (status = 400, description = "Invalid request data"),
+        (status = 409, description = "User already exists"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "Authentication",
+    summary = "Register a new user",
+    description = descriptions::HANDLER_USER_REGISTRATION_DESCRIPTION
+)]
+pub async fn register(
+    State(state): State<AppState>,
+    Json(request): Json<CreateUserRequest>,
+) -> Result<Json<RegisterResponse>, ApiError> {
+    let response = state.auth_service.register(request).await.map_err(|e| {
+        error!("Error registering user: {:?}", e);
+        match e {
+            crate::utils::error::Error::Validation(msg) => ApiError::bad_request(msg),
+            _ => ApiError::internal_error(format!("Failed to register user: {}", e)),
+        }
+    })?;
+
+    Ok(Json(response))
+}
+
+/// Login user
+#[utoipa::path(
+    post,
+    path = "/auth/login",
+    request_body = LoginRequest,
+    responses(
+        (status = 200, description = "Login successful", body = LoginResponse),
+        (status = 400, description = "Invalid credentials"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "Authentication",
+    summary = "Login user",
+    description = descriptions::HANDLER_USER_LOGIN_DESCRIPTION
+)]
+pub async fn login(
+    State(state): State<AppState>,
+    Json(request): Json<LoginRequest>,
+) -> Result<Json<LoginResponse>, ApiError> {
+    let response = state.auth_service.login(request).await.map_err(|e| {
+        error!("Error logging in user: {:?}", e);
+        match e {
+            crate::utils::error::Error::Validation(msg) => ApiError::bad_request(msg),
+            _ => ApiError::internal_error(format!("Failed to login user: {}", e)),
+        }
+    })?;
+
+    Ok(Json(response))
+}
+
+/// Get current user profile
+#[utoipa::path(
+    get,
+    path = "/auth/me",
+    responses(
+        (status = 200, description = "User profile retrieved successfully", body = UserProfile),
+        (status = 401, description = "Unauthorized"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "Authentication",
+    summary = "Get current user profile",
+    description = descriptions::HANDLER_GET_CURRENT_USER_PROFILE_DESCRIPTION
+)]
+pub async fn get_current_user_profile(
+    State(state): State<AppState>,
+    request: Request,
+) -> Result<Json<UserProfile>, ApiError> {
+    let user_id = crate::api::jwt_middleware::get_current_user_id(&request)
+        .ok_or_else(|| ApiError::unauthorized("Invalid or missing JWT token"))?;
+
+    let profile = state
+        .auth_service
+        .get_user_profile(user_id)
+        .await
+        .map_err(|e| {
+            error!("Error getting user profile: {:?}", e);
+            match e {
+                crate::utils::error::Error::Validation(msg) => ApiError::bad_request(msg),
+                _ => ApiError::internal_error(format!("Failed to get user profile: {}", e)),
+            }
+        })?;
+
+    Ok(Json(profile))
+}
+
+/// Refresh access token
+#[utoipa::path(
+    post,
+    path = "/auth/refresh",
+    request_body = RefreshTokenRequest,
+    responses(
+        (status = 200, description = "Token refreshed successfully", body = LoginResponse),
+        (status = 400, description = "Invalid refresh token"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "Authentication",
+    summary = "Refresh access token",
+    description = descriptions::HANDLER_TOKEN_REFRESH_DESCRIPTION
+)]
+pub async fn refresh_token(
+    State(state): State<AppState>,
+    Json(request): Json<RefreshTokenRequest>,
+) -> Result<Json<LoginResponse>, ApiError> {
+    let response = state
+        .auth_service
+        .refresh_token(request)
+        .await
+        .map_err(|e| {
+            error!("Error refreshing token: {:?}", e);
+            match e {
+                crate::utils::error::Error::Validation(msg) => ApiError::bad_request(msg),
+                _ => ApiError::internal_error(format!("Failed to refresh token: {}", e)),
+            }
+        })?;
+
+    Ok(Json(response))
 }

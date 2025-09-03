@@ -8,6 +8,7 @@ import { ProposalList } from "../proposals/proposal-list";
 import { Proposal as GraphQLProposal, useProposals } from "../../hooks/useProposals";
 import { Header, Protocol } from "../ui/header";
 import { SearchModal } from "../ui/search-modal";
+import { AuthModal } from "../auth/auth-modal";
 import { useSpaces } from "../../hooks/useSpaces";
 import { Tabs } from "../ui/tabs";
 import { CommunityAnalysis } from "../community/CommunityAnalysis";
@@ -33,6 +34,7 @@ export function AnalyzerClient() {
   });
   
   const [isSearchModalOpen, setIsSearchModalOpen] = React.useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = React.useState(false);
   
   // Fetch spaces for the protocol dropdown
   const { spaces, loading: spacesLoading } = useSpaces();
@@ -97,6 +99,7 @@ export function AnalyzerClient() {
         onSearch={handleSearch}
         protocols={protocols}
         loading={spacesLoading}
+        onAuthModalOpen={() => setIsAuthModalOpen(true)}
       />
       
       <main className="flex-1 container mx-auto px-4 py-6">
@@ -152,6 +155,14 @@ export function AnalyzerClient() {
         protocols={protocols}
         onSelectProposal={handleSelectProposal}
         onSelectProtocol={handleSelectProtocolFromSearch}
+      />
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onSuccess={() => {
+          setIsAuthModalOpen(false);
+        }}
       />
     </div>
   );
