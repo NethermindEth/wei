@@ -1,3 +1,5 @@
+#![cfg(feature = "e2e-tests")]
+
 use agent::services::agent::AgentService;
 use anyhow::Result;
 use std::time::Duration;
