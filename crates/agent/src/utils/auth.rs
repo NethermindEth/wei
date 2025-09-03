@@ -44,6 +44,12 @@ impl JwtConfig {
             refresh_token_expiry: 604800, // 7 days
         }
     }
+
+    /// Create a new JWT configuration with a dummy secret
+    #[cfg(test)]
+    pub fn dummy() -> Self {
+        Self::new("test_secret".to_string())
+    }
 }
 
 /// Hash a password using Argon2

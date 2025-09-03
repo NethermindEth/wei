@@ -43,3 +43,6 @@ rand = "0.8"
 [dev-dependencies]
 tokio-test = "0.4"
 mockall = "0.12" 
+
+[features]
+e2e-tests = []

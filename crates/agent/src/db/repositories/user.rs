@@ -3,8 +3,10 @@
 use chrono::Utc;
 use uuid::Uuid;
 
+#[cfg(test)]
+use crate::db::core::dummy_database;
 use crate::{
-    db::core::Database,
+    db::core::{Database},
     models::user::{RefreshToken, User},
     utils::error::{Error, Result},
 };
@@ -19,6 +21,12 @@ impl UserRepository {
     /// Create a new user repository
     pub fn new(db: Database) -> Self {
         Self { db }
+    }
+
+    /// Create a new user repository with a dummy database
+    #[cfg(test)]
+    pub fn dummy() -> Self {
+        Self { db: dummy_database() }
     }
 
     /// Create a new user

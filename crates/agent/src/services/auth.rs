@@ -296,20 +296,9 @@ mod tests {
     }
 
     async fn create_test_auth_service() -> AuthService {
-        // For unit tests that only test validation methods, we can create a service
-        // with a dummy user repository since we're not actually using the database
-        use crate::db::repositories::UserRepository;
-        use sqlx::postgres::PgPoolOptions;
-
-        // Create a dummy database connection (won't be used for validation tests)
-        let dummy_url = "postgresql://postgres:postgres@localhost:5432/postgres";
-        let dummy_pool = PgPoolOptions::new()
-            .max_connections(1)
-            .connect(dummy_url)
-            .await
-            .expect("Failed to create dummy database connection");
-
-        let user_repo = UserRepository::new(dummy_pool);
-        AuthService::new(user_repo, "test_secret".to_string())
+        AuthService {
+            user_repo: UserRepository::dummy(),
+            jwt_config: JwtConfig::dummy(),
+        }
     }
 }

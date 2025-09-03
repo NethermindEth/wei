@@ -1,4 +1,5 @@
 //! Authentication integration tests
+#![cfg(feature = "e2e-tests")]
 
 use agent::{
     db::core::init_db_with_migrations,
