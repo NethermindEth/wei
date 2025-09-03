@@ -26,3 +26,19 @@ pub const PROPOSAL_DESCRIPTION: &str = "A governance proposal to be analyzed by 
 
 /// Description of the analyze response
 pub const ANALYZE_RESPONSE_DESCRIPTION: &str = "Response containing the structured analysis result";
+
+// User authentication descriptions
+/// Description of user registration request
+pub const USER_REGISTRATION_DESCRIPTION: &str = "Request payload for creating a new user account";
+
+/// Description of user login request
+pub const USER_LOGIN_DESCRIPTION: &str = "Request payload for user authentication";
+
+/// Description of user login response
+pub const USER_LOGIN_RESPONSE_DESCRIPTION: &str = "Response containing authentication tokens";
+
+/// Description of token refresh request
+pub const TOKEN_REFRESH_DESCRIPTION: &str = "Request payload for refreshing access tokens";
+
+/// Description of user profile
+pub const USER_PROFILE_DESCRIPTION: &str = "User account information without sensitive data";

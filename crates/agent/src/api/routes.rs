@@ -21,7 +21,7 @@ use crate::{
         middleware::{api_key_auth, handle_error_middleware},
     },
     config::Config,
-    services::cache::CacheService,
+    services::{auth::AuthService, cache::CacheService},
     swagger::handlers::{openapi_handler, swagger_ui_handler},
     AgentService,
 };
@@ -33,6 +33,8 @@ pub struct AppState {
     pub config: Config,
     /// Agent service for processing requests
     pub agent_service: AgentService,
+    /// Authentication service for user management
+    pub auth_service: AuthService,
     /// Cache service for managing cached responses
     pub cache_service: CacheService,
 }
@@ -47,6 +49,7 @@ impl FromRef<AppState> for Config {
 pub fn create_router(
     config: &Config,
     agent_service: AgentService,
+    auth_service: AuthService,
     cache_service: CacheService,
 ) -> Router {
     let tracing_layer = TraceLayer::new_for_http()
@@ -60,6 +63,7 @@ pub fn create_router(
     let state = AppState {
         config: config.clone(),
         agent_service,
+        auth_service,
         cache_service,
     };
 
@@ -119,7 +123,19 @@ pub fn create_router(
     let public_routes = Router::new()
         .route("/health", get(handlers::health))
         .route("/api-docs/openapi.json", get(openapi_handler))
-        .route("/api-docs", get(swagger_ui_handler));
+        .route("/api-docs", get(swagger_ui_handler))
+        // Authentication routes
+        .route("/auth/register", post(handlers::register))
+        .route("/auth/login", post(handlers::login))
+        .route("/auth/refresh", post(handlers::refresh_token));
+
+    // JWT-protected routes (require valid JWT token)
+    let jwt_routes = Router::new()
+        .route("/auth/me", get(handlers::get_current_user_profile))
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            crate::api::jwt_middleware::jwt_auth,
+        ));
 
     // Protected routes that require API key authentication
     let protected_routes = Router::new()
@@ -209,6 +225,7 @@ pub fn create_router(
 
     // Combine routes
     public_routes
+        .merge(jwt_routes)
         .merge(protected_routes)
         .fallback(custom_fallback)
         // Use a simpler error handling approach

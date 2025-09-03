@@ -10,6 +10,12 @@ use tracing::{error, info};
 /// Database type - PostgreSQL connection pool
 pub type Database = PgPool;
 
+/// Create a dummy database connection
+#[cfg(test)]
+pub fn dummy_database() -> Database {
+    PgPool::connect_lazy("postgresql://postgres:postgres@localhost:5432/postgres").unwrap()
+}
+
 /// Database error type
 pub type DbError = sqlx::Error;
 

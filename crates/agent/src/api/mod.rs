@@ -7,6 +7,8 @@
 pub mod error;
 /// Request handlers for API endpoints
 pub mod handlers;
+/// JWT authentication middleware
+pub mod jwt_middleware;
 /// Middleware for request processing
 pub mod middleware;
 /// Route definitions and router creation

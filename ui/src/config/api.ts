@@ -9,6 +9,11 @@ export const API_CONFIG = {
   ENDPOINTS: {
     ANALYZE: '/pre-filter',
     COMMUNITY: '/community',
+    AUTH: {
+      REGISTER: '/auth/register',
+      LOGIN: '/auth/login',
+      REFRESH: '/auth/refresh',
+    },
   },
 } as const;
 

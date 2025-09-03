@@ -11,9 +11,8 @@ use tokio::signal;
 use tokio::signal::unix::{signal, SignalKind};
 
 use agent::config::Config;
-use agent::db::repositories::CacheRepository;
-use agent::services::agent::AgentService;
-use agent::services::cache::CacheService;
+use agent::db::repositories::{CacheRepository, UserRepository};
+use agent::services::{agent::AgentService, auth::AuthService, cache::CacheService};
 
 #[tokio::main]
 async fn main() -> agent::Result<()> {
@@ -52,10 +51,14 @@ async fn main() -> agent::Result<()> {
     let agent_service = AgentService::new(db.clone(), config.clone());
 
     // Initialize cache service
-    let cache_repo = CacheRepository::new(db);
+    let cache_repo = CacheRepository::new(db.clone());
     let cache_service = CacheService::new(cache_repo);
 
-    let app = create_router(&config, agent_service, cache_service);
+    // Initialize authentication service
+    let user_repo = UserRepository::new(db);
+    let auth_service = AuthService::new(user_repo, config.jwt_secret.clone());
+
+    let app = create_router(&config, agent_service, auth_service, cache_service);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
     let listener = TcpListener::bind(addr).await.unwrap();

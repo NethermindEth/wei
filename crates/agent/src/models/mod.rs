@@ -11,6 +11,8 @@ pub mod deepresearch;
 pub mod health;
 /// Proposal data model
 pub mod proposal;
+/// User authentication data model
+pub mod user;
 /// Webhook event data model
 pub mod webhook;
 
@@ -21,4 +23,8 @@ pub use deepresearch::{
 };
 pub use health::HealthResponse;
 pub use proposal::Proposal;
+pub use user::{
+    CreateUserRequest, LoginRequest, LoginResponse, RefreshToken, RefreshTokenRequest,
+    RegisterResponse, User, UserProfile,
+};
 pub use webhook::WebhookEvent;

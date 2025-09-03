@@ -1,3 +1,5 @@
+#![cfg(feature = "e2e-tests")]
+
 use agent::models::Proposal;
 use agent::services::agent::AgentServiceTrait;
 

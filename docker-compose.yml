@@ -44,7 +44,7 @@ services:
       -   "${WEI_AGENT_PORT}:${WEI_AGENT_PORT}"
     command: ["/app/agent"]
     restart: unless-stopped
-    
+
   # Agent migrations
   agent-migrations:
     image: postgres:16
@@ -90,7 +90,7 @@ services:
       - "3002:3002"
     command: ["/app/indexer", "--webhook-secret", "${WEI_INDEXER_WEBHOOK_SECRET:-default_webhook_secret}"]
     restart: unless-stopped
-    
+
   # Indexer migrations
   indexer-migrations:
     image: postgres:16
