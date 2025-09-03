@@ -42,7 +42,7 @@ impl AgentService {
         let openrouter: OpenRouterClient = OpenRouterClient::builder()
             .api_key(config.ai_model_api_key.clone())
             .build()
-            .map_err(|  e: openrouter_rs::error::OpenRouterError(e.to_string()))?;
+            .map_err(|e: openrouter_rs::error::OpenRouterError| Error::ChatBuilder(e))?;
 
         Ok(openrouter)
     }
@@ -74,7 +74,7 @@ impl AgentServiceTrait for AgentService {
                 Message::new(Role::User, serde_json::to_string(&proposal)?.as_str()),
             ])
             .build()
-            .map_err(|e| Error::ChatBuilder(e.to_string()))?;
+            .map_err(|e: openrouter_rs::error::OpenRouterError| Error::ChatBuilder(e))?;
 
         let response = self
             .openrouter

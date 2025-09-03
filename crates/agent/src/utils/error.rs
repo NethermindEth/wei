@@ -52,7 +52,7 @@ pub enum Error {
 
     /// ChatCompletionRequest builder error
     #[error("ChatCompletionRequest builder error: {0}")]
-    ChatBuilder(String),
+    ChatBuilder(openrouter_rs::error::OpenRouterError),
 
     /// Internal service error
     #[error("Internal error: {0}")]
