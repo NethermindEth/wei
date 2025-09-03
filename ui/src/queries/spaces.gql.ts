@@ -6,13 +6,13 @@ export const SpacesQuery = gql`
       first: $first
       skip: $skip
       orderBy: "created"
+      where:{verified:true}
       orderDirection: desc
     ) {
       id
       name
       about
       avatar
-      verified
       domain
       members
     }
