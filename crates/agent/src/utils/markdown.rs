@@ -700,13 +700,19 @@ Some text after"#;
   "key": "value"
 }"#;
 
-        assert_eq!(extract_json_string_from_markdown(markdown), Some(expected.to_string()));
+        assert_eq!(
+            extract_json_string_from_markdown(markdown),
+            Some(expected.to_string())
+        );
     }
 
     #[test]
     fn test_extract_json_string_without_markers() {
         let content = r#"{"key": "value"}"#;
-        assert_eq!(extract_json_string_from_markdown(content), Some(content.to_string()));
+        assert_eq!(
+            extract_json_string_from_markdown(content),
+            Some(content.to_string())
+        );
     }
 
     #[test]
@@ -716,7 +722,10 @@ Some text after"#;
   "key": "value"
 }"#;
 
-        assert_eq!(extract_json_string_from_markdown(markdown), Some(markdown.to_string()));
+        assert_eq!(
+            extract_json_string_from_markdown(markdown),
+            Some(markdown.to_string())
+        );
     }
 
     #[test]
