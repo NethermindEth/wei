@@ -1,6 +1,5 @@
 //! Main agent service
 
-use crate::models::analysis::EvaluationCategory;
 use std::collections::HashMap;
 use std::future::Future;
 
@@ -8,9 +7,8 @@ use openrouter_rs::{api::chat::ChatCompletionRequest, types::Role, Message, Open
 use serde_json;
 use tracing::{debug, error, info};
 
-use crate::models::analysis::StructuredAnalysisResponse;
-use crate::models::custom_evaluation::EvaluationResult;
-use crate::models::custom_evaluation::{CustomEvaluationRequest, CustomEvaluationResponse};
+use crate::models::analysis::{ StructuredAnalysisResponse, EvaluationCategory, ProposalArguments};
+use crate::models::custom_evaluation::{CustomEvaluationRequest, CustomEvaluationResponse, EvaluationResult};
 use crate::models::deepresearch::{DeepResearchResponse, DeepResearchResult};
 use crate::prompts::custom_evaluation::generate_custom_evaluation_prompt;
 use crate::prompts::{ANALYZE_PROPOSAL_PROMPT, DEEP_RESEARCH_PROMPT};
@@ -133,6 +131,7 @@ impl AgentService {
                     suggestions: vec!["Please try again".to_string()],
                 };
 
+              
                 let fallback = StructuredAnalysisResponse {
                     summary: "Unable to generate summary due to parsing error".to_string(),
                     goals_and_motivation: default_category.clone(),

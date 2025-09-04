@@ -3,40 +3,55 @@ import { Proposal, AnalysisResponse, CustomEvaluationRequest, CustomEvaluationRe
 import { CacheService } from './cache';
 
 export class ApiService {
-  private static async makeRequest<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
-    const url = getApiUrl(endpoint);
+  private static baseUrl = getApiUrl('');
+
+  private static async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const url = `${this.baseUrl}${endpoint}`;
     
     try {
-      // Create a new options object to avoid header overrides
-      const mergedOptions = { ...options };
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          ...getApiHeaders(),
+          ...(options.headers || {})
+        },
+      });
       
-      // Ensure headers are properly merged
-      mergedOptions.headers = {
-        ...getApiHeaders(),
-        ...(options.headers || {})
-      };
-      
-      const response = await fetch(url, mergedOptions);
-
       if (!response.ok) {
-        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+        const errorText = await response.text();
+        console.error(`API error (${response.status}): ${errorText}`);
+        throw new Error(`API error: ${response.status} ${response.statusText}`);
       }
 
-      return await response.json();
+      const data = await response.json();
+      return data;
     } catch (error) {
-      console.error('API request error:', error);
+      console.error(`API request error for ${endpoint}:`, error);
       throw error;
     }
   }
 
   static async analyzeProposal(proposal: Proposal): Promise<AnalysisResponse> {
-    return this.makeRequest<AnalysisResponse>('/pre-filter', {
-      method: 'POST',
-      body: JSON.stringify(proposal),
-    });
+    try {
+      // Use a more specific type for the response
+      const response = await this.makeRequest<{structured_response?: AnalysisResponse}>('/pre-filter', {
+        method: 'POST',
+        body: JSON.stringify(proposal),
+      });
+      
+      // Debug logging
+      
+      // Check if response has structured_response field
+      if (response && response.structured_response) {
+        return response.structured_response;
+      } else {
+        return response as unknown as AnalysisResponse;
+      }
+    } catch (error) {
+      console.error('Error in analyzeProposal:', error);
+      throw error;
+    }
   }
   
   static async customEvaluateProposal(request: CustomEvaluationRequest): Promise<CustomEvaluationResponse> {
