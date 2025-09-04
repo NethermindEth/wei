@@ -52,7 +52,7 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
   // Custom evaluation states
   const [customCriteria, setCustomCriteria] = React.useState<string>("");
   const [isCustomEvaluating, setIsCustomEvaluating] = React.useState(false);
-  const [customResult, setCustomResult] = React.useState<CustomEvaluationResponse | null>(null);
+  const [customResults, setCustomResults] = React.useState<Array<CustomEvaluationResponse & { timestamp: number, criteria: string }>>([]);
 
   // Fetch proposals for search functionality
   const { proposals: allProposals } = useProposals(1000);
@@ -117,7 +117,6 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
 
     setIsCustomEvaluating(true);
     setError(null);
-    setCustomResult(null);
 
     try {
       const content = `${selectedProposal.title}\n\n${selectedProposal.body}`;
@@ -133,7 +132,18 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
         throw new Error('Invalid response format from custom evaluation');
       }
       
-      setCustomResult(response);
+      // Add the new result to the array with timestamp and criteria
+      setCustomResults(prevResults => [
+        ...prevResults,
+        {
+          ...response,
+          timestamp: Date.now(),
+          criteria: customCriteria
+        }
+      ]);
+      
+      // Clear the criteria input for the next evaluation
+      setCustomCriteria("");
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Custom evaluation failed');
     } finally {
@@ -315,6 +325,14 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
 
                     {backendResult && !isLoading && (
                       <div className="space-y-6">
+                          <div className="border-b border-white/10 pb-4">
+                            <h3 className="text-md font-semibold mb-2 text-white/90">Summary</h3>
+                            <div className="mb-2">
+                              <p className="text-white/80">{backendResult.summary}</p>
+                            </div>
+                          </div>
+                      
+                        
                         {/* Goals & Motivation */}
                         <div className="border-b border-white/10 pb-4">
                           <h3 className="text-md font-semibold mb-2 text-white/90">Goals & Motivation</h3>
@@ -448,53 +466,68 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
                       </div>
                     )}           
                     {/* Custom Evaluation Results */}
-                    {customResult && (
-                      <div className="mt-6 rounded-md border border-white/10 bg-white/5 p-4 mb-4">
-                        <div className="grid gap-4 break-words">
-                          <h3 className="text-lg font-semibold mb-2">Custom Evaluation Results</h3>
-                          
-                          {/* Summary */}
-                          {customResult.summary && (
-                            <div className="border-b border-white/10 pb-3">
-                              <h4 className="text-md font-semibold mb-2">Summary</h4>
-                              <p className="text-white/90">{customResult.summary}</p>
-                            </div>
-                          )}
-                          
-                          {/* Custom Criteria Results */}
-                          {customResult.response_map && Object.entries(customResult.response_map).map(([criteriaName, evaluation]) => (
-                            <div key={criteriaName} className="border-b border-white/10 pb-3">
-                              <h4 className="text-md font-semibold mb-2">{criteriaName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h4>
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium text-white/80">Status:</span>
-                                <StatusBadge status={evaluation.status} />
+                    {customResults.length > 0 && (
+                      <div className="mt-6 space-y-6">
+                        <h3 className="text-lg font-semibold mb-2">Custom Evaluation Results</h3>
+                        
+                        {/* Map through all results in the array */}
+                        {customResults.map((result, resultIndex) => (
+                          <div key={resultIndex} className="rounded-md border border-white/10 bg-white/5 p-4 mb-4">
+                            <div className="grid gap-4 break-words">
+                              {/* Evaluation timestamp and criteria */}
+                              <div className="flex justify-between items-center border-b border-white/10 pb-2 mb-2">
+                                <h4 className="text-md font-semibold">
+                                  Evaluation #{resultIndex + 1}
+                                </h4>
+                                <span className="text-xs text-white/60">
+                                  {new Date(result.timestamp).toLocaleString()}
+                                </span>
                               </div>
-                              {evaluation.justification && (
-                                <div className="mb-1">
-                                  <span className="font-medium text-white/80">Justification:</span>{" "}
-                                  <span className="text-white/70">{evaluation.justification}</span>
+                              
+                              {/* Criteria used */}
+                              <div className="border-b border-white/10 pb-3">
+                                <h5 className="text-sm font-medium mb-1 text-white/80">Criteria Used:</h5>
+                                <p className="text-white/70 text-sm whitespace-pre-wrap">{result.criteria}</p>
+                              </div>
+                              
+                              {/* Summary removed - now displayed in the proposal feedback section */}
+                              
+                              {/* Custom Criteria Results */}
+                              {result.response_map && Object.entries(result.response_map).map(([criteriaName, evaluation]) => (
+                                <div key={criteriaName} className="border-b border-white/10 pb-3">
+                                  <h5 className="text-md font-semibold mb-2">{criteriaName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h5>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="font-medium text-white/80">Status:</span>
+                                    <StatusBadge status={evaluation.status} />
+                                  </div>
+                                  {evaluation.justification && (
+                                    <div className="mb-1">
+                                      <span className="font-medium text-white/80">Justification:</span>{" "}
+                                      <span className="text-white/70">{evaluation.justification}</span>
+                                    </div>
+                                  )}
+                                  {evaluation.suggestions?.length > 0 && (
+                                    <div>
+                                      <span className="font-medium text-white/80">Suggestions:</span>
+                                      <ul className="list-disc pl-5 text-white/70">
+                                        {evaluation.suggestions.map((suggestion, index) => (
+                                          <li key={index}>{suggestion}</li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                              {evaluation.suggestions?.length > 0 && (
-                                <div>
-                                  <span className="font-medium text-white/80">Suggestions:</span>
-                                  <ul className="list-disc pl-5 text-white/70">
-                                    {evaluation.suggestions.map((suggestion, index) => (
-                                      <li key={index}>{suggestion}</li>
-                                    ))}
-                                  </ul>
+                              ))}
+                              
+                              {/* Show message if no criteria in response_map */}
+                              {result.response_map && Object.keys(result.response_map).length === 0 && (
+                                <div className="text-amber-400">
+                                  No evaluation criteria were found in the response.
                                 </div>
                               )}
                             </div>
-                          ))}
-                          
-                          {/* Show message if no criteria in response_map */}
-                          {customResult.response_map && Object.keys(customResult.response_map).length === 0 && (
-                            <div className="text-amber-400">
-                              No evaluation criteria were found in the response.
-                            </div>
-                          )}
-                        </div>
+                          </div>
+                        ))}
                       </div>
                     )}
                     
