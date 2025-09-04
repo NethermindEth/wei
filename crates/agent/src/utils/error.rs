@@ -52,7 +52,7 @@ pub enum Error {
 
     /// ChatCompletionRequest builder error
     #[error("ChatCompletionRequest builder error: {0}")]
-    ChatBuilder(openrouter_rs::error::OpenRouterError),
+    ChatBuilder(Box<openrouter_rs::error::OpenRouterError>),
 
     /// Response processing errors
     #[error("Response error: {0}")]

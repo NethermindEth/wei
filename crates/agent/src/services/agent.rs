@@ -7,8 +7,10 @@ use openrouter_rs::{api::chat::ChatCompletionRequest, types::Role, Message, Open
 use serde_json;
 use tracing::{debug, error, info};
 
-use crate::models::analysis::{ StructuredAnalysisResponse, EvaluationCategory, ProposalArguments};
-use crate::models::custom_evaluation::{CustomEvaluationRequest, CustomEvaluationResponse, EvaluationResult};
+use crate::models::analysis::{EvaluationCategory, StructuredAnalysisResponse};
+use crate::models::custom_evaluation::{
+    CustomEvaluationRequest, CustomEvaluationResponse, EvaluationResult,
+};
 use crate::models::deepresearch::{DeepResearchResponse, DeepResearchResult};
 use crate::prompts::custom_evaluation::generate_custom_evaluation_prompt;
 use crate::prompts::{ANALYZE_PROPOSAL_PROMPT, DEEP_RESEARCH_PROMPT};
@@ -57,7 +59,7 @@ impl AgentService {
         let openrouter: OpenRouterClient = OpenRouterClient::builder()
             .api_key(config.ai_model_api_key.clone())
             .build()
-            .map_err(|e: openrouter_rs::error::OpenRouterError| Error::ChatBuilder(e))?;
+            .map_err(|e: openrouter_rs::error::OpenRouterError| Error::ChatBuilder(Box::new(e)))?;
 
         Ok(openrouter)
     }
@@ -104,7 +106,7 @@ impl AgentService {
                 Message::new(Role::User, serde_json::to_string(&proposal)?.as_str()),
             ])
             .build()
-            .map_err(|e: openrouter_rs::error::OpenRouterError| Error::ChatBuilder(e))?;
+            .map_err(|e: openrouter_rs::error::OpenRouterError| Error::ChatBuilder(Box::new(e)))?;
 
         let response = self
             .openrouter
@@ -131,7 +133,6 @@ impl AgentService {
                     suggestions: vec!["Please try again".to_string()],
                 };
 
-              
                 let fallback = StructuredAnalysisResponse {
                     summary: "Unable to generate summary due to parsing error".to_string(),
                     goals_and_motivation: default_category.clone(),
@@ -167,7 +168,7 @@ impl AgentService {
                 Message::new(Role::User, proposal.description.as_str()),
             ])
             .build()
-            .map_err(Error::ChatBuilder)?;
+            .map_err(|e| Error::ChatBuilder(Box::new(e)))?;
 
         let response = self.openrouter.send_chat_completion(&chat_request).await?;
 
@@ -324,7 +325,7 @@ impl AgentServiceTrait for AgentService {
             })
             .await
     }
-    
+
     /// Custom evaluate a proposal with specific criteria
     async fn custom_evaluate_proposal(
         &self,

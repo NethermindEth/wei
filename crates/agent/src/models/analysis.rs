@@ -47,8 +47,6 @@ pub enum AnalysisResult {
     NeedsReview,
 }
 
-
-
 /// Structured response from the AI model based on standardized evaluation criteria
 #[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema)]
 #[schema(description = descriptions::STRUCTURED_ANALYSIS_RESPONSE_DESCRIPTION)]
@@ -64,7 +62,16 @@ pub struct StructuredAnalysisResponse {
     /// Technical specifications evaluation
     pub technical_specifications: EvaluationCategory,
     /// Language quality evaluation
-    pub language_quality: EvaluationCategory
+    pub language_quality: EvaluationCategory,
+}
+
+/// Arguments for and against a proposal
+#[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema)]
+pub struct ProposalArguments {
+    /// Arguments supporting the proposal
+    pub for_proposal: Vec<String>,
+    /// Arguments against the proposal
+    pub against: Vec<String>,
 }
 
 /// Evaluation category with status, justification and suggestions

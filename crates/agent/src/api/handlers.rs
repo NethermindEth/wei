@@ -11,10 +11,8 @@ use tracing::error;
 use crate::{
     api::{error::ApiError, routes::AppState},
     models::{
-        analysis::AnalyzeResponse,
-        CustomEvaluationRequest, CustomEvaluationResponse,
-        DeepResearchApiResponse, DeepResearchRequest, HealthResponse,
-        Proposal,
+        analysis::AnalyzeResponse, CustomEvaluationRequest, CustomEvaluationResponse,
+        DeepResearchApiResponse, DeepResearchRequest, HealthResponse, Proposal,
     },
     services::{
         agent::AgentServiceTrait,
