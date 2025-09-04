@@ -13,8 +13,8 @@ use crate::{
     api::{error::ApiError, routes::AppState},
     models::{
         analysis::{AnalyzeResponse, ProposalArguments},
-        CustomEvaluationRequest, CustomEvaluationResponse,
-        DeepResearchApiResponse, DeepResearchRequest, HealthResponse, Proposal,
+        CustomEvaluationRequest, CustomEvaluationResponse, DeepResearchApiResponse,
+        DeepResearchRequest, HealthResponse, Proposal,
     },
     services::{
         agent::AgentServiceTrait,
@@ -532,4 +532,5 @@ pub async fn custom_evaluate_proposal(
             ApiError::internal_error(format!("Failed to evaluate proposal: {}", e))
         })?;
 
-    Ok(Json(custom_response))}
+    Ok(Json(custom_response))
+}
