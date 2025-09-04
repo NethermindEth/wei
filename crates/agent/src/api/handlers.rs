@@ -476,9 +476,10 @@ pub async fn get_proposal_arguments(
             "Proposal description cannot be empty",
         ));
     }
+    const MAX_PROPOSAL_LENGTH: usize = 50_000;
 
     // Limit proposal size to prevent abuse
-    if proposal.description.len() > 50000 {
+    if proposal.description.len() > MAX_PROPOSAL_LENGTH {
         return Err(ApiError::bad_request(
             "Proposal description is too long (max 50000 characters)",
         ));

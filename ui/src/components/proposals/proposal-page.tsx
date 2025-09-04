@@ -10,6 +10,15 @@ import { AnalysisResponse, ProposalArguments } from "../../types/proposal";
 import ReactMarkdown from 'react-markdown';
 import { RelatedProposals } from "./related-proposals";
 
+interface ProposalPageProps {
+  proposalId: string;
+}
+
+interface ArgumentsState {
+  status: 'idle' | 'loading' | 'success' | 'error';
+  data: ProposalArguments | null;
+  error: string | null;
+}
 // Status badge component for consistent styling
 const StatusBadge = ({ status }: { status?: string }) => {
   if (!status) return <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-500/20 text-gray-400">UNKNOWN</span>;
@@ -33,17 +42,13 @@ const StatusBadge = ({ status }: { status?: string }) => {
   );
 };
 
-interface ProposalPageProps {
-  proposalId: string;
-}
+
 
 export function ProposalPage({ proposalId }: ProposalPageProps) {
   const [isLoading, setIsLoading] = React.useState(false);
   const [backendResult, setBackendResult] = React.useState<AnalysisResponse | null>(null);
   const [error, setError] = React.useState<string | null>(null);
-  const [proposalArguments, setProposalArguments] = React.useState<ProposalArguments | null>(null);
-  const [isLoadingArguments, setIsLoadingArguments] = React.useState(false);
-  const [argumentsError, setArgumentsError] = React.useState<string | null>(null);
+  const [argumentsState, setArgumentsState] = React.useState<ArgumentsState>({ status: 'idle', data: null, error: null });
   const [selectedProposal, setSelectedProposal] = React.useState<Proposal | null>(null);
   const [isProposalExpanded, setIsProposalExpanded] = React.useState(false);
   const [activeSection, setActiveSection] = React.useState<'feedback' | 'discussion' | 'related' | 'arguments'>('feedback');
@@ -76,8 +81,7 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
   }, []);
   
   const fetchProposalArguments = React.useCallback(async (proposal: Proposal) => {
-    setIsLoadingArguments(true);
-    setArgumentsError(null);
+    setArgumentsState({ status: 'loading', data: null, error: null });
     
     try {
       const description = `${proposal.title}\n\n${proposal.body}`;
@@ -85,15 +89,14 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
       
       const result = await ApiService.getProposalArguments(proposalData);
       
-      setProposalArguments(result.arguments || null);
-      if (!result.arguments) {
-        setArgumentsError('No arguments data received from analysis');
+      if (result.arguments) {
+        setArgumentsState({ status: 'success', data: result.arguments, error: null });
+      } else {
+        setArgumentsState({ status: 'error', data: null, error: 'No arguments data received from analysis' });
       }
     } catch (err) {
       console.error('Error fetching proposal arguments:', err);
-      setArgumentsError('Failed to fetch proposal arguments. Please try again.');
-    } finally {
-      setIsLoadingArguments(false);
+      setArgumentsState({ status: 'error', data: null, error: 'Failed to fetch proposal arguments. Please try again.' });
     }
   }, []);
 
@@ -467,19 +470,19 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
                       <button
                         onClick={() => selectedProposal && fetchProposalArguments(selectedProposal)}
                         className="flex items-center gap-1 text-sm text-white/60 hover:text-white transition-colors"
-                        disabled={isLoadingArguments}
+                        disabled={argumentsState.status === 'loading'}
                       >
-                        <ArrowPathIcon className={`w-4 h-4 ${isLoadingArguments ? 'animate-spin' : ''}`} />
+                        <ArrowPathIcon className={`w-4 h-4 ${argumentsState.status === 'loading' ? 'animate-spin' : ''}`} />
                         <span>Refresh</span>
                       </button>
                     </div>
                     
-                    {isLoadingArguments ? (
+                    {argumentsState.status === 'loading' ? (
                       <div className="flex items-center justify-center py-12">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white/30"></div>
                         <span className="ml-3 text-white/60">Analyzing arguments...</span>
                       </div>
-                    ) : proposalArguments ? (
+                    ) : argumentsState.status === 'success' && argumentsState.data ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Arguments For */}
                         <div className="bg-green-500/10 rounded-lg p-4 border border-green-500/20 shadow-sm">
@@ -487,9 +490,9 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
                             <CheckCircleIcon className="w-5 h-5 mr-2" />
                             Supporting Arguments
                           </h4>
-                          {proposalArguments.for_proposal?.length > 0 ? (
+                          {argumentsState.data.for_proposal?.length > 0 ? (
                             <ul className="space-y-2 text-white/80">
-                              {proposalArguments.for_proposal.map((arg, index) => (
+                              {argumentsState.data.for_proposal.map((arg, index) => (
                                 <li key={index} className="flex items-start">
                                   <span className="text-green-400 mr-2">•</span>
                                   <span>{arg}</span>
@@ -507,9 +510,9 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
                             <XCircleIcon className="w-5 h-5 mr-2" />
                             Opposing Arguments
                           </h4>
-                          {proposalArguments.against?.length > 0 ? (
+                          {argumentsState.data.against?.length > 0 ? (
                             <ul className="space-y-2 text-white/80">
-                              {proposalArguments.against.map((arg, index) => (
+                              {argumentsState.data.against.map((arg, index) => (
                                 <li key={index} className="flex items-start">
                                   <span className="text-red-400 mr-2">•</span>
                                   <span>{arg}</span>
@@ -523,9 +526,9 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
                       </div>
                     ) : (
                       <div className="text-center py-8">
-                        {argumentsError ? (
+                        {argumentsState.error ? (
                           <div className="mb-4">
-                            <p className="text-red-400 mb-2">{argumentsError}</p>
+                            <p className="text-red-400 mb-2">{argumentsState.error}</p>
                             <p className="text-white/60">Please try again or check the proposal content.</p>
                           </div>
                         ) : (
@@ -535,7 +538,7 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
                           onClick={() => selectedProposal && fetchProposalArguments(selectedProposal)}
                           className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
                         >
-                          {argumentsError ? 'Retry Analysis' : 'Analyze Arguments'}
+                          {argumentsState.error ? 'Retry Analysis' : 'Analyze Arguments'}
                         </button>
                       </div>
                     )}
