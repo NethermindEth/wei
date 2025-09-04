@@ -146,6 +146,7 @@ async fn test_expected_format() {
 
     // Define the expected JSON structure
     let expected_structure = json!({
+        "summary": "",
         "goals_and_motivation": {
             "status": "",
             "justification": "",
