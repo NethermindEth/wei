@@ -221,7 +221,7 @@ impl AgentServiceTrait for AgentService {
 
         self.cache_service
             .cache_or_compute(&query, || async {
-                self.compute_proposal_analysis(&proposal).await
+                self.compute_proposal_analysis(proposal).await
             })
             .await
     }
