@@ -53,7 +53,7 @@ pub enum Error {
     /// ChatCompletionRequest builder error
     #[error("ChatCompletionRequest builder error: {0}")]
     ChatBuilder(openrouter_rs::error::OpenRouterError),
-    
+
     /// Response processing errors
     #[error("Response error: {0}")]
     #[allow(dead_code)] // TODO: Remove after development phase
@@ -76,7 +76,7 @@ pub enum ResponseError {
     /// No content in response
     #[error("No content in response")]
     NoContent,
-    
+
     /// Invalid response format
     #[error("Invalid response format: {0}")]
     InvalidFormat(String),

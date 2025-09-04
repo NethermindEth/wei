@@ -8,13 +8,13 @@ fn get_test_api_config() -> (String, String) {
     // Use environment variable for port if available, otherwise use default
     let port = env::var("WEI_AGENT_PORT").unwrap_or_else(|_| "8000".to_string());
     let api_url = format!("http://localhost:{}", port);
-    
+
     // Use environment variable for API keys if available, otherwise use test value
     let api_key = env::var("WEI_AGENT_API_KEYS")
         .ok()
         .and_then(|keys| keys.split(',').next().map(|k| k.trim().to_string()))
         .unwrap_or_else(|| "test-api-key".to_string());
-    
+
     (api_url, api_key)
 }
 

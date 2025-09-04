@@ -1,12 +1,12 @@
 //! Main agent service
 
+use crate::models::analysis::EvaluationCategory;
 use std::collections::HashMap;
 use std::future::Future;
-use crate::models::analysis::EvaluationCategory;
 
 use openrouter_rs::{api::chat::ChatCompletionRequest, types::Role, Message, OpenRouterClient};
 use serde_json;
-use tracing::{error, info,debug};
+use tracing::{debug, error, info};
 
 use crate::models::analysis::StructuredAnalysisResponse;
 use crate::models::custom_evaluation::EvaluationResult;
@@ -38,6 +38,7 @@ impl AgentService {
     }
 
     /// Initialize the OpenRouter client
+    #[allow(clippy::result_large_err)]
     fn init_open_router(config: &Config) -> Result<OpenRouterClient> {
         let openrouter: OpenRouterClient = OpenRouterClient::builder()
             .api_key(config.ai_model_api_key.clone())
@@ -87,11 +88,8 @@ impl AgentServiceTrait for AgentService {
             .ok_or(Error::Response(ResponseError::NoContent))?
             .to_string();
 
-        // Extract JSON from the response if it's wrapped in markdown code blocks
-        let json_content = extract_json_from_markdown(&content).to_string();
-
-        // Parse the JSON response into our structured format
-        match serde_json::from_str::<StructuredAnalysisResponse>(&json_content) {
+        // Extract and parse JSON from the response if it's wrapped in markdown code blocks
+        match extract_json_from_markdown::<StructuredAnalysisResponse>(&content) {
             Ok(structured_response) => Ok(structured_response),
             Err(e) => {
                 error!("Failed to parse structured response: {}", e);
@@ -135,7 +133,7 @@ impl AgentServiceTrait for AgentService {
                 Message::new(Role::User, proposal.description.as_str()),
             ])
             .build()
-            .map_err(|e| Error::ChatBuilder(e))?;
+            .map_err(Error::ChatBuilder)?;
 
         let response = self.openrouter.send_chat_completion(&chat_request).await?;
 
@@ -147,19 +145,15 @@ impl AgentServiceTrait for AgentService {
         // Log the raw response content for debugging
         debug!("Raw AI response: {}", content);
 
-        // Extract JSON from the response if it's wrapped in markdown code blocks
-        let json_content = extract_json_from_markdown(&content).to_string();
-
-        // Parse the JSON response into our custom evaluation format
-        match serde_json::from_str::<CustomEvaluationResponse>(&json_content) {
+        // Extract and parse JSON from the response if it's wrapped in markdown code blocks
+        match extract_json_from_markdown::<CustomEvaluationResponse>(&content) {
             Ok(custom_response) => Ok(custom_response),
             Err(e) => {
                 error!("Failed to parse custom evaluation response: {}", e);
                 error!("Raw response: {}", content);
-                error!("Extracted JSON: {}", json_content);
 
                 // Try to parse as a Value first to see what we're getting
-                if let Ok(value) = serde_json::from_str::<serde_json::Value>(&json_content) {
+                if let Ok(value) = serde_json::from_str::<serde_json::Value>(&content) {
                     error!("Response parsed as generic JSON: {}", value);
                 }
 

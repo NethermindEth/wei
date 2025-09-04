@@ -14,6 +14,7 @@ use agent::config::Config;
 use agent::services::agent::AgentService;
 
 #[tokio::main]
+#[allow(clippy::result_large_err)]
 async fn main() -> agent::Result<()> {
     dotenv::dotenv().ok();
 
