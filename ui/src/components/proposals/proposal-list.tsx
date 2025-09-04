@@ -77,9 +77,9 @@ export function ProposalList({ onSelectProposal, selectedProposalId, spaceId }: 
         </div>
       ) : (
         <div ref={scrollContainerRef} className="grid gap-4 h-[400px] overflow-y-auto overflow-x-hidden pr-2" style={{ width: '100%', boxSizing: 'border-box' }}>
-          {proposals.map(proposal => (
+          {proposals.map((proposal, index) => (
             <div
-              key={proposal.id}
+              key={`${proposal.id}-${index}`}
               ref={proposal.id === selectedProposalId ? selectedProposalRef : null}
             >
               <ProposalCard
