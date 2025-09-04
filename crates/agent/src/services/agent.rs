@@ -219,10 +219,9 @@ impl AgentServiceTrait for AgentService {
         // Create a cache query based on the proposal content hash
         let query = CacheableQuery::new("/pre-filter", "POST").with_body(proposal)?;
 
-        let proposal_clone = proposal.clone();
         self.cache_service
             .cache_or_compute(&query, || async {
-                self.compute_proposal_analysis(&proposal_clone).await
+                self.compute_proposal_analysis(&proposal).await
             })
             .await
     }
