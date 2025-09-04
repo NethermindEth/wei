@@ -35,6 +35,8 @@ This repository is a Rust workspace with two crates: `crates/agent` and `crates/
   - `cargo install sqlx-cli --no-default-features --features native-tls,postgres`
 - **OpenRouter API key**: Required for AI agent functionality
   - Sign up at [OpenRouter](https://openrouter.ai/) and get an API key
+- **Exa API key**: Optional, for related proposals search functionality
+  - Sign up at [Exa](https://exa.ai/) and get an API key
 
 ### Setup
 
@@ -162,6 +164,47 @@ The Wei Agent now features automatic database creation and migration management.
 
 See the `env.example` file for a complete list of environment variables. Copy this file to `.env` and update the values as needed.
 
+### API Documentation
+
+The Agent service provides interactive API documentation through Swagger UI:
+
+- **Access the API documentation**:
+  - Start the agent service: `cargo run -p agent`
+  - Open your browser and navigate to: [https://wei-agent.dev-nethermind.xyz/api-docs](https://wei-agent.dev-nethermind.xyz/api-docs)
+  - The Swagger UI provides an interactive interface to explore and test all available endpoints
+
+- **Available endpoints**:
+  - **Health Check**: `GET /health` - Check service status (public)
+  - **Analyze Proposal**: `POST /pre-filter` - Analyze a DAO/Governance proposal (protected)
+  - **Get Analysis**: `GET /pre-filter/{id}` - Retrieve analysis by ID (protected)
+  - **Get Proposal Analyses**: `GET /pre-filter` - List all analyses (protected)
+
+- **API Specification**:
+  - OpenAPI JSON: [https://wei-agent.dev-nethermind.xyz/api-docs/openapi.json](https://wei-agent.dev-nethermind.xyz/api-docs/openapi.json)
+  - The specification includes detailed descriptions, request/response schemas, and examples
+
+### API Integrations
+
+Wei integrates with several external APIs to provide comprehensive governance data and analysis:
+
+#### Exa Search API
+- **Purpose**: Powers the "Related Proposals" feature to find similar proposals across different governance platforms
+- **Configuration**: Set `WEI_AGENT_EXA_API_KEY` in your environment
+- **Signup**: [exa.ai](https://exa.ai/)
+- **Optional**: The system will work without Exa, but related proposals functionality will be disabled
+
+#### Snapshot API
+- **Purpose**: Fetches governance proposals and voting data from Snapshot
+- **Rate Limiting**: 100 requests per minute without an API key
+- **Configuration**: Set `WEI_INDEXER_SNAPSHOT_API_KEY` (optional) 
+- **Endpoint**: `https://hub.snapshot.org/api`
+- **Note**: Works without authentication but with rate limits
+
+#### Tally API
+- **Purpose**: Fetches on-chain governance data
+- **Configuration**: Set `WEI_INDEXER_TALLY_API_KEY` in your environment
+- **Signup**: [tally.xyz](https://tally.xyz/)
+
 ### API Authentication
 
 The Agent service includes API key authentication for protected endpoints:
@@ -176,7 +219,7 @@ The Agent service includes API key authentication for protected endpoints:
   ```
 
 - **Usage**:
-  - Public endpoints (e.g., `/health`) are accessible without authentication
+  - Public endpoints (e.g., `/health`, `/api-docs`) are accessible without authentication
   - Protected endpoints require an API key in the `x-api-key` header
   - Invalid requests receive `401 Unauthorized` or `403 Forbidden` responses
 

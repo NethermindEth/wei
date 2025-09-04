@@ -1,9 +1,20 @@
 import { gql } from "@apollo/client/core";
 
-export const GetSpacesNameAndId = gql`query GetSpacesNameAndId($first: Int = 1000, $skip: Int = 0) {
-    spaces(where: {verified: true}, first: $first, skip: $skip) {
+export const SpacesQuery = gql`
+  query Spaces($first: Int, $skip: Int) {
+    spaces(
+      first: $first
+      skip: $skip
+      orderBy: "created"
+      where:{verified:true}
+      orderDirection: desc
+    ) {
       id
       name
-      proposalsCount
+      about
+      avatar
+      domain
+      members
     }
-  }`
+  }
+`;

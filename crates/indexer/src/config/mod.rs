@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, Parser)]
 pub struct Config {
     /// Application port
-    #[arg(env = "WEI_INDEXER_PORT", long, default_value = "8001")]
+    #[arg(env = "WEI_INDEXER_PORT", long, default_value = "3002")]
     pub port: u16,
 
     /// Host to bind to

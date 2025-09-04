@@ -8,7 +8,7 @@ use std::collections::HashSet;
 #[derive(Debug, Clone, Serialize, Deserialize, Parser)]
 pub struct Config {
     /// Application port
-    #[arg(env = "WEI_AGENT_PORT", long, default_value = "8000")]
+    #[arg(env = "WEI_AGENT_PORT", long, default_value = "3001")]
     pub port: u16,
 
     /// Database URL
@@ -46,6 +46,10 @@ pub struct Config {
         default_value = "http://localhost:3000"
     )]
     cors_allowed_urls_raw: String,
+
+    /// Exa API key for search functionality
+    #[arg(env = "WEI_AGENT_EXA_API_KEY", long)]
+    pub exa_api_key: Option<String>,
 }
 
 impl Config {

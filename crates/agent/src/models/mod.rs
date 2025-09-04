@@ -9,6 +9,10 @@
 pub mod analysis;
 /// Custom evaluation criteria data model
 pub mod custom_evaluation;
+/// Deep research data model
+pub mod deepresearch;
+/// Health check response model
+pub mod health;
 /// Proposal data model
 pub mod proposal;
 /// Webhook event data model
@@ -32,6 +36,11 @@ pub enum EvaluationStatus {
 pub use custom_evaluation::CustomEvaluationRequest;
 pub use custom_evaluation::CustomEvaluationResponse;
 
-pub use analysis::{Analysis, AnalysisResult};
+pub use analysis::{Analysis, AnalysisResult, AnalyzeResponse, StructuredAnalysisResponse};
+pub use deepresearch::{
+    DeepResearchApiResponse, DeepResearchRequest, DeepResearchResponse, DeepResearchResult,
+    DiscussionResource,
+};
+pub use health::HealthResponse;
 pub use proposal::Proposal;
 pub use webhook::WebhookEvent;
