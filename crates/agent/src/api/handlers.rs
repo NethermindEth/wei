@@ -6,15 +6,14 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tracing::{error};
+use tracing::error;
 use utoipa::ToSchema;
 
 use crate::{
     api::{error::ApiError, routes::AppState},
     models::{
-        analysis::{AnalyzeResponse, ProposalArguments}, 
-        DeepResearchApiResponse, DeepResearchRequest, HealthResponse,
-        Proposal,
+        analysis::{AnalyzeResponse, ProposalArguments},
+        DeepResearchApiResponse, DeepResearchRequest, HealthResponse, Proposal,
     },
     services::{
         agent::AgentServiceTrait,
@@ -473,14 +472,18 @@ pub async fn get_proposal_arguments(
 ) -> Result<Json<ProposalArgumentsResponse>, ApiError> {
     // Validate proposal content
     if proposal.description.trim().is_empty() {
-        return Err(ApiError::bad_request("Proposal description cannot be empty"));
+        return Err(ApiError::bad_request(
+            "Proposal description cannot be empty",
+        ));
     }
-    
+
     // Limit proposal size to prevent abuse
     if proposal.description.len() > 50000 {
-        return Err(ApiError::bad_request("Proposal description is too long (max 50000 characters)"));
+        return Err(ApiError::bad_request(
+            "Proposal description is too long (max 50000 characters)",
+        ));
     }
-    
+
     let cached_response = state
         .agent_service
         .get_proposal_arguments(&proposal)
@@ -489,12 +492,12 @@ pub async fn get_proposal_arguments(
             error!("Error getting proposal arguments: {:?}", e);
             ApiError::internal_error(format!("Failed to get proposal arguments: {}", e))
         })?;
-    
+
     // Validate response data
     let arguments = cached_response.data;
     let has_for_args = !arguments.for_proposal.is_empty();
     let has_against_args = !arguments.against.is_empty();
-    
+
     if !has_for_args && !has_against_args {
         error!("No arguments were generated for proposal");
         // We'll still return the empty arguments rather than an error

@@ -243,7 +243,7 @@ impl AgentServiceTrait for AgentService {
     async fn get_cached_deep_research(&self, topic: &str) -> Result<Option<DeepResearchResult>> {
         self.community_repo.get_by_topic(topic).await
     }
-    
+
     /// Get proposal arguments with caching
     async fn get_proposal_arguments(
         &self,
@@ -344,18 +344,17 @@ Do not include any explanatory text, only the JSON object.
                         error!("Failed to parse arguments response: {}", e);
                         error!("Raw response: {}", content);
                         error!("Cleaned response: {}", cleaned_content);
-                        
                         // Try to extract arguments using a more sophisticated approach
                         let mut for_args = Vec::new();
                         let mut against_args = Vec::new();
-                        
+
                         // Look for patterns that might indicate arguments
                         let lines: Vec<&str> = content.lines().collect();
                         let mut current_section: Option<&str> = None;
-                        
+
                         for line in lines {
                             let line_lower = line.trim().to_lowercase();
-                            
+
                             // Detect section headers
                             if line_lower.contains("for") || line_lower.contains("supporting") || line_lower.contains("pros") || line_lower.contains("pro:") {
                                 current_section = Some("for");
@@ -364,11 +363,11 @@ Do not include any explanatory text, only the JSON object.
                                 current_section = Some("against");
                                 continue;
                             }
-                            
+
                             // Extract argument points (often bullet points or numbered)
                             if line.trim().starts_with("-") || line.trim().starts_with("*") || 
-                               (line.trim().len() > 2 && line.trim()[0..2].chars().all(|c| c.is_digit(10) || c == '.')) {
-                                let arg = line.trim().trim_start_matches(|c| c == '-' || c == '*' || c == '.' || c.is_digit(10) || c.is_whitespace()).trim().to_string();
+                               (line.trim().len() > 2 && line.trim()[0..2].chars().all(|c| c.is_ascii_digit() || c == '.')) {
+                                let arg = line.trim().trim_start_matches(|c: char| c == '-' || c == '*' || c == '.' || c.is_ascii_digit() || c.is_whitespace()).trim().to_string();
                                 if !arg.is_empty() {
                                     match current_section {
                                         Some("for") => for_args.push(arg),
@@ -378,7 +377,7 @@ Do not include any explanatory text, only the JSON object.
                                 }
                             }
                         }
-                        
+
                         // If we couldn't extract anything meaningful, provide fallback
                         if for_args.is_empty() {
                             for_args.push("Could not extract supporting arguments from the response".to_string());
@@ -386,7 +385,7 @@ Do not include any explanatory text, only the JSON object.
                         if against_args.is_empty() {
                             against_args.push("Could not extract opposing arguments from the response".to_string());
                         }
-                        
+
                         Ok(crate::models::analysis::ProposalArguments {
                             for_proposal: for_args,
                             against: against_args,
