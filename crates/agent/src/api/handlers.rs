@@ -11,8 +11,8 @@ use tracing::error;
 use crate::{
     api::{error::ApiError, routes::AppState},
     models::{
-        analysis::AnalyzeResponse, DeepResearchApiResponse, DeepResearchRequest, HealthResponse,
-        Proposal,
+        analysis::AnalyzeResponse, CustomEvaluationRequest, CustomEvaluationResponse,
+        DeepResearchApiResponse, DeepResearchRequest, HealthResponse, Proposal,
     },
     services::{
         agent::AgentServiceTrait,
@@ -440,4 +440,27 @@ pub async fn cleanup_cache(
         cleaned_entries,
         message: format!("Cleaned up {} expired cache entries", cleaned_entries),
     }))
+}
+
+/// Custom evaluate a proposal with specific criteria
+pub async fn custom_evaluate_proposal(
+    State(state): State<AppState>,
+    Json(request): Json<CustomEvaluationRequest>,
+) -> Result<Json<CustomEvaluationResponse>, ApiError> {
+    // Create a temporary proposal object from the content
+    let proposal = Proposal {
+        description: request.content.clone(),
+    };
+
+    // Perform custom evaluation
+    let custom_response = state
+        .agent_service
+        .custom_evaluate_proposal(&proposal, &request)
+        .await
+        .map_err(|e| {
+            error!("Error performing custom evaluation: {:?}", e);
+            ApiError::internal_error(format!("Failed to evaluate proposal: {}", e))
+        })?;
+
+    Ok(Json(custom_response))
 }

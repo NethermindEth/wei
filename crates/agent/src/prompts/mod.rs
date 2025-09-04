@@ -2,6 +2,9 @@
 //!
 //! This module contains the prompts for the agent service.
 
+/// Custom evaluation prompt generator
+pub mod custom_evaluation;
+
 /// Professional prompt for analyzing DAO/Governance proposals
 /// Based on standardized evaluation criteria for proposal quality assessment
 pub const ANALYZE_PROPOSAL_PROMPT: &str = r#"You are an expert governance analyst specializing in DAO proposals, DeFi protocols, and decentralized governance systems. Your role is to evaluate governance proposals according to a standardized structure across five key categories.

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Proposal } from '../../types/graphql';
+import { Proposal } from '../../hooks/useProposals';
 import { Modal } from '../ui/modal';
 import ReactMarkdown from 'react-markdown';
 import '../ui/markdown-styles.css';

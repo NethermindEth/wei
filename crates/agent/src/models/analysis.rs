@@ -65,6 +65,15 @@ pub struct StructuredAnalysisResponse {
     pub language_quality: EvaluationCategory,
 }
 
+/// Arguments for and against a proposal
+#[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema)]
+pub struct ProposalArguments {
+    /// Arguments supporting the proposal
+    pub for_proposal: Vec<String>,
+    /// Arguments against the proposal
+    pub against: Vec<String>,
+}
+
 /// Evaluation category with status, justification and suggestions
 #[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema)]
 #[schema(description = descriptions::EVALUATION_CATEGORY_DESCRIPTION)]
@@ -78,6 +87,17 @@ pub struct EvaluationCategory {
     /// Suggestions for improvement (only provided for fail status)
     #[schema(example = examples::EVALUATION_CATEGORY_SUGGESTIONS_EXAMPLE)]
     pub suggestions: Vec<String>,
+}
+
+impl EvaluationCategory {
+    /// Creates a new EvaluationCategory with status NotApplicable and a default suggestion
+    pub fn na(justification: &str) -> Self {
+        Self {
+            status: "n/a".to_string(),
+            justification: justification.to_string(),
+            suggestions: vec!["Please try again".to_string()],
+        }
+    }
 }
 
 // Deprecated structs have been removed

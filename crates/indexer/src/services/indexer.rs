@@ -1,10 +1,5 @@
 //! Main indexer service
 
-#[allow(unused_imports)]
-use async_trait::async_trait;
-#[allow(unused_imports)]
-use std::sync::Arc;
-
 use crate::{
     db::Database,
     models::{Actor, Proposal},
