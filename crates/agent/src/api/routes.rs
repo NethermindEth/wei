@@ -132,6 +132,10 @@ pub fn create_router(
             post(handlers::get_proposal_arguments).options(|_: Request| async { "" }),
         )
         .route(
+            "/pre-filter/custom",
+            post(handlers::custom_evaluate_proposal).options(|_: Request| async { "" }),
+        )
+        .route(
             "/pre-filter/:id",
             get(handlers::get_analysis).options(|_: Request| async { "" }),
         )
@@ -187,7 +191,14 @@ pub fn create_router(
 
         // Simple heuristic: if the path exists in our routes but the method is not allowed
         // This is a simplified approach - in a real app you might want to check against registered routes
-        let known_paths = ["/analyze", "/analyze/", "/analyses/", "/analyses/proposal/"];
+        let known_paths = [
+            "/pre-filter",
+            "/pre-filter/custom",
+            "/analyze",
+            "/analyze/",
+            "/analyses/",
+            "/analyses/proposal/",
+        ];
         let path_exists = known_paths.iter().any(|&p| uri.path().starts_with(p));
 
         if path_exists

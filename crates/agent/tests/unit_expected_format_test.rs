@@ -96,6 +96,7 @@ async fn test_expected_format() {
 
     // Create a response with the expected format
     let response = StructuredAnalysisResponse {
+        summary: "Proposal to reallocate $89,980 USD from Domain Allocator funds to the Hackathon Continuation Program to address a funding shortfall caused by token price changes.".to_string(),
         goals_and_motivation: EvaluationCategory {
             status: "pass".to_string(),
             justification: "The proposal clearly states its goal to address funding shortfall."
@@ -145,6 +146,7 @@ async fn test_expected_format() {
 
     // Define the expected JSON structure
     let expected_structure = json!({
+        "summary": "",
         "goals_and_motivation": {
             "status": "",
             "justification": "",

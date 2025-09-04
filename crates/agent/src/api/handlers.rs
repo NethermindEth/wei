@@ -13,6 +13,7 @@ use crate::{
     api::{error::ApiError, routes::AppState},
     models::{
         analysis::{AnalyzeResponse, ProposalArguments},
+        CustomEvaluationRequest, CustomEvaluationResponse,
         DeepResearchApiResponse, DeepResearchRequest, HealthResponse, Proposal,
     },
     services::{
@@ -510,3 +511,25 @@ pub async fn get_proposal_arguments(
         from_cache: cached_response.from_cache,
     }))
 }
+
+/// Custom evaluate a proposal with specific criteria
+pub async fn custom_evaluate_proposal(
+    State(state): State<AppState>,
+    Json(request): Json<CustomEvaluationRequest>,
+) -> Result<Json<CustomEvaluationResponse>, ApiError> {
+    // Create a temporary proposal object from the content
+    let proposal = Proposal {
+        description: request.content.clone(),
+    };
+
+    // Perform custom evaluation
+    let custom_response = state
+        .agent_service
+        .custom_evaluate_proposal(&proposal, &request)
+        .await
+        .map_err(|e| {
+            error!("Error performing custom evaluation: {:?}", e);
+            ApiError::internal_error(format!("Failed to evaluate proposal: {}", e))
+        })?;
+
+    Ok(Json(custom_response))}

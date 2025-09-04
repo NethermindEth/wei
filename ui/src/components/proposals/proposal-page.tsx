@@ -2,11 +2,11 @@
 
 import * as React from "react";
 
-import { ChevronDownIcon, ChevronUpIcon, ArrowPathIcon, ClockIcon, CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
+import { ChevronDownIcon, ChevronUpIcon, ArrowPathIcon, ClockIcon, CheckCircleIcon, XCircleIcon, PaperAirplaneIcon } from "@heroicons/react/24/outline";
 import { CommunityAnalysis } from "../community/CommunityAnalysis";
 import { Proposal, useProposals } from "../../hooks/useProposals";
 import { ApiService } from "../../services/api";
-import { AnalysisResponse, ProposalArguments } from "../../types/proposal";
+import { AnalysisResponse, ProposalArguments, CustomEvaluationRequest, CustomEvaluationResponse } from "../../types/proposal";
 import ReactMarkdown from 'react-markdown';
 import { RelatedProposals } from "./related-proposals";
 
@@ -29,6 +29,10 @@ const StatusBadge = ({ status }: { status?: string }) => {
         return 'bg-green-500/20 text-green-400';
       case 'fail':
         return 'bg-red-500/20 text-red-400';
+      case 'warning':
+        return 'bg-orange-500/20 text-orange-400';
+      case 'neutral':
+        return 'bg-blue-500/20 text-blue-400';
       case 'n/a':
       default:
         return 'bg-yellow-500/20 text-yellow-400';
@@ -52,6 +56,11 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
   const [selectedProposal, setSelectedProposal] = React.useState<Proposal | null>(null);
   const [isProposalExpanded, setIsProposalExpanded] = React.useState(false);
   const [activeSection, setActiveSection] = React.useState<'feedback' | 'discussion' | 'related' | 'arguments'>('feedback');
+  
+  // Custom evaluation states
+  const [customCriteria, setCustomCriteria] = React.useState<string>("");
+  const [isCustomEvaluating, setIsCustomEvaluating] = React.useState(false);
+  const [customResults, setCustomResults] = React.useState<Array<CustomEvaluationResponse & { timestamp: number, criteria: string }>>([]);
 
   // Fetch proposals for search functionality
   const { proposals: allProposals } = useProposals(1000);
@@ -69,7 +78,7 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
         ? await ApiService.refreshProposalAnalysis(proposalData)
         : await ApiService.analyzeProposal(proposalData);
       
-      console.log('Analysis response:', response);
+    
       
       setBackendResult(response);
     } catch (err) {
@@ -121,6 +130,57 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
         analyzeProposal(selectedProposal, true),
         fetchProposalArguments(selectedProposal)
       ]);
+    }
+  };
+
+  const handleCustomCriteriaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setCustomCriteria(e.target.value);
+  };
+
+  const handleCustomEvaluate = async () => {
+    if (!selectedProposal) {
+      setError("Please select a proposal to evaluate");
+      return;
+    }
+
+    if (!customCriteria.trim()) {
+      setError("Please enter custom criteria");
+      return;
+    }
+
+    setIsCustomEvaluating(true);
+    setError(null);
+
+    try {
+      const content = `${selectedProposal.title}\n\n${selectedProposal.body}`;
+      const request: CustomEvaluationRequest = {
+        content,
+        custom_criteria: customCriteria
+      };
+
+      const response = await ApiService.customEvaluateProposal(request);
+      
+      // Validate the response structure
+      if (!response.summary || !response.response_map || typeof response.response_map !== 'object') {
+        throw new Error('Invalid response format from custom evaluation');
+      }
+      
+      // Add the new result to the array with timestamp and criteria
+      setCustomResults(prevResults => [
+        ...prevResults,
+        {
+          ...response,
+          timestamp: Date.now(),
+          criteria: customCriteria
+        }
+      ]);
+      
+      // Clear the criteria input for the next evaluation
+      setCustomCriteria("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Custom evaluation failed');
+    } finally {
+      setIsCustomEvaluating(false);
     }
   };
 
@@ -308,6 +368,14 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
 
                     {backendResult && !isLoading && (
                       <div className="space-y-6">
+                          <div className="border-b border-white/10 pb-4">
+                            <h3 className="text-md font-semibold mb-2 text-white/90">Summary</h3>
+                            <div className="mb-2">
+                              <p className="text-white/80">{backendResult.summary}</p>
+                            </div>
+                          </div>
+                      
+                        
                         {/* Goals & Motivation */}
                         <div className="border-b border-white/10 pb-4">
                           <h3 className="text-md font-semibold mb-2 text-white/90">Goals & Motivation</h3>
@@ -418,10 +486,10 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
                           {backendResult.language_quality?.justification && (
                             <div className="mb-2">
                               <span className="font-medium text-white/80">Justification:</span>{" "}
-                              <span className="text-white/70">{backendResult.language_quality.justification}</span>
+                              <p className="text-white/70">{backendResult.language_quality.justification}</p>
                             </div>
                           )}
-                          {backendResult.language_quality?.suggestions?.length > 0 && (
+                          {backendResult.language_quality?.suggestions && backendResult.language_quality.suggestions.length > 0 && (
                             <div>
                               <span className="font-medium text-white/80">Suggestions:</span>
                               <ul className="list-disc pl-5 text-white/70">
@@ -441,7 +509,120 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
                       <div className="text-white/60 text-sm italic">
                         Analysis will appear here once the proposal is processed.
                       </div>
+                    )}           
+                    {/* Custom Evaluation Results */}
+                    {customResults.length > 0 && (
+                      <div className="mt-6 space-y-6">
+                        <h3 className="text-lg font-semibold mb-2">Custom Evaluation Results</h3>
+                        
+                        {/* Map through all results in the array */}
+                        {customResults.map((result, resultIndex) => (
+                          <div key={resultIndex} className="rounded-md border border-white/10 bg-white/5 p-4 mb-4">
+                            <div className="grid gap-4 break-words">
+                              {/* Evaluation timestamp and criteria */}
+                              <div className="flex justify-between items-center border-b border-white/10 pb-2 mb-2">
+                                <h4 className="text-md font-semibold">
+                                  Evaluation #{resultIndex + 1}
+                                </h4>
+                                <span className="text-xs text-white/60">
+                                  {new Date(result.timestamp).toLocaleString()}
+                                </span>
+                              </div>
+                              
+                              {/* Criteria used */}
+                              <div className="border-b border-white/10 pb-3">
+                                <h5 className="text-sm font-medium mb-1 text-white/80">Criteria Used:</h5>
+                                <p className="text-white/70 text-sm whitespace-pre-wrap">{result.criteria}</p>
+                              </div>
+                              
+                              {/* Summary removed - now displayed in the proposal feedback section */}
+                              
+                              {/* Custom Criteria Results */}
+                              {result.response_map && Object.entries(result.response_map).map(([criteriaName, evaluation]) => (
+                                <div key={criteriaName} className="border-b border-white/10 pb-3">
+                                  <h5 className="text-md font-semibold mb-2">{criteriaName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h5>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="font-medium text-white/80">Status:</span>
+                                    <StatusBadge status={evaluation.status} />
+                                  </div>
+                                  {evaluation.justification && (
+                                    <div className="mb-1">
+                                      <span className="font-medium text-white/80">Justification:</span>{" "}
+                                      <span className="text-white/70">{evaluation.justification}</span>
+                                    </div>
+                                  )}
+                                  {evaluation.suggestions?.length > 0 && (
+                                    <div>
+                                      <span className="font-medium text-white/80">Suggestions:</span>
+                                      <ul className="list-disc pl-5 text-white/70">
+                                        {evaluation.suggestions.map((suggestion, index) => (
+                                          <li key={index}>{suggestion}</li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                              
+                              {/* Show message if no criteria in response_map */}
+                              {result.response_map && Object.keys(result.response_map).length === 0 && (
+                                <div className="text-amber-400">
+                                  No evaluation criteria were found in the response.
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     )}
+                    
+                    {/* Custom Evaluation Loading */}
+                    {isCustomEvaluating && (
+                      <div className="flex items-center justify-center h-full mt-4">
+                        <div className="h-4 w-4 border-2 border-t-[--color-accent] border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin mr-2"></div>
+                        <p className="text-white/70 text-sm">Running custom evaluation...</p>
+                      </div>
+                    )}
+                    
+                    {/* Custom Evaluation Input */}
+                    <div className="border-t border-white/10 pt-4 mt-6">
+                      <h3 className="text-md font-semibold mb-2 text-white/90">Custom Evaluation</h3>
+                      <div className="mb-3">
+                        <label htmlFor="customCriteria" className="block text-sm font-medium mb-1 text-white/80">
+                          Enter Custom Criteria
+                        </label>
+                        <textarea
+                          id="customCriteria"
+                          className="w-full min-h-[100px] p-2 rounded-md bg-white/5 border border-white/10 text-sm font-mono text-white/90 mb-2"
+                          placeholder={`Please evaluate this proposal focusing on:
+1. Budget justification - Is the budget well justified and detailed?
+2. Milestone clarity - Are there clear, measurable milestones?
+3. Technical feasibility - Is the proposal technically sound?`}
+                          value={customCriteria}
+                          onChange={handleCustomCriteriaChange}
+                        />
+                        <div className="flex justify-end">
+                          <button
+                            onClick={handleCustomEvaluate}
+                            disabled={isCustomEvaluating || !selectedProposal || !customCriteria.trim()}
+                            className="inline-flex h-9 items-center justify-center gap-2 px-4 py-2 rounded-md bg-[--color-accent] text-white shadow transition-colors hover:bg-[--color-accent]/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[--color-accent] disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+                            aria-label="Run Custom Evaluation"
+                          >
+                            {isCustomEvaluating ? (
+                              <>
+                                <div className="h-4 w-4 border-2 border-t-white border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
+                                <span className="text-sm font-medium">Evaluating...</span>
+                              </>
+                            ) : (
+                              <>
+                                <PaperAirplaneIcon className="h-4 w-4 -rotate-45" />
+                                <span className="text-sm font-medium">Evaluate</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
 
