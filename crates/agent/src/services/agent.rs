@@ -374,10 +374,8 @@ impl AgentServiceTrait for AgentService {
             .cache_or_compute(&query, || async {
                 // Extract topic from proposal title or first few lines
                 let topic = extract_topic_from_proposal(&proposal_clone);
-                
                 // Perform deep research on the topic to gather community opinions
                 let deep_research_result = self.compute_deep_research(&topic).await;
-                
                 // Format the deep research data for the AI prompt
                 let community_context = match deep_research_result {
                     Ok(research) => format_deep_research_for_prompt(&research),
@@ -386,7 +384,6 @@ impl AgentServiceTrait for AgentService {
                         String::new() // Empty string if research fails
                     }
                 };
-                
                 // Generate arguments with enhanced prompt that includes deep research
                 let prompt = format!(r#"You are an expert in analyzing governance proposals. Your task is to extract balanced and comprehensive arguments for and against the following proposal.
 

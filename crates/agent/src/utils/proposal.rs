@@ -9,7 +9,7 @@ pub fn extract_topic_from_proposal(proposal: &Proposal) -> String {
 
     if !first_lines.is_empty() {
         // Join the first few lines
-        let topic = first_lines.join(" ");
+        let topic = first_lines.join("\n");
 
         // Limit length to a reasonable size
         if topic.len() > 100 {
@@ -57,29 +57,23 @@ mod tests {
     #[test]
     fn test_extract_topic_from_proposal_with_title() {
         let proposal = Proposal {
-            title: Some("Implement Staking Rewards".to_string()),
-            description:
-                "This is a long description that should not be used when title is available"
-                    .to_string(),
-            url: None,
+            description: "Implement Staking Rewards\n\nThis is a long description that should not be used when title is available".to_string(),
         };
 
         assert_eq!(
             extract_topic_from_proposal(&proposal),
-            "Implement Staking Rewards"
+            "Implement Staking Rewards\n\nThis is a long description that should not be used when title is availabl"
         );
     }
 
     #[test]
     fn test_extract_topic_from_proposal_without_title() {
         let proposal = Proposal {
-            title: None,
             description: "Proposal to implement staking rewards\n\nThis would allow users to earn passive income.".to_string(),
-            url: None,
         };
 
         assert_eq!(
-            extract_topic_from_proposal(&proposal), 
+            extract_topic_from_proposal(&proposal),
             "Proposal to implement staking rewards\n\nThis would allow users to earn passive income."
         );
     }
