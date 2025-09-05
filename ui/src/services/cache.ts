@@ -150,4 +150,25 @@ export class CacheService {
       query_params: queryParams,
     };
   }
+
+  /**
+   * Helper function to create a query for roadmap generation
+   */
+  static createRoadmapQuery(request: { subject: string; kind: string; scope: string; from?: string; to?: string }): CacheableQuery {
+    const queryParams: Record<string, string> = {
+      subject: request.subject,
+      kind: request.kind,
+      scope: request.scope,
+    };
+    
+    if (request.from) queryParams.from = request.from;
+    if (request.to) queryParams.to = request.to;
+
+    return {
+      endpoint: '/roadmap',
+      method: 'POST',
+      query_params: queryParams,
+      body: request,
+    };
+  }
 }

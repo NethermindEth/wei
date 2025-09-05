@@ -12,7 +12,7 @@ use crate::{
     api::{error::ApiError, routes::AppState},
     models::{
         analysis::AnalyzeResponse, DeepResearchApiResponse, DeepResearchRequest, HealthResponse,
-        Proposal,
+        Proposal, RoadmapApiResponse, RoadmapRequest,
     },
     services::{
         agent::AgentServiceTrait,
@@ -440,4 +440,92 @@ pub async fn cleanup_cache(
         cleaned_entries,
         message: format!("Cleaned up {} expired cache entries", cleaned_entries),
     }))
+}
+
+/// Generate a roadmap for a protocol/DAO/company
+#[utoipa::path(
+    post,
+    path = "/roadmap",
+    request_body = RoadmapRequest,
+    responses(
+        (status = 200, description = "Roadmap generated successfully", body = RoadmapApiResponse),
+        (status = 400, description = "Invalid request data"),
+        (status = 500, description = "Internal server error during roadmap generation")
+    ),
+    tag = "Roadmap",
+    summary = "Generate an outcome-driven roadmap",
+    description = "Generate a comprehensive roadmap for a protocol, DAO, company, or other entity using AI analysis of problems, interventions, and fitness functions."
+)]
+pub async fn generate_roadmap(
+    State(state): State<AppState>,
+    Json(request): Json<RoadmapRequest>,
+) -> Result<Json<RoadmapApiResponse>, ApiError> {
+    let roadmap_result = state
+        .agent_service
+        .generate_roadmap(&request)
+        .await
+        .map_err(|e| {
+            error!("Error generating roadmap: {:?}", e);
+            ApiError::internal_error(format!("Failed to generate roadmap: {}", e))
+        })?;
+
+    Ok(Json(roadmap_result))
+}
+
+/// Get cached roadmap results
+#[utoipa::path(
+    get,
+    path = "/roadmap",
+    params(
+        ("subject" = String, Query, description = "The subject/domain name"),
+        ("kind" = String, Query, description = "The kind of entity"),
+        ("scope" = String, Query, description = "One-line scope description"),
+        ("from" = Option<String>, Query, description = "Research window start date (YYYY-MM-DD)"),
+        ("to" = Option<String>, Query, description = "Research window end date (YYYY-MM-DD)")
+    ),
+    responses(
+        (status = 200, description = "Cached roadmap retrieved successfully", body = RoadmapApiResponse),
+        (status = 404, description = "No cached roadmap found"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "Roadmap",
+    summary = "Get cached roadmap results",
+    description = "Retrieve cached roadmap results for a given set of parameters."
+)]
+pub async fn get_cached_roadmap(
+    Query(params): Query<HashMap<String, String>>,
+    State(state): State<AppState>,
+) -> Result<Json<RoadmapApiResponse>, ApiError> {
+    let request = RoadmapRequest {
+        subject: params
+            .get("subject")
+            .ok_or_else(|| ApiError::bad_request("Missing required parameter: subject"))?
+            .clone(),
+        kind: params
+            .get("kind")
+            .ok_or_else(|| ApiError::bad_request("Missing required parameter: kind"))?
+            .clone(),
+        scope: params
+            .get("scope")
+            .ok_or_else(|| ApiError::bad_request("Missing required parameter: scope"))?
+            .clone(),
+        from: params.get("from").cloned(),
+        to: params.get("to").cloned(),
+    };
+
+    let roadmap_result = state
+        .agent_service
+        .get_cached_roadmap(&request)
+        .await
+        .map_err(|e| {
+            error!("Error getting cached roadmap: {:?}", e);
+            ApiError::internal_error(format!("Failed to get cached roadmap: {}", e))
+        })?;
+
+    match roadmap_result {
+        Some(result) => Ok(Json(result)),
+        None => Err(ApiError::not_found(
+            "No cached roadmap found for the given parameters",
+        )),
+    }
 }

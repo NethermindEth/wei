@@ -91,18 +91,6 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
     }
   };
 
-  const buildUrlWithParams = (baseUrl: string, params: Record<string, string | null>) => {
-  const searchParams = new URLSearchParams();
-  Object.entries(params).forEach(([key, value]) => {
-    if (value) searchParams.set(key, value);
-  });
-  const queryString = searchParams.toString();
-  return `${baseUrl}${queryString ? `?${queryString}` : ''}`;
-};
-
-  const handleBackClick = () => {
-    window.history.back();
-  };
 
   if (!selectedProposal) {
     return (

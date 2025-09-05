@@ -1,6 +1,6 @@
 export const API_CONFIG = {
   // Backend API base URL - adjust this based on your development setup
-  BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
+  BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
   
   // API key for authentication
   API_KEY: process.env.NEXT_PUBLIC_API_KEY || 'key1222',
@@ -9,6 +9,7 @@ export const API_CONFIG = {
   ENDPOINTS: {
     ANALYZE: '/pre-filter',
     COMMUNITY: '/community',
+    ROADMAP: '/roadmap',
   },
 } as const;
 

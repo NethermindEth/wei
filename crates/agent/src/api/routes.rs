@@ -149,6 +149,12 @@ pub fn create_router(
                 .post(handlers::analyze_community)
                 .options(|_: Request| async { "" }),
         )
+        .route(
+            "/roadmap",
+            get(handlers::get_cached_roadmap)
+                .post(handlers::generate_roadmap)
+                .options(|_: Request| async { "" }),
+        )
         // Cache management routes
         .route(
             "/cache",

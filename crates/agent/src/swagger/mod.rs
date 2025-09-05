@@ -7,6 +7,11 @@ use crate::models::analysis::{
     Analysis, AnalysisResult, EvaluationCategory, ProposalAnalysis, ProposalMetadata,
     StructuredAnalysisResponse,
 };
+use crate::models::roadmap::{
+    CurrentValue, Domain, Evidence, FitnessFunction, Intervention, Link, LiveValidation, Metadata,
+    Problem, Proposal as RoadmapProposal, ResearchWindow, RoadmapApiResponse, RoadmapRequest,
+    RoadmapResponse, RoadmapResult, Signal, Source, Target,
+};
 use crate::models::HealthResponse;
 use crate::models::Proposal;
 
@@ -21,14 +26,23 @@ pub mod handlers;
         crate::api::handlers::health,
         crate::api::handlers::analyze_proposal,
         crate::api::handlers::get_analysis,
-        crate::api::handlers::get_proposal_analyses
+        crate::api::handlers::get_proposal_analyses,
+        crate::api::handlers::generate_roadmap,
+        crate::api::handlers::get_cached_roadmap
     ),
     components(
-        schemas(Proposal, AnalyzeResponse, HealthResponse, Analysis, AnalysisResult, StructuredAnalysisResponse, EvaluationCategory, ProposalAnalysis, ProposalMetadata)
+        schemas(
+            Proposal, AnalyzeResponse, HealthResponse, Analysis, AnalysisResult,
+            StructuredAnalysisResponse, EvaluationCategory, ProposalAnalysis, ProposalMetadata,
+            RoadmapApiResponse, RoadmapRequest, RoadmapResponse, RoadmapResult,
+            Domain, ResearchWindow, FitnessFunction, Target, CurrentValue, Problem, Evidence,
+            Intervention, LiveValidation, Signal, RoadmapProposal, Link, Source, Metadata
+        )
     ),
     tags(
         (name = "Health", description = "Service health and status endpoints"),
-        (name = "Analysis", description = "Proposal analysis endpoints for AI-powered governance assessment")
+        (name = "Analysis", description = "Proposal analysis endpoints for AI-powered governance assessment"),
+        (name = "Roadmap", description = "Outcome-driven roadmap generation endpoints for protocols, DAOs, and companies")
     ),
     info(
         title = "Wei Agent API",

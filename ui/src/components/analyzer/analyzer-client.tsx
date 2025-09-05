@@ -13,6 +13,7 @@ import { Tabs } from "../ui/tabs";
 import { CommunityAnalysis } from "../community/CommunityAnalysis";
 import { ProtocolList } from "../protocols/ProtocolList";
 import { ProposalPage } from "../proposals/proposal-page";
+import { RoadmapView } from "../roadmap/RoadmapView";
 
 export function AnalyzerClient() {
   const [selectedSpaceId, setSelectedSpaceId] = useQueryState("space", {
@@ -103,6 +104,7 @@ export function AnalyzerClient() {
         <Tabs
           tabs={[
             { id: "protocol", label: "Protocol" },
+            { id: "roadmap", label: "Roadmap" },
             { id: "stakeholders", label: "Stakeholders" },
             { id: "proposals", label: "Proposals" }
           ]}
@@ -120,6 +122,20 @@ export function AnalyzerClient() {
               protocols={protocols} 
               onProtocolSelect={handleProtocolChange}
             />
+          )}
+
+          {activeTab === "roadmap" && selectedSpaceId && (
+            <RoadmapView 
+              protocolId={selectedSpaceId}
+              protocolName={protocols.find(p => p.id === selectedSpaceId)?.name || selectedSpaceId}
+            />
+          )}
+
+          {activeTab === "roadmap" && !selectedSpaceId && (
+            <div className="text-center py-12">
+              <h2 className="text-xl font-semibold text-white/90 mb-2">Select a Protocol</h2>
+              <p className="text-white/60">Please select a protocol from the dropdown above to view its roadmap.</p>
+            </div>
           )}
           
           {activeTab === "stakeholders" && (
