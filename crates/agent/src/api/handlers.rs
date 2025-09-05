@@ -454,7 +454,7 @@ pub async fn cleanup_cache(
     ),
     tag = "Roadmap",
     summary = "Generate an outcome-driven roadmap",
-    description = "Generate a comprehensive roadmap for a protocol, DAO, company, or other entity using AI analysis of problems, interventions, and fitness functions."
+    description = descriptions::HANDLER_GENERATE_ROADMAP_DESCRIPTION
 )]
 pub async fn generate_roadmap(
     State(state): State<AppState>,
@@ -490,7 +490,7 @@ pub async fn generate_roadmap(
     ),
     tag = "Roadmap",
     summary = "Get cached roadmap results",
-    description = "Retrieve cached roadmap results for a given set of parameters."
+    description = descriptions::HANDLER_GET_CACHED_ROADMAP_DESCRIPTION
 )]
 pub async fn get_cached_roadmap(
     Query(params): Query<HashMap<String, String>>,
