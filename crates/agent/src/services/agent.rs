@@ -5,25 +5,29 @@ use std::future::Future;
 
 use openrouter_rs::{api::chat::ChatCompletionRequest, types::Role, Message, OpenRouterClient};
 use serde_json;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
-use crate::models::analysis::{EvaluationCategory, StructuredAnalysisResponse};
 use crate::models::custom_evaluation::{
     CustomEvaluationRequest, CustomEvaluationResponse, EvaluationResult,
 };
 use crate::models::deepresearch::{DeepResearchResponse, DeepResearchResult};
-use crate::prompts::custom_evaluation::generate_custom_evaluation_prompt;
-use crate::prompts::{ANALYZE_PROPOSAL_PROMPT, DEEP_RESEARCH_PROMPT};
-use crate::utils::error::{Error, ResponseError, Result};
-use crate::utils::markdown::extract_json_from_markdown;
-
+use crate::models::{
+    analysis::{EvaluationCategory, StructuredAnalysisResponse},
+    Proposal,
+};
+use crate::prompts::{
+    custom_evaluation::generate_custom_evaluation_prompt, ANALYZE_PROPOSAL_PROMPT,
+    DEEP_RESEARCH_PROMPT,
+};
 use crate::services::cache::{CacheService, CacheableQuery, CachedResponse};
+use crate::utils::error::{Error, ResponseError, Result};
+use crate::utils::markdown::{extract_json_from_markdown, extract_json_string_from_markdown};
+use crate::utils::proposal::{extract_topic_from_proposal, format_deep_research_for_prompt};
 use crate::{
     db::{
         core::Database,
         repositories::{CacheRepository, CommunityRepository},
     },
-    models::Proposal,
     Config,
 };
 
@@ -357,7 +361,7 @@ impl AgentServiceTrait for AgentService {
         self.community_repo.get_by_topic(topic).await
     }
 
-    /// Get proposal arguments with caching
+    /// Get proposal arguments with caching and deep research integration
     async fn get_proposal_arguments(
         &self,
         proposal: &Proposal,
@@ -368,8 +372,23 @@ impl AgentServiceTrait for AgentService {
         let proposal_clone = proposal.clone();
         self.cache_service
             .cache_or_compute(&query, || async {
-                // Generate arguments separately since they're no longer part of the main analysis
-                let prompt = r#"You are an expert in analyzing governance proposals. Your task is to extract balanced and comprehensive arguments for and against the following proposal.
+                // Extract topic from proposal title or first few lines
+                let topic = extract_topic_from_proposal(&proposal_clone);
+                
+                // Perform deep research on the topic to gather community opinions
+                let deep_research_result = self.compute_deep_research(&topic).await;
+                
+                // Format the deep research data for the AI prompt
+                let community_context = match deep_research_result {
+                    Ok(research) => format_deep_research_for_prompt(&research),
+                    Err(e) => {
+                        warn!("Failed to get deep research for proposal arguments: {}", e);
+                        String::new() // Empty string if research fails
+                    }
+                };
+                
+                // Generate arguments with enhanced prompt that includes deep research
+                let prompt = format!(r#"You are an expert in analyzing governance proposals. Your task is to extract balanced and comprehensive arguments for and against the following proposal.
 
 For each side (for and against), provide 3-5 strong, substantive arguments that:
 1. Are specific to this proposal's content and context
@@ -377,19 +396,22 @@ For each side (for and against), provide 3-5 strong, substantive arguments that:
 3. Are concise but complete (1-2 sentences each)
 4. Are objective and factual rather than emotional
 
+COMMUNITY CONTEXT (use this to inform your arguments):
+{}
+
 Your response MUST be in this exact JSON format:
-{
+{{
   "for_proposal": ["argument 1", "argument 2", "argument 3", "argument 4", "argument 5"],
   "against": ["argument 1", "argument 2", "argument 3", "argument 4", "argument 5"]
-}
+}}
 
 Do not include any explanatory text, only the JSON object.
-"#;
+"#, community_context);
 
                 let request = ChatCompletionRequest::builder()
-                    .model(self.config.ai_model_name.clone())
+                    .model("perplexity/sonar-pro".to_string()) // Use Perplexity for better reasoning
                     .messages(vec![
-                        Message::new(Role::System, prompt),
+                        Message::new(Role::System, &prompt),
                         Message::new(Role::User, serde_json::to_string(&proposal_clone)?.as_str()),
                     ])
                     .temperature(0.2) // Lower temperature for more consistent, focused responses
@@ -409,27 +431,14 @@ Do not include any explanatory text, only the JSON object.
                     ))?
                     .to_string();
 
-                // Clean the response content - remove markdown code blocks if present
-                let cleaned_content = if content.starts_with("```json") {
-                    content
-                        .strip_prefix("```json")
-                        .unwrap_or(&content)
-                        .strip_suffix("```")
-                        .unwrap_or(&content)
-                        .trim()
-                } else if content.starts_with("```") {
-                    content
-                        .strip_prefix("```")
-                        .unwrap_or(&content)
-                        .strip_suffix("```")
-                        .unwrap_or(&content)
-                        .trim()
-                } else {
-                    content.trim()
+                // Extract JSON from the content
+                let cleaned_content = match extract_json_string_from_markdown(&content) {
+                    Some(json_str) => json_str,
+                    None => content.clone(), // Fallback to original content if extraction fails
                 };
 
                 // Try to parse the response as ProposalArguments
-                match serde_json::from_str::<crate::models::analysis::ProposalArguments>(cleaned_content) {
+                match serde_json::from_str::<crate::models::analysis::ProposalArguments>(&cleaned_content) {
                     Ok(arguments) => {
                         // Ensure we have at least one argument on each side
                         if arguments.for_proposal.is_empty() || arguments.against.is_empty() {
