@@ -7,12 +7,14 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::error;
+use utoipa::ToSchema;
 
 use crate::{
     api::{error::ApiError, routes::AppState},
     models::{
-        analysis::AnalyzeResponse, CustomEvaluationRequest, CustomEvaluationResponse,
-        DeepResearchApiResponse, DeepResearchRequest, HealthResponse, Proposal,
+        analysis::{AnalyzeResponse, ProposalArguments},
+        CustomEvaluationRequest, CustomEvaluationResponse, DeepResearchApiResponse,
+        DeepResearchRequest, HealthResponse, Proposal,
     },
     services::{
         agent::AgentServiceTrait,
@@ -66,7 +68,7 @@ pub async fn analyze_proposal(
         .await
         .map_err(|e| {
             error!("Error analyzing proposal: {:?}", e);
-            ApiError::internal_error(format!("Failed to analyze proposal: {}", e))
+            ApiError::internal_error(e.to_string())
         })?;
 
     Ok(Json(AnalyzeResponse {
@@ -200,10 +202,7 @@ pub async fn search_related_proposals(
                 .await
                 .map_err(|e| {
                     error!("Error searching for related proposals: {:?}", e);
-                    crate::utils::error::Error::Internal(format!(
-                        "Failed to search for related proposals: {}",
-                        e
-                    ))
+                    crate::utils::error::Error::Internal(e.to_string())
                 })?;
 
             Ok(RelatedProposalsResponse {
@@ -214,7 +213,7 @@ pub async fn search_related_proposals(
         .await
         .map_err(|e| {
             error!("Error in related proposals cache operation: {:?}", e);
-            ApiError::internal_error(format!("Failed to search for related proposals: {}", e))
+            ApiError::internal_error(e.to_string())
         })?;
 
     let response = RelatedProposalsResponseCached {
@@ -238,7 +237,7 @@ pub async fn analyze_community(
         .await
         .map_err(|e| {
             error!("Error analyzing community: {:?}", e);
-            ApiError::internal_error(format!("Failed to analyze community: {}", e))
+            ApiError::internal_error(e.to_string())
         })?;
 
     Ok(Json(DeepResearchApiResponse {
@@ -267,10 +266,7 @@ pub async fn get_community_analysis(
         .await
         .map_err(|e| {
             error!("Error retrieving cached community analysis: {:?}", e);
-            ApiError::internal_error(format!(
-                "Failed to retrieve cached community analysis: {}",
-                e
-            ))
+            ApiError::internal_error(e.to_string())
         })?;
 
     let response = cached_result.map(|result| DeepResearchApiResponse {
@@ -295,7 +291,7 @@ pub async fn list_cached_queries(
         .await
         .map_err(|e| {
             error!("Error listing cached queries: {:?}", e);
-            ApiError::internal_error(format!("Failed to list cached queries: {}", e))
+            ApiError::internal_error(e.to_string())
         })?;
 
     Ok(Json(cached_queries))
@@ -331,7 +327,7 @@ pub async fn invalidate_cache(
         .await
         .map_err(|e| {
             error!("Error invalidating cache: {:?}", e);
-            ApiError::internal_error(format!("Failed to invalidate cache: {}", e))
+            ApiError::internal_error(e.to_string())
         })?;
 
     let message = if success {
@@ -369,7 +365,7 @@ pub async fn refresh_cache(
         .await
         .map_err(|e| {
             error!("Error refreshing cache: {:?}", e);
-            ApiError::internal_error(format!("Failed to refresh cache: {}", e))
+            ApiError::internal_error(e.to_string())
         })?;
 
     let message = if success {
@@ -408,7 +404,7 @@ pub async fn get_cache_stats(
 ) -> Result<Json<CacheStatsResponse>, ApiError> {
     let stats = state.cache_service.get_stats().await.map_err(|e| {
         error!("Error getting cache stats: {:?}", e);
-        ApiError::internal_error(format!("Failed to get cache stats: {}", e))
+        ApiError::internal_error(e.to_string())
     })?;
 
     Ok(Json(CacheStatsResponse {
@@ -433,12 +429,80 @@ pub async fn cleanup_cache(
 ) -> Result<Json<CacheCleanupResponse>, ApiError> {
     let cleaned_entries = state.cache_service.cleanup_expired().await.map_err(|e| {
         error!("Error cleaning up cache: {:?}", e);
-        ApiError::internal_error(format!("Failed to cleanup cache: {}", e))
+        ApiError::internal_error(e.to_string())
     })?;
 
     Ok(Json(CacheCleanupResponse {
         cleaned_entries,
         message: format!("Cleaned up {} expired cache entries", cleaned_entries),
+    }))
+}
+
+/// Response for proposal arguments
+#[derive(Serialize, ToSchema)]
+pub struct ProposalArgumentsResponse {
+    /// Arguments for and against the proposal
+    pub arguments: ProposalArguments,
+    /// Whether this response came from cache
+    pub from_cache: bool,
+}
+
+/// Get proposal arguments
+#[utoipa::path(
+    post,
+    path = "/pre-filter/arguments",
+    request_body = Proposal,
+    responses(
+        (status = 200, description = "Arguments retrieved successfully", body = ProposalArgumentsResponse),
+        (status = 400, description = "Invalid request data"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "Analysis",
+    summary = descriptions::HANDLER_GET_PROPOSAL_ARGUMENTS_SUMMARY,
+    description = descriptions::HANDLER_GET_PROPOSAL_ARGUMENTS_DESCRIPTION
+)]
+pub async fn get_proposal_arguments(
+    State(state): State<AppState>,
+    Json(proposal): Json<Proposal>,
+) -> Result<Json<ProposalArgumentsResponse>, ApiError> {
+    // Validate proposal content
+    if proposal.description.trim().is_empty() {
+        return Err(ApiError::bad_request(
+            "Proposal description cannot be empty",
+        ));
+    }
+    const MAX_PROPOSAL_LENGTH: usize = 50_000;
+
+    // Limit proposal size to prevent abuse
+    if proposal.description.len() > MAX_PROPOSAL_LENGTH {
+        return Err(ApiError::bad_request(
+            "Proposal description is too long (max 50000 characters)",
+        ));
+    }
+
+    let cached_response = state
+        .agent_service
+        .get_proposal_arguments(&proposal)
+        .await
+        .map_err(|e| {
+            error!("Error getting proposal arguments: {:?}", e);
+            ApiError::internal_error(e.to_string())
+        })?;
+
+    // Validate response data
+    let arguments = cached_response.data;
+    let has_for_args = !arguments.for_proposal.is_empty();
+    let has_against_args = !arguments.against.is_empty();
+
+    if !has_for_args && !has_against_args {
+        error!("{}", crate::utils::error::ResponseError::NoContent);
+        // We'll still return the empty arguments rather than an error
+        // but we log it for monitoring purposes
+    }
+
+    Ok(Json(ProposalArgumentsResponse {
+        arguments,
+        from_cache: cached_response.from_cache,
     }))
 }
 
@@ -459,7 +523,7 @@ pub async fn custom_evaluate_proposal(
         .await
         .map_err(|e| {
             error!("Error performing custom evaluation: {:?}", e);
-            ApiError::internal_error(format!("Failed to evaluate proposal: {}", e))
+            ApiError::internal_error(e.to_string())
         })?;
 
     Ok(Json(custom_response))

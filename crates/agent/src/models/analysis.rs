@@ -68,9 +68,9 @@ pub struct StructuredAnalysisResponse {
 /// Arguments for and against a proposal
 #[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema)]
 pub struct ProposalArguments {
-    /// Arguments supporting the proposal
+    /// List of arguments supporting the proposal
     pub for_proposal: Vec<String>,
-    /// Arguments against the proposal
+    /// List of arguments against the proposal
     pub against: Vec<String>,
 }
 

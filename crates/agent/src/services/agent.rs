@@ -5,25 +5,29 @@ use std::future::Future;
 
 use openrouter_rs::{api::chat::ChatCompletionRequest, types::Role, Message, OpenRouterClient};
 use serde_json;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
-use crate::models::analysis::{EvaluationCategory, StructuredAnalysisResponse};
 use crate::models::custom_evaluation::{
     CustomEvaluationRequest, CustomEvaluationResponse, EvaluationResult,
 };
 use crate::models::deepresearch::{DeepResearchResponse, DeepResearchResult};
-use crate::prompts::custom_evaluation::generate_custom_evaluation_prompt;
-use crate::prompts::{ANALYZE_PROPOSAL_PROMPT, DEEP_RESEARCH_PROMPT};
-use crate::utils::error::{Error, ResponseError, Result};
-use crate::utils::markdown::extract_json_from_markdown;
-
+use crate::models::{
+    analysis::{EvaluationCategory, StructuredAnalysisResponse},
+    Proposal,
+};
+use crate::prompts::{
+    custom_evaluation::generate_custom_evaluation_prompt, ANALYZE_PROPOSAL_PROMPT,
+    DEEP_RESEARCH_PROMPT,
+};
 use crate::services::cache::{CacheService, CacheableQuery, CachedResponse};
+use crate::utils::error::{Error, ResponseError, Result};
+use crate::utils::markdown::{extract_json_from_markdown, extract_json_string_from_markdown};
+use crate::utils::proposal::{extract_topic_from_proposal, format_deep_research_for_prompt};
 use crate::{
     db::{
         core::Database,
         repositories::{CacheRepository, CommunityRepository},
     },
-    models::Proposal,
     Config,
 };
 
@@ -72,6 +76,12 @@ pub trait AgentServiceTrait {
         &self,
         proposal: &Proposal,
     ) -> impl Future<Output = Result<CachedResponse<StructuredAnalysisResponse>>>;
+
+    /// Get proposal arguments with caching
+    fn get_proposal_arguments(
+        &self,
+        proposal: &Proposal,
+    ) -> impl Future<Output = Result<CachedResponse<crate::models::analysis::ProposalArguments>>>;
 
     /// Custom evaluate a proposal with specific criteria
     fn custom_evaluate_proposal(
@@ -318,10 +328,9 @@ impl AgentServiceTrait for AgentService {
         // Create a cache query based on the proposal content hash
         let query = CacheableQuery::new("/pre-filter", "POST").with_body(proposal)?;
 
-        let proposal_clone = proposal.clone();
         self.cache_service
             .cache_or_compute(&query, || async {
-                self.compute_proposal_analysis(&proposal_clone).await
+                self.compute_proposal_analysis(proposal).await
             })
             .await
     }
@@ -350,5 +359,159 @@ impl AgentServiceTrait for AgentService {
     /// Get cached deep research results (deprecated - use deep_research instead)
     async fn get_cached_deep_research(&self, topic: &str) -> Result<Option<DeepResearchResult>> {
         self.community_repo.get_by_topic(topic).await
+    }
+
+    /// Get proposal arguments with caching and deep research integration
+    async fn get_proposal_arguments(
+        &self,
+        proposal: &Proposal,
+    ) -> Result<CachedResponse<crate::models::analysis::ProposalArguments>> {
+        // Create a cache query based on the proposal content hash
+        let query = CacheableQuery::new("/pre-filter/arguments", "POST").with_body(proposal)?;
+
+        let proposal_clone = proposal.clone();
+        self.cache_service
+            .cache_or_compute(&query, || async {
+                // Extract topic from proposal title or first few lines
+                let topic = extract_topic_from_proposal(&proposal_clone);
+                // Perform deep research on the topic to gather community opinions
+                let deep_research_result = self.compute_deep_research(&topic).await;
+                // Format the deep research data for the AI prompt
+                let community_context = match deep_research_result {
+                    Ok(research) => format_deep_research_for_prompt(&research),
+                    Err(e) => {
+                        warn!("Failed to get deep research for proposal arguments: {}", e);
+                        String::new() // Empty string if research fails
+                    }
+                };
+                // Generate arguments with enhanced prompt that includes deep research
+                let prompt = format!(r#"You are an expert in analyzing governance proposals. Your task is to extract balanced and comprehensive arguments for and against the following proposal.
+
+For each side (for and against), provide 3-5 strong, substantive arguments that:
+1. Are specific to this proposal's content and context
+2. Consider technical, economic, governance, and community impact aspects
+3. Are concise but complete (1-2 sentences each)
+4. Are objective and factual rather than emotional
+
+COMMUNITY CONTEXT (use this to inform your arguments):
+{}
+
+Your response MUST be in this exact JSON format:
+{{
+  "for_proposal": ["argument 1", "argument 2", "argument 3", "argument 4", "argument 5"],
+  "against": ["argument 1", "argument 2", "argument 3", "argument 4", "argument 5"]
+}}
+
+Do not include any explanatory text, only the JSON object.
+"#, community_context);
+
+                let request = ChatCompletionRequest::builder()
+                    .model("perplexity/sonar-pro".to_string()) // Use Perplexity for better reasoning
+                    .messages(vec![
+                        Message::new(Role::System, &prompt),
+                        Message::new(Role::User, serde_json::to_string(&proposal_clone)?.as_str()),
+                    ])
+                    .temperature(0.2) // Lower temperature for more consistent, focused responses
+                    .build()
+                    .map_err(|e| crate::utils::error::Error::Internal(e.to_string()))?;
+
+                let response = self
+                    .openrouter
+                    .send_chat_completion(&request)
+                    .await
+                    .map_err(|e| crate::utils::error::Error::Internal(e.to_string()))?;
+
+                let content = response.choices[0]
+                    .content()
+                    .ok_or(crate::utils::error::Error::Internal(
+                        "No content in response".to_string(),
+                    ))?
+                    .to_string();
+
+                // Extract JSON from the content
+                let cleaned_content = match extract_json_string_from_markdown(&content) {
+                    Some(json_str) => json_str,
+                    None => content.clone(), // Fallback to original content if extraction fails
+                };
+
+                // Try to parse the response as ProposalArguments
+                match serde_json::from_str::<crate::models::analysis::ProposalArguments>(&cleaned_content) {
+                    Ok(arguments) => {
+                        // Ensure we have at least one argument on each side
+                        if arguments.for_proposal.is_empty() || arguments.against.is_empty() {
+                            let mut args = arguments;
+                            if args.for_proposal.is_empty() {
+                                args.for_proposal.push("No supporting arguments could be identified for this proposal".to_string());
+                            }
+                            if args.against.is_empty() {
+                                args.against.push("No opposing arguments could be identified for this proposal".to_string());
+                            }
+                            Ok(args)
+                        } else {
+                            // Limit the number of arguments to a reasonable amount if we got too many
+                            let mut args = arguments;
+                            if args.for_proposal.len() > 7 {
+                                args.for_proposal.truncate(7);
+                            }
+                            if args.against.len() > 7 {
+                                args.against.truncate(7);
+                            }
+                            Ok(args)
+                        }
+                    },
+                    Err(e) => {
+                        error!("Failed to parse arguments response: {}", e);
+                        error!("Raw response: {}", content);
+                        error!("Cleaned response: {}", cleaned_content);
+                        // Try to extract arguments using a more sophisticated approach
+                        let mut for_args = Vec::new();
+                        let mut against_args = Vec::new();
+
+                        // Look for patterns that might indicate arguments
+                        let lines: Vec<&str> = content.lines().collect();
+                        let mut current_section: Option<&str> = None;
+
+                        for line in lines {
+                            let line_lower = line.trim().to_lowercase();
+
+                            // Detect section headers
+                            if line_lower.contains("for") || line_lower.contains("supporting") || line_lower.contains("pros") || line_lower.contains("pro:") {
+                                current_section = Some("for");
+                                continue;
+                            } else if line_lower.contains("against") || line_lower.contains("opposing") || line_lower.contains("cons") || line_lower.contains("con:") {
+                                current_section = Some("against");
+                                continue;
+                            }
+
+                            // Extract argument points (often bullet points or numbered)
+                            if line.trim().starts_with("-") || line.trim().starts_with("*") || 
+                               (line.trim().len() > 2 && line.trim()[0..2].chars().all(|c| c.is_ascii_digit() || c == '.')) {
+                                let arg = line.trim().trim_start_matches(|c: char| c == '-' || c == '*' || c == '.' || c.is_ascii_digit() || c.is_whitespace()).trim().to_string();
+                                if !arg.is_empty() {
+                                    match current_section {
+                                        Some("for") => for_args.push(arg),
+                                        Some("against") => against_args.push(arg),
+                                        _ => {} // Ignore if we don't know which section we're in
+                                    }
+                                }
+                            }
+                        }
+
+                        // If we couldn't extract anything meaningful, provide fallback
+                        if for_args.is_empty() {
+                            for_args.push("Could not extract supporting arguments from the response".to_string());
+                        }
+                        if against_args.is_empty() {
+                            against_args.push("Could not extract opposing arguments from the response".to_string());
+                        }
+
+                        Ok(crate::models::analysis::ProposalArguments {
+                            for_proposal: for_args,
+                            against: against_args,
+                        })
+                    }
+                }
+            })
+            .await
     }
 }

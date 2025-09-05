@@ -94,7 +94,11 @@ Your response MUST be a valid JSON object with the following structure:
     "status": "pass",
     "justification": "",
     "suggestions": []
-  }.
+  },
+  "arguments": {
+    "for_proposal": ["High user demand", "Better yields"],
+    "against": ["Liquidity concerns", "Volatility concerns"]
+  }
 }
 ```
 

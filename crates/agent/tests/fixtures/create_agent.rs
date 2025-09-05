@@ -58,9 +58,9 @@ pub async fn create_agent_service() -> Result<AgentService> {
          Make sure your .env file contains WEI_AGENT_OPEN_ROUTER_API_KEY and WEI_AGENT_AI_MODEL_NAME"
     );
 
-    // For testing, we'll use a mock database connection
-    // In a real test environment, you would set up a test database
-    config.database_url = "postgres://postgres:postgres@localhost:5432/postgres".to_string();
+    // For testing, we'll use the wei_agent database
+    // This matches the database used in the Docker setup
+    config.database_url = "postgres://postgres:postgres@localhost:5432/wei_agent".to_string();
     config.api_key_auth_enabled = false;
 
     // Create a database pool for testing
