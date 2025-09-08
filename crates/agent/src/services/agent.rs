@@ -12,18 +12,19 @@ use crate::models::custom_evaluation::{
     CustomEvaluationRequest, CustomEvaluationResponse, EvaluationResult,
 };
 use crate::models::deepresearch::{DeepResearchResponse, DeepResearchResult};
+use crate::models::roadmap::{RoadmapApiResponse, RoadmapRequest, RoadmapResponse, RoadmapResult};
 use crate::prompts::custom_evaluation::generate_custom_evaluation_prompt;
-use crate::prompts::{ANALYZE_PROPOSAL_PROMPT, DEEP_RESEARCH_PROMPT};
+use crate::prompts::{ANALYZE_PROPOSAL_PROMPT, DEEP_RESEARCH_PROMPT, ROADMAP_GENERATION_PROMPT};
 use crate::utils::error::{Error, ResponseError, Result};
 use crate::utils::markdown::extract_json_from_markdown;
 
-use crate::services::cache::{CacheService, CacheableQuery, CachedResponse};
 use crate::{
     db::{
         core::Database,
         repositories::{CacheRepository, CommunityRepository},
     },
     models::Proposal,
+    services::cache::{CacheService, CacheableQuery, CachedResponse},
     Config,
 };
 
@@ -91,9 +92,65 @@ pub trait AgentServiceTrait {
         &self,
         topic: &str,
     ) -> impl Future<Output = Result<Option<DeepResearchResult>>>;
+
+    /// Generate a roadmap for a protocol/DAO/company with caching
+    fn generate_roadmap(
+        &self,
+        request: &RoadmapRequest,
+    ) -> impl Future<Output = Result<RoadmapApiResponse>>;
+
+    /// Get cached roadmap results
+    fn get_cached_roadmap(
+        &self,
+        request: &RoadmapRequest,
+    ) -> impl Future<Output = Result<Option<RoadmapApiResponse>>>;
 }
 
 impl AgentService {
+    /// Helper function to find the end of a JSON object by counting braces
+    fn find_json_end(content: &str) -> Option<usize> {
+        let mut brace_count = 0;
+        let mut in_string = false;
+        let mut escaped = false;
+        let mut found_start = false;
+
+        for (i, ch) in content.char_indices() {
+            if escaped {
+                escaped = false;
+                continue;
+            }
+
+            if ch == '\\' {
+                escaped = true;
+                continue;
+            }
+
+            if ch == '"' {
+                in_string = !in_string;
+                continue;
+            }
+
+            if !in_string {
+                if ch == '{' {
+                    found_start = true;
+                    brace_count += 1;
+                } else if ch == '}' {
+                    brace_count -= 1;
+                    if brace_count == 0 && found_start {
+                        return Some(i + 1);
+                    }
+                }
+            }
+        }
+
+        // If we never found a closing brace but we have content, return the full length
+        if found_start && brace_count > 0 {
+            Some(content.len())
+        } else {
+            None
+        }
+    }
+
     /// Compute the actual proposal analysis (without caching)
     async fn compute_proposal_analysis(
         &self,
@@ -307,6 +364,154 @@ impl AgentService {
 
         Ok(research_response)
     }
+
+    /// Compute the actual roadmap generation (without caching)
+    async fn compute_roadmap(&self, request: &RoadmapRequest) -> Result<RoadmapResponse> {
+        // Construct the user prompt with the specific request parameters
+        let user_prompt = format!(
+            "SUBJECT = \"{}\", KIND = \"{}\", SCOPE = \"{}\"",
+            request.subject, request.kind, request.scope
+        );
+
+        let mut user_prompt = user_prompt;
+        if let Some(from) = &request.from {
+            user_prompt.push_str(&format!(", FROM = \"{}\"", from));
+        }
+        if let Some(to) = &request.to {
+            user_prompt.push_str(&format!(", TO = \"{}\"", to));
+        }
+        user_prompt.push_str(". Produce JSON per *Outcome‑Driven Roadmap Schema v1.0.0*. Ensure every intervention is linked to a problem, or create a problem, or mark link as `unclear`. Validate whether each intervention is live/stale/abandoned using explicit signals and citations. IMPORTANT: Return ONLY the JSON object - no markdown code blocks, no backticks, no explanatory text. Your response must start with { and end with }.");
+
+        let request_builder = ChatCompletionRequest::builder()
+            .model(self.config.roadmap_model_name.clone()) // Use configurable model for roadmap generation
+            .messages(vec![
+                Message::new(Role::System, ROADMAP_GENERATION_PROMPT),
+                Message::new(Role::User, &user_prompt),
+            ])
+            .build()
+            .map_err(|e| crate::utils::error::Error::Internal(e.to_string()))?;
+
+        let response = self
+            .openrouter
+            .send_chat_completion(&request_builder)
+            .await
+            .map_err(|e| crate::utils::error::Error::Internal(e.to_string()))?;
+
+        let content = response.choices[0]
+            .content()
+            .ok_or(crate::utils::error::Error::Internal(
+                "No content in response".to_string(),
+            ))?
+            .to_string();
+
+        // Clean the response content - remove markdown code blocks if present
+        let cleaned_content = if content.contains("```json") {
+            // Find the start and end of the JSON block
+            if let Some(start) = content.find("```json") {
+                let json_start = start + 7; // Length of "```json"
+                if let Some(end) = content[json_start..].find("```") {
+                    content[json_start..json_start + end].trim()
+                } else {
+                    // If no closing ```, try to find the end of the JSON object
+                    let json_content = &content[json_start..];
+                    if let Some(json_end) = Self::find_json_end(json_content) {
+                        json_content[..json_end].trim()
+                    } else {
+                        json_content.trim()
+                    }
+                }
+            } else {
+                content.trim()
+            }
+        } else if content.contains("```") {
+            // Find the start and end of the code block
+            if let Some(start) = content.find("```") {
+                let code_start = start + 3; // Length of "```"
+                if let Some(end) = content[code_start..].find("```") {
+                    content[code_start..code_start + end].trim()
+                } else {
+                    // If no closing ```, try to find the end of the JSON object
+                    let code_content = &content[code_start..];
+                    if let Some(json_end) = Self::find_json_end(code_content) {
+                        code_content[..json_end].trim()
+                    } else {
+                        code_content.trim()
+                    }
+                }
+            } else {
+                content.trim()
+            }
+        } else {
+            // Try to find JSON object boundaries even without code blocks
+            if let Some(json_start) = content.find('{') {
+                let json_content = &content[json_start..];
+                if let Some(json_end) = Self::find_json_end(json_content) {
+                    json_content[..json_end].trim()
+                } else {
+                    json_content.trim()
+                }
+            } else {
+                content.trim()
+            }
+        };
+
+        // Parse the JSON response into our structured format
+        let roadmap_response = match serde_json::from_str::<RoadmapResponse>(cleaned_content) {
+            Ok(parsed_response) => parsed_response,
+            Err(e) => {
+                // Log detailed error information for debugging
+                error!("Failed to parse roadmap response: {}", e);
+                error!("Raw response length: {} chars", content.len());
+                error!("Cleaned response length: {} chars", cleaned_content.len());
+                error!(
+                    "Raw response (first 500 chars): {}",
+                    &content[..content.len().min(500)]
+                );
+                error!(
+                    "Cleaned response (first 500 chars): {}",
+                    &cleaned_content[..cleaned_content.len().min(500)]
+                );
+
+                // Analyze JSON structure issues
+                let open_braces = cleaned_content.matches('{').count();
+                let close_braces = cleaned_content.matches('}').count();
+                error!(
+                    "Brace count - Open: {}, Close: {}",
+                    open_braces, close_braces
+                );
+
+                // Try to find the last complete JSON object
+                if let Some(last_brace) = cleaned_content.rfind('}') {
+                    let potential_json = &cleaned_content[..last_brace + 1];
+                    info!("Attempting to parse truncated JSON");
+
+                    // Try parsing the truncated version
+                    match serde_json::from_str::<RoadmapResponse>(potential_json) {
+                        Ok(parsed) => {
+                            info!("Successfully parsed truncated JSON");
+                            parsed
+                        }
+                        Err(e2) => {
+                            error!("Failed to parse truncated JSON: {}", e2);
+                            // Instead of silently creating a fallback response, return a proper error
+                            return Err(crate::utils::error::Error::Internal(format!(
+                                "Failed to parse roadmap response: {}. Original error: {}",
+                                e2, e
+                            )));
+                        }
+                    }
+                } else {
+                    // Return a proper error instead of a silent fallback
+                    return Err(crate::utils::error::Error::Internal(format!(
+                        "Failed to parse roadmap response: {}",
+                        e
+                    )));
+                }
+            }
+        };
+
+        Ok(roadmap_response)
+    }
 }
 
 impl AgentServiceTrait for AgentService {
@@ -350,5 +555,75 @@ impl AgentServiceTrait for AgentService {
     /// Get cached deep research results (deprecated - use deep_research instead)
     async fn get_cached_deep_research(&self, topic: &str) -> Result<Option<DeepResearchResult>> {
         self.community_repo.get_by_topic(topic).await
+    }
+
+    /// Generate a roadmap for a protocol/DAO/company with caching
+    async fn generate_roadmap(&self, request: &RoadmapRequest) -> Result<RoadmapApiResponse> {
+        // Create a cache query based on the request parameters
+        let mut query_params = std::collections::HashMap::new();
+        query_params.insert("subject".to_string(), request.subject.clone());
+        query_params.insert("kind".to_string(), request.kind.clone());
+        query_params.insert("scope".to_string(), request.scope.clone());
+
+        let query = CacheableQuery::new("/roadmap", "POST")
+            .with_params(query_params)
+            .with_body(request)?;
+
+        let request_clone = request.clone();
+        let cached_response = self
+            .cache_service
+            .cache_or_compute(&query, || async {
+                let roadmap_response = self.compute_roadmap(&request_clone).await?;
+
+                // Create the result with proper metadata
+                let result = RoadmapResult {
+                    id: uuid::Uuid::new_v4(),
+                    request: request_clone,
+                    response: roadmap_response,
+                    created_at: chrono::Utc::now(),
+                    expires_at: chrono::Utc::now() + chrono::Duration::hours(24),
+                };
+
+                Ok(RoadmapApiResponse {
+                    result,
+                    cache_info: None,
+                })
+            })
+            .await?;
+
+        Ok(cached_response.data)
+    }
+
+    /// Get cached roadmap results
+    async fn get_cached_roadmap(
+        &self,
+        request: &RoadmapRequest,
+    ) -> Result<Option<RoadmapApiResponse>> {
+        // Create a cacheable query for the roadmap request
+        let mut query = CacheableQuery::new("/roadmap", "GET")
+            .with_param("subject", &request.subject)
+            .with_param("kind", &request.kind)
+            .with_param("scope", &request.scope);
+
+        // Add optional date parameters if present
+        if let Some(from) = &request.from {
+            query = query.with_param("from", from);
+        }
+
+        if let Some(to) = &request.to {
+            query = query.with_param("to", to);
+        }
+
+        // Generate the roadmap to ensure it's cached
+        // This is a workaround since we don't have direct access to check the cache
+        // The POST endpoint will return cached data if available
+        debug!(
+            "Attempting to retrieve cached roadmap for query: {}",
+            query.cache_description()
+        );
+
+        // For now, we'll return None and let the POST endpoint handle caching
+        // In a future update, we could implement a proper cache check mechanism
+        Ok(None)
     }
 }

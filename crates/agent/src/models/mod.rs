@@ -15,6 +15,8 @@ pub mod deepresearch;
 pub mod health;
 /// Proposal data model
 pub mod proposal;
+/// Roadmap data model
+pub mod roadmap;
 /// Webhook event data model
 pub mod webhook;
 
@@ -43,4 +45,5 @@ pub use deepresearch::{
 };
 pub use health::HealthResponse;
 pub use proposal::Proposal;
+pub use roadmap::{RoadmapApiResponse, RoadmapRequest, RoadmapResponse, RoadmapResult};
 pub use webhook::WebhookEvent;
