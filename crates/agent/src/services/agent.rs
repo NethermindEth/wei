@@ -3,8 +3,7 @@
 use std::future::Future;
 
 use openrouter_rs::{api::chat::ChatCompletionRequest, types::Role, Message, OpenRouterClient};
-use serde_json;
-use tracing::error;
+use tracing::{debug, error, info};
 
 use crate::models::analysis::{EvaluationCategory, StructuredAnalysisResponse};
 use crate::models::deepresearch::{DeepResearchResponse, DeepResearchResult};
@@ -278,7 +277,7 @@ impl AgentService {
         user_prompt.push_str(". Produce JSON per *Outcome‑Driven Roadmap Schema v1.0.0*. Ensure every intervention is linked to a problem, or create a problem, or mark link as `unclear`. Validate whether each intervention is live/stale/abandoned using explicit signals and citations. IMPORTANT: Return ONLY the JSON object - no markdown code blocks, no backticks, no explanatory text. Your response must start with { and end with }.");
 
         let request_builder = ChatCompletionRequest::builder()
-            .model("perplexity/sonar-pro".to_string()) // Use Sonar DeepResearch Pro model for comprehensive research
+            .model(self.config.roadmap_model_name.clone()) // Use configurable model for roadmap generation
             .messages(vec![
                 Message::new(Role::System, ROADMAP_GENERATION_PROMPT),
                 Message::new(Role::User, &user_prompt),
@@ -354,93 +353,48 @@ impl AgentService {
         let roadmap_response = match serde_json::from_str::<RoadmapResponse>(cleaned_content) {
             Ok(parsed_response) => parsed_response,
             Err(e) => {
+                // Log detailed error information for debugging
                 error!("Failed to parse roadmap response: {}", e);
                 error!("Raw response length: {} chars", content.len());
                 error!("Cleaned response length: {} chars", cleaned_content.len());
                 error!(
-                    "Raw response (first 2000 chars): {}",
-                    &content[..content.len().min(2000)]
+                    "Raw response (first 500 chars): {}",
+                    &content[..content.len().min(500)]
                 );
                 error!(
-                    "Cleaned response (first 2000 chars): {}",
-                    &cleaned_content[..cleaned_content.len().min(2000)]
+                    "Cleaned response (first 500 chars): {}",
+                    &cleaned_content[..cleaned_content.len().min(500)]
                 );
 
-                // Try to find where the JSON parsing failed
-                error!("JSON parsing error details: {}", e);
-
-                // Check if the JSON is properly closed
+                // Analyze JSON structure issues
                 let open_braces = cleaned_content.matches('{').count();
                 let close_braces = cleaned_content.matches('}').count();
-                error!(
-                    "Brace count - Open: {}, Close: {}",
-                    open_braces, close_braces
-                );
-
-                // Check if the response ends properly
-                let trimmed = cleaned_content.trim();
-                if !trimmed.ends_with('}') {
-                    error!(
-                        "Response doesn't end with '}}' - last 100 chars: {}",
-                        &trimmed[trimmed.len().saturating_sub(100)..]
-                    );
-                }
-
+                error!("Brace count - Open: {}, Close: {}", open_braces, close_braces);
+                
                 // Try to find the last complete JSON object
                 if let Some(last_brace) = cleaned_content.rfind('}') {
                     let potential_json = &cleaned_content[..last_brace + 1];
-                    error!(
-                        "Attempting to parse truncated JSON (first {} chars): {}",
-                        potential_json.len(),
-                        &potential_json[..potential_json.len().min(500)]
-                    );
-
+                    info!("Attempting to parse truncated JSON");
+                    
                     // Try parsing the truncated version
                     match serde_json::from_str::<RoadmapResponse>(potential_json) {
-                        Ok(truncated_response) => {
-                            error!("Successfully parsed truncated JSON! Using truncated response.");
-                            return Ok(truncated_response);
+                        Ok(parsed) => {
+                            info!("Successfully parsed truncated JSON");
+                            parsed
                         }
-                        Err(truncated_e) => {
-                            error!("Truncated JSON also failed to parse: {}", truncated_e);
+                        Err(e2) => {
+                            error!("Failed to parse truncated JSON: {}", e2);
+                            // Instead of silently creating a fallback response, return a proper error
+                            return Err(crate::utils::error::Error::Internal(
+                                format!("Failed to parse roadmap response: {}. Original error: {}", e2, e)
+                            ));
                         }
                     }
-                }
-
-                // Create a fallback response with minimal structure
-                RoadmapResponse {
-                    schema_version: "1.0.0".to_string(),
-                    domain: crate::models::roadmap::Domain {
-                        name: request.subject.clone(),
-                        kind: request.kind.clone(),
-                        scope: request.scope.clone(),
-                        as_of: chrono::Utc::now().format("%Y-%m-%d").to_string(),
-                        research_window: if request.from.is_some() || request.to.is_some() {
-                            Some(crate::models::roadmap::ResearchWindow {
-                                from: request
-                                    .from
-                                    .clone()
-                                    .unwrap_or_else(|| "2024-01-01".to_string()),
-                                to: request.to.clone().unwrap_or_else(|| {
-                                    chrono::Utc::now().format("%Y-%m-%d").to_string()
-                                }),
-                            })
-                        } else {
-                            None
-                        },
-                    },
-                    streams: vec!["General".to_string()],
-                    fitness_functions: vec![],
-                    problems: vec![],
-                    interventions: vec![],
-                    proposals: None,
-                    links: vec![],
-                    sources: vec![],
-                    metadata: Some(crate::models::roadmap::Metadata {
-                        generator: Some("Wei Agent".to_string()),
-                        generated_at: Some(chrono::Utc::now().to_rfc3339()),
-                        notes: Some("Fallback response due to parsing error".to_string()),
-                    }),
+                } else {
+                    // Return a proper error instead of a silent fallback
+                    return Err(crate::utils::error::Error::Internal(
+                        format!("Failed to parse roadmap response: {}", e)
+                    ));
                 }
             }
         };
@@ -523,10 +477,30 @@ impl AgentServiceTrait for AgentService {
     /// Get cached roadmap results
     async fn get_cached_roadmap(
         &self,
-        _request: &RoadmapRequest,
+        request: &RoadmapRequest,
     ) -> Result<Option<RoadmapApiResponse>> {
-        // The POST endpoint handles caching automatically through cache_or_compute
-        // This GET endpoint is not needed since POST already returns cached data
+        // Create a cacheable query for the roadmap request
+        let mut query = CacheableQuery::new("/roadmap", "GET")
+            .with_param("subject", &request.subject)
+            .with_param("kind", &request.kind)
+            .with_param("scope", &request.scope);
+            
+        // Add optional date parameters if present
+        if let Some(from) = &request.from {
+            query = query.with_param("from", from);
+        }
+        
+        if let Some(to) = &request.to {
+            query = query.with_param("to", to);
+        }
+        
+        // Generate the roadmap to ensure it's cached
+        // This is a workaround since we don't have direct access to check the cache
+        // The POST endpoint will return cached data if available
+        debug!("Attempting to retrieve cached roadmap for query: {}", query.cache_description());
+        
+        // For now, we'll return None and let the POST endpoint handle caching
+        // In a future update, we could implement a proper cache check mechanism
         Ok(None)
     }
 }

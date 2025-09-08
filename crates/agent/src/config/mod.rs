@@ -26,6 +26,10 @@ pub struct Config {
     /// AI model name
     #[arg(env = "WEI_AGENT_AI_MODEL_NAME", long, default_value = "gpt-4o-mini")]
     pub ai_model_name: String,
+    
+    /// Roadmap generation model name
+    #[arg(env = "WEI_AGENT_ROADMAP_MODEL_NAME", long, default_value = "perplexity/sonar-pro")]
+    pub roadmap_model_name: String,
 
     /// AI model API key
     #[arg(env = "WEI_AGENT_OPEN_ROUTER_API_KEY", long)]
