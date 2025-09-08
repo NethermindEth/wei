@@ -34,7 +34,7 @@ export function useSpaces(): UseSpacesResult {
         const result = await apolloClient.query<SpacesData>({
           query: SpacesQuery,
           variables: {
-            first: 100,
+            first: 1000,
             skip: 0
           }
         });

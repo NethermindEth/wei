@@ -16,4 +16,3 @@ pub mod utils;
 // Re-export commonly used types
 pub use config::Config;
 pub use models::{Actor, Proposal, ProtocolId};
-pub use services::IndexerService;

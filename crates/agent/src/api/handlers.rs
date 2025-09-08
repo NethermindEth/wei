@@ -28,7 +28,8 @@ fn is_valid_date_format(date: &str) -> bool {
 use crate::{
     api::{error::ApiError, routes::AppState},
     models::{
-        analysis::AnalyzeResponse, DeepResearchApiResponse, DeepResearchRequest, HealthResponse,
+        analysis::AnalyzeResponse, CustomEvaluationRequest, CustomEvaluationResponse,
+        DeepResearchApiResponse, DeepResearchRequest, HealthResponse,
         Proposal, RoadmapApiResponse, RoadmapRequest,
     },
     services::{
@@ -620,4 +621,27 @@ pub async fn get_cached_roadmap(
             "No cached roadmap found for the given parameters",
         )),
     }
+}
+
+/// Custom evaluate a proposal with specific criteria
+pub async fn custom_evaluate_proposal(
+    State(state): State<AppState>,
+    Json(request): Json<CustomEvaluationRequest>,
+) -> Result<Json<CustomEvaluationResponse>, ApiError> {
+    // Create a temporary proposal object from the content
+    let proposal = Proposal {
+        description: request.content.clone(),
+    };
+
+    // Perform custom evaluation
+    let custom_response = state
+        .agent_service
+        .custom_evaluate_proposal(&proposal, &request)
+        .await
+        .map_err(|e| {
+            error!("Error performing custom evaluation: {:?}", e);
+            ApiError::internal_error(format!("Failed to evaluate proposal: {}", e))
+        })?;
+
+    Ok(Json(custom_response))
 }

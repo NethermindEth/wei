@@ -10,8 +10,4 @@ pub mod id;
 /// Data validation utilities
 pub mod validation;
 
-// TODO: Remove unused imports after development phase
-#[allow(unused_imports)]
-pub use error::IndexerError;
-#[allow(unused_imports)]
-pub use id::generate_proposal_id;
+// Re-exports will be added here when needed

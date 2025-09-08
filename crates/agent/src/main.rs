@@ -16,6 +16,7 @@ use agent::services::agent::AgentService;
 use agent::services::cache::CacheService;
 
 #[tokio::main]
+#[allow(clippy::result_large_err)]
 async fn main() -> agent::Result<()> {
     dotenv::dotenv().ok();
 

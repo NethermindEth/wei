@@ -16,7 +16,7 @@ pub mod swagger;
 pub mod utils;
 
 // Re-export commonly used types
+pub use crate::services::agent::AgentService;
 pub use config::Config;
 pub use models::{Analysis, AnalysisResult};
-pub use services::AgentService;
 pub use utils::error::{Error, Result};

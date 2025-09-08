@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useMemo } from "react";
 import { useQueryState } from "nuqs";
-
 import { ProposalList } from "../proposals/proposal-list";
 import { Proposal as GraphQLProposal, useProposals } from "../../hooks/useProposals";
 import { Header, Protocol } from "../ui/header";
@@ -21,6 +20,7 @@ export function AnalyzerClient() {
     shallow: true,
     clearOnDefault: true,
   });
+  
   const [activeTab, setActiveTab] = useQueryState("tab", {
     history: "push",
     shallow: true,
@@ -41,7 +41,7 @@ export function AnalyzerClient() {
   // Fetch proposals for search functionality
   const { proposals: allProposals } = useProposals(1000); // Get more proposals for search
 
-    const handleSelectProposal = async (proposal: GraphQLProposal) => {
+  const handleSelectProposal = async (proposal: GraphQLProposal) => {
     setProposalId(proposal.id);
     // If proposal has a space, switch to that space/protocol
     if (proposal.space?.id) {
@@ -50,7 +50,7 @@ export function AnalyzerClient() {
     // Switch to proposals tab when selecting a proposal
     setActiveTab("proposals");
   };
-  
+
 
 
   // Convert spaces to protocols for the header
@@ -69,7 +69,7 @@ export function AnalyzerClient() {
     setSelectedSpaceId(protocolId);
     // Keep current tab unless we're switching to "All Protocols" and not on proposals tab
     if (!protocolId && activeTab === "protocol") {
-    setActiveTab("proposals");
+      setActiveTab("proposals");
     }
   };
 
@@ -111,7 +111,6 @@ export function AnalyzerClient() {
           activeTab={activeTab}
           onTabChange={handleTabChange}
         />
-        
         <div className="mt-6">
           {activeTab === "protocol" && selectedSpaceId && (
             <CommunityAnalysis topic={selectedSpaceId} variant="protocol" />
@@ -154,11 +153,18 @@ export function AnalyzerClient() {
               />
             </div>
           )}
-
+          
           {activeTab === "proposals" && proposalId && (
-            <ProposalPage proposalId={proposalId} />
+            <>
+              <ProposalPage proposalId={proposalId} />
+              
+              
+            </>
           )}
+          
         </div>
+        
+      
       </main>
 
       <SearchModal
@@ -171,4 +177,4 @@ export function AnalyzerClient() {
       />
     </div>
   );
-} 
+}

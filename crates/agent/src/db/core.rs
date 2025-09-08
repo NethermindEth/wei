@@ -122,27 +122,11 @@ pub async fn ensure_database_exists(connection_params: &str) -> Result<bool, Dat
 
 /// Initialize the database with automatic creation and run migrations only for new databases
 pub async fn init_db_with_migrations(database_url: &str) -> Result<Database, DatabaseError> {
-    // Create database if needed and check if it's new
-    let is_new_database = ensure_database_exists(database_url).await?;
-
     // Connect to the database
     let pool = init_db_pool(database_url).await?;
 
     // Run migrations only if the database was newly created
-    if is_new_database {
-        info!("New database detected, running migrations");
-        sqlx::migrate!("./migrations")
-            .run(&pool)
-            .await
-            .map_err(|e| {
-                error!("Error running migrations: {}", e);
-                DatabaseError::Migration(e)
-            })?;
-
-        info!("Database migrations completed successfully");
-    } else {
-        info!("Using existing database, skipping migrations");
-    }
+    run_migrations(&pool).await?;
 
     Ok(pool)
 }
@@ -154,4 +138,20 @@ pub async fn init_db_pool(database_url: &str) -> Result<Database, DbError> {
         .acquire_timeout(Duration::from_secs(3))
         .connect(database_url)
         .await
+}
+
+/// Run migrations
+pub async fn run_migrations(pool: &sqlx::Pool<sqlx::Postgres>) -> Result<(), DatabaseError> {
+    info!("Run  migrations...");
+
+    sqlx::migrate!("./migrations")
+        .run(pool)
+        .await
+        .map_err(|e| {
+            error!("Error running migrations: {}", e);
+            DatabaseError::Migration(e)
+        })?;
+
+    info!("Migrations completed successfully");
+    Ok(())
 }

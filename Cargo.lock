@@ -86,6 +86,7 @@ dependencies = [
  "hex",
  "json5",
  "mockall",
+ "once_cell",
  "openrouter-rs",
  "regex",
  "reqwest",

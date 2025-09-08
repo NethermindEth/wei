@@ -5,3 +5,6 @@
 
 /// Error types and handling
 pub mod error;
+
+/// Markdown parsing utilities
+pub mod markdown;
