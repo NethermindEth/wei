@@ -9,12 +9,29 @@ use std::collections::HashMap;
 use tracing::error;
 use utoipa::ToSchema;
 
+/// Helper function to validate date format (YYYY-MM-DD)
+fn is_valid_date_format(date: &str) -> bool {
+    // Check basic format with regex
+    let re = regex::Regex::new(r"^\d{4}-\d{2}-\d{2}$").unwrap();
+    if !re.is_match(date) {
+        return false;
+    }
+
+    // Validate as actual date
+    if let Ok(_parsed_date) = chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d") {
+        // Additional validation if needed (e.g., not in the future)
+        return true;
+    }
+
+    false
+}
+
 use crate::{
     api::{error::ApiError, routes::AppState},
     models::{
         analysis::{AnalyzeResponse, ProposalArguments},
         CustomEvaluationRequest, CustomEvaluationResponse, DeepResearchApiResponse,
-        DeepResearchRequest, HealthResponse, Proposal,
+        DeepResearchRequest, HealthResponse, Proposal, RoadmapApiResponse, RoadmapRequest,
     },
     services::{
         agent::AgentServiceTrait,
@@ -504,6 +521,181 @@ pub async fn get_proposal_arguments(
         arguments,
         from_cache: cached_response.from_cache,
     }))
+}
+
+/// Generate a roadmap for a protocol/DAO/company
+#[utoipa::path(
+    post,
+    path = "/roadmap",
+    request_body = RoadmapRequest,
+    responses(
+        (status = 200, description = "Roadmap generated successfully", body = RoadmapApiResponse),
+        (status = 400, description = "Invalid request data"),
+        (status = 500, description = "Internal server error during roadmap generation")
+    ),
+    tag = "Roadmap",
+    summary = "Generate an outcome-driven roadmap",
+    description = descriptions::HANDLER_GENERATE_ROADMAP_DESCRIPTION
+)]
+pub async fn generate_roadmap(
+    State(state): State<AppState>,
+    Json(request): Json<RoadmapRequest>,
+) -> Result<Json<RoadmapApiResponse>, ApiError> {
+    // Validate required fields
+    if request.subject.trim().is_empty() {
+        return Err(ApiError::bad_request("Subject cannot be empty"));
+    }
+
+    if request.kind.trim().is_empty() {
+        return Err(ApiError::bad_request("Kind cannot be empty"));
+    }
+
+    if request.scope.trim().is_empty() {
+        return Err(ApiError::bad_request("Scope cannot be empty"));
+    }
+
+    // Validate date formats if provided
+    if let Some(from_date) = &request.from {
+        if !is_valid_date_format(from_date) {
+            return Err(ApiError::bad_request(
+                "From date must be in YYYY-MM-DD format",
+            ));
+        }
+    }
+
+    if let Some(to_date) = &request.to {
+        if !is_valid_date_format(to_date) {
+            return Err(ApiError::bad_request(
+                "To date must be in YYYY-MM-DD format",
+            ));
+        }
+    }
+
+    // Validate date range if both dates are provided
+    if let (Some(from_date), Some(to_date)) = (&request.from, &request.to) {
+        if from_date > to_date {
+            return Err(ApiError::bad_request(
+                "From date must be before or equal to To date",
+            ));
+        }
+    }
+
+    let roadmap_result = state
+        .agent_service
+        .generate_roadmap(&request)
+        .await
+        .map_err(|e| {
+            error!("Error generating roadmap: {:?}", e);
+            ApiError::internal_error(format!("Failed to generate roadmap: {}", e))
+        })?;
+
+    Ok(Json(roadmap_result))
+}
+
+/// Get cached roadmap results
+#[utoipa::path(
+    get,
+    path = "/roadmap",
+    params(
+        ("subject" = String, Query, description = "The subject/domain name"),
+        ("kind" = String, Query, description = "The kind of entity"),
+        ("scope" = String, Query, description = "One-line scope description"),
+        ("from" = Option<String>, Query, description = "Research window start date (YYYY-MM-DD)"),
+        ("to" = Option<String>, Query, description = "Research window end date (YYYY-MM-DD)")
+    ),
+    responses(
+        (status = 200, description = "Cached roadmap retrieved successfully", body = RoadmapApiResponse),
+        (status = 404, description = "No cached roadmap found"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "Roadmap",
+    summary = "Get cached roadmap results",
+    description = descriptions::HANDLER_GET_CACHED_ROADMAP_DESCRIPTION
+)]
+
+pub async fn get_cached_roadmap(
+    Query(params): Query<HashMap<String, String>>,
+    State(state): State<AppState>,
+) -> Result<Json<RoadmapApiResponse>, ApiError> {
+    // Extract and validate required parameters
+    let subject = params
+        .get("subject")
+        .ok_or_else(|| ApiError::bad_request("Missing required parameter: subject"))?
+        .clone();
+
+    if subject.trim().is_empty() {
+        return Err(ApiError::bad_request("Subject cannot be empty"));
+    }
+
+    let kind = params
+        .get("kind")
+        .ok_or_else(|| ApiError::bad_request("Missing required parameter: kind"))?
+        .clone();
+
+    if kind.trim().is_empty() {
+        return Err(ApiError::bad_request("Kind cannot be empty"));
+    }
+
+    let scope = params
+        .get("scope")
+        .ok_or_else(|| ApiError::bad_request("Missing required parameter: scope"))?
+        .clone();
+
+    if scope.trim().is_empty() {
+        return Err(ApiError::bad_request("Scope cannot be empty"));
+    }
+
+    // Extract and validate optional date parameters
+    let from = params.get("from").cloned();
+    if let Some(from_date) = &from {
+        if !is_valid_date_format(from_date) {
+            return Err(ApiError::bad_request(
+                "From date must be in YYYY-MM-DD format",
+            ));
+        }
+    }
+
+    let to = params.get("to").cloned();
+    if let Some(to_date) = &to {
+        if !is_valid_date_format(to_date) {
+            return Err(ApiError::bad_request(
+                "To date must be in YYYY-MM-DD format",
+            ));
+        }
+    }
+
+    // Validate date range if both dates are provided
+    if let (Some(from_date), Some(to_date)) = (&from, &to) {
+        if from_date > to_date {
+            return Err(ApiError::bad_request(
+                "From date must be before or equal to To date",
+            ));
+        }
+    }
+
+    let request = RoadmapRequest {
+        subject,
+        kind,
+        scope,
+        from,
+        to,
+    };
+
+    let roadmap_result = state
+        .agent_service
+        .get_cached_roadmap(&request)
+        .await
+        .map_err(|e| {
+            error!("Error getting cached roadmap: {:?}", e);
+            ApiError::internal_error(format!("Failed to get cached roadmap: {}", e))
+        })?;
+
+    match roadmap_result {
+        Some(result) => Ok(Json(result)),
+        None => Err(ApiError::not_found(
+            "No cached roadmap found for the given parameters",
+        )),
+    }
 }
 
 /// Custom evaluate a proposal with specific criteria

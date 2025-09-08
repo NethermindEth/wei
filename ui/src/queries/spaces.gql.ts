@@ -5,8 +5,8 @@ export const SpacesQuery = gql`
     spaces(
       first: $first
       skip: $skip
-      orderBy: "created"
       where:{verified:true}
+      orderBy: "created"
       orderDirection: desc
     ) {
       id
