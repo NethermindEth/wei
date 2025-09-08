@@ -13,18 +13,18 @@ use crate::models::custom_evaluation::{
 };
 use crate::models::deepresearch::{DeepResearchResponse, DeepResearchResult};
 use crate::models::roadmap::{RoadmapApiResponse, RoadmapRequest, RoadmapResponse, RoadmapResult};
-use crate::prompts::{ANALYZE_PROPOSAL_PROMPT, DEEP_RESEARCH_PROMPT, ROADMAP_GENERATION_PROMPT};
 use crate::prompts::custom_evaluation::generate_custom_evaluation_prompt;
+use crate::prompts::{ANALYZE_PROPOSAL_PROMPT, DEEP_RESEARCH_PROMPT, ROADMAP_GENERATION_PROMPT};
 use crate::utils::error::{Error, ResponseError, Result};
 use crate::utils::markdown::extract_json_from_markdown;
 
 use crate::{
-    services::cache::{CacheService, CacheableQuery, CachedResponse},
     db::{
         core::Database,
         repositories::{CacheRepository, CommunityRepository},
     },
     models::Proposal,
+    services::cache::{CacheService, CacheableQuery, CachedResponse},
     Config,
 };
 
@@ -475,13 +475,16 @@ impl AgentService {
                 // Analyze JSON structure issues
                 let open_braces = cleaned_content.matches('{').count();
                 let close_braces = cleaned_content.matches('}').count();
-                error!("Brace count - Open: {}, Close: {}", open_braces, close_braces);
-                
+                error!(
+                    "Brace count - Open: {}, Close: {}",
+                    open_braces, close_braces
+                );
+
                 // Try to find the last complete JSON object
                 if let Some(last_brace) = cleaned_content.rfind('}') {
                     let potential_json = &cleaned_content[..last_brace + 1];
                     info!("Attempting to parse truncated JSON");
-                    
+
                     // Try parsing the truncated version
                     match serde_json::from_str::<RoadmapResponse>(potential_json) {
                         Ok(parsed) => {
@@ -491,16 +494,18 @@ impl AgentService {
                         Err(e2) => {
                             error!("Failed to parse truncated JSON: {}", e2);
                             // Instead of silently creating a fallback response, return a proper error
-                            return Err(crate::utils::error::Error::Internal(
-                                format!("Failed to parse roadmap response: {}. Original error: {}", e2, e)
-                            ));
+                            return Err(crate::utils::error::Error::Internal(format!(
+                                "Failed to parse roadmap response: {}. Original error: {}",
+                                e2, e
+                            )));
                         }
                     }
                 } else {
                     // Return a proper error instead of a silent fallback
-                    return Err(crate::utils::error::Error::Internal(
-                        format!("Failed to parse roadmap response: {}", e)
-                    ));
+                    return Err(crate::utils::error::Error::Internal(format!(
+                        "Failed to parse roadmap response: {}",
+                        e
+                    )));
                 }
             }
         };
@@ -599,21 +604,24 @@ impl AgentServiceTrait for AgentService {
             .with_param("subject", &request.subject)
             .with_param("kind", &request.kind)
             .with_param("scope", &request.scope);
-            
+
         // Add optional date parameters if present
         if let Some(from) = &request.from {
             query = query.with_param("from", from);
         }
-        
+
         if let Some(to) = &request.to {
             query = query.with_param("to", to);
         }
-        
+
         // Generate the roadmap to ensure it's cached
         // This is a workaround since we don't have direct access to check the cache
         // The POST endpoint will return cached data if available
-        debug!("Attempting to retrieve cached roadmap for query: {}", query.cache_description());
-        
+        debug!(
+            "Attempting to retrieve cached roadmap for query: {}",
+            query.cache_description()
+        );
+
         // For now, we'll return None and let the POST endpoint handle caching
         // In a future update, we could implement a proper cache check mechanism
         Ok(None)

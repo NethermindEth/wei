@@ -17,4 +17,5 @@ pub const HANDLER_GET_PROPOSAL_ANALYSES_DESCRIPTION: &str = "Get analyses by pro
 pub const HANDLER_GENERATE_ROADMAP_DESCRIPTION: &str = "Generate a comprehensive roadmap for a protocol, DAO, company, or other entity using AI analysis of problems, interventions, and fitness functions.";
 
 /// Description of the get cached roadmap handler
-pub const HANDLER_GET_CACHED_ROADMAP_DESCRIPTION: &str = "Retrieve cached roadmap results for a given set of parameters.";
+pub const HANDLER_GET_CACHED_ROADMAP_DESCRIPTION: &str =
+    "Retrieve cached roadmap results for a given set of parameters.";

@@ -15,13 +15,13 @@ fn is_valid_date_format(date: &str) -> bool {
     if !re.is_match(date) {
         return false;
     }
-    
+
     // Validate as actual date
     if let Ok(_parsed_date) = chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d") {
         // Additional validation if needed (e.g., not in the future)
         return true;
     }
-    
+
     false
 }
 
@@ -29,8 +29,8 @@ use crate::{
     api::{error::ApiError, routes::AppState},
     models::{
         analysis::AnalyzeResponse, CustomEvaluationRequest, CustomEvaluationResponse,
-        DeepResearchApiResponse, DeepResearchRequest, HealthResponse,
-        Proposal, RoadmapApiResponse, RoadmapRequest,
+        DeepResearchApiResponse, DeepResearchRequest, HealthResponse, Proposal, RoadmapApiResponse,
+        RoadmapRequest,
     },
     services::{
         agent::AgentServiceTrait,
@@ -482,35 +482,41 @@ pub async fn generate_roadmap(
     if request.subject.trim().is_empty() {
         return Err(ApiError::bad_request("Subject cannot be empty"));
     }
-    
+
     if request.kind.trim().is_empty() {
         return Err(ApiError::bad_request("Kind cannot be empty"));
     }
-    
+
     if request.scope.trim().is_empty() {
         return Err(ApiError::bad_request("Scope cannot be empty"));
     }
-    
+
     // Validate date formats if provided
     if let Some(from_date) = &request.from {
         if !is_valid_date_format(from_date) {
-            return Err(ApiError::bad_request("From date must be in YYYY-MM-DD format"));
+            return Err(ApiError::bad_request(
+                "From date must be in YYYY-MM-DD format",
+            ));
         }
     }
-    
+
     if let Some(to_date) = &request.to {
         if !is_valid_date_format(to_date) {
-            return Err(ApiError::bad_request("To date must be in YYYY-MM-DD format"));
+            return Err(ApiError::bad_request(
+                "To date must be in YYYY-MM-DD format",
+            ));
         }
     }
-    
+
     // Validate date range if both dates are provided
     if let (Some(from_date), Some(to_date)) = (&request.from, &request.to) {
         if from_date > to_date {
-            return Err(ApiError::bad_request("From date must be before or equal to To date"));
+            return Err(ApiError::bad_request(
+                "From date must be before or equal to To date",
+            ));
         }
     }
-    
+
     let roadmap_result = state
         .agent_service
         .generate_roadmap(&request)
@@ -553,51 +559,57 @@ pub async fn get_cached_roadmap(
         .get("subject")
         .ok_or_else(|| ApiError::bad_request("Missing required parameter: subject"))?
         .clone();
-        
+
     if subject.trim().is_empty() {
         return Err(ApiError::bad_request("Subject cannot be empty"));
     }
-    
+
     let kind = params
         .get("kind")
         .ok_or_else(|| ApiError::bad_request("Missing required parameter: kind"))?
         .clone();
-        
+
     if kind.trim().is_empty() {
         return Err(ApiError::bad_request("Kind cannot be empty"));
     }
-    
+
     let scope = params
         .get("scope")
         .ok_or_else(|| ApiError::bad_request("Missing required parameter: scope"))?
         .clone();
-        
+
     if scope.trim().is_empty() {
         return Err(ApiError::bad_request("Scope cannot be empty"));
     }
-    
+
     // Extract and validate optional date parameters
     let from = params.get("from").cloned();
     if let Some(from_date) = &from {
         if !is_valid_date_format(from_date) {
-            return Err(ApiError::bad_request("From date must be in YYYY-MM-DD format"));
+            return Err(ApiError::bad_request(
+                "From date must be in YYYY-MM-DD format",
+            ));
         }
     }
-    
+
     let to = params.get("to").cloned();
     if let Some(to_date) = &to {
         if !is_valid_date_format(to_date) {
-            return Err(ApiError::bad_request("To date must be in YYYY-MM-DD format"));
+            return Err(ApiError::bad_request(
+                "To date must be in YYYY-MM-DD format",
+            ));
         }
     }
-    
+
     // Validate date range if both dates are provided
     if let (Some(from_date), Some(to_date)) = (&from, &to) {
         if from_date > to_date {
-            return Err(ApiError::bad_request("From date must be before or equal to To date"));
+            return Err(ApiError::bad_request(
+                "From date must be before or equal to To date",
+            ));
         }
     }
-    
+
     let request = RoadmapRequest {
         subject,
         kind,
