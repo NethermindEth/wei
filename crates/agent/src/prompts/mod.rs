@@ -5,6 +5,9 @@
 /// Custom evaluation prompt generator
 pub mod custom_evaluation;
 
+/// Proposal arguments prompt generator
+pub mod proposal_arguments;
+
 /// Professional prompt for analyzing DAO/Governance proposals
 /// Based on standardized evaluation criteria for proposal quality assessment
 pub const ANALYZE_PROPOSAL_PROMPT: &str = r#"You are an expert governance analyst specializing in DAO proposals, DeFi protocols, and decentralized governance systems. Your role is to evaluate governance proposals according to a standardized structure across five key categories.
@@ -115,7 +118,8 @@ IMPORTANT: Your response MUST be a valid JSON object that can be parsed. Follow 
 10. Arrays must be properly formatted with square brackets and comma-separated values
 11. Do not use trailing commas in arrays or objects
 12. Ensure all special characters are properly escaped in strings
-13. Your entire response should be parseable by standard JSON parsers"#;
+13. Your entire response should be parseable by standard JSON parsers
+14. The response must start with { and end with }"#;
 
 /// Deep research prompt for mapping discussion platforms and communities
 pub const DEEP_RESEARCH_PROMPT: &str = r#"Your task is to **map out all the major public discussion platforms and locations** where deep discourse around a given **protocol / community / subculture / idea / topic** happens.
