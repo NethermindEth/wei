@@ -27,7 +27,7 @@ fn is_valid_date_format(date: &str) -> bool {
 }
 
 use crate::{
-    api::{error::ApiError, routes::AppState},
+    api::{error::ApiError, error_utils::{log_and_convert_api_error, OperationContext}, routes::AppState},
     models::{
         analysis::{AnalyzeResponse, ProposalArguments},
         CustomEvaluationRequest, CustomEvaluationResponse, DeepResearchApiResponse,
@@ -83,10 +83,7 @@ pub async fn analyze_proposal(
         .agent_service
         .analyze_proposal(&proposal)
         .await
-        .map_err(|e| {
-            error!("Error analyzing proposal: {:?}", e);
-            ApiError::internal_error(e.to_string())
-        })?;
+        .map_err(|e| log_and_convert_api_error(OperationContext::AnalyzeProposal, e))?;
 
     Ok(Json(AnalyzeResponse {
         structured_response: cached_response.data,
@@ -501,10 +498,7 @@ pub async fn get_proposal_arguments(
         .agent_service
         .get_proposal_arguments(&proposal)
         .await
-        .map_err(|e| {
-            error!("Error getting proposal arguments: {:?}", e);
-            ApiError::internal_error(e.to_string())
-        })?;
+        .map_err(|e| log_and_convert_api_error(OperationContext::GetProposalArguments, e))?;
 
     // Validate response data
     let arguments = cached_response.data;
@@ -584,10 +578,7 @@ pub async fn generate_roadmap(
         .agent_service
         .generate_roadmap(&request)
         .await
-        .map_err(|e| {
-            error!("Error generating roadmap: {:?}", e);
-            ApiError::internal_error(format!("Failed to generate roadmap: {}", e))
-        })?;
+        .map_err(|e| log_and_convert_api_error(OperationContext::GenerateRoadmap, e))?;
 
     Ok(Json(roadmap_result))
 }
@@ -685,10 +676,7 @@ pub async fn get_cached_roadmap(
         .agent_service
         .get_cached_roadmap(&request)
         .await
-        .map_err(|e| {
-            error!("Error getting cached roadmap: {:?}", e);
-            ApiError::internal_error(format!("Failed to get cached roadmap: {}", e))
-        })?;
+        .map_err(|e| log_and_convert_api_error(OperationContext::GetCachedRoadmap, e))?;
 
     match roadmap_result {
         Some(result) => Ok(Json(result)),
@@ -713,10 +701,7 @@ pub async fn custom_evaluate_proposal(
         .agent_service
         .custom_evaluate_proposal(&proposal, &request)
         .await
-        .map_err(|e| {
-            error!("Error performing custom evaluation: {:?}", e);
-            ApiError::internal_error(e.to_string())
-        })?;
+        .map_err(|e| log_and_convert_api_error(OperationContext::CustomEvaluateProposal, e))?;
 
     Ok(Json(custom_response))
 }

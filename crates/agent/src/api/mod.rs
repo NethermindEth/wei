@@ -5,6 +5,8 @@
 
 /// Error handling for API endpoints
 pub mod error;
+/// Error handling utilities
+pub mod error_utils;
 /// Request handlers for API endpoints
 pub mod handlers;
 /// Middleware for request processing
