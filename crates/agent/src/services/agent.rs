@@ -161,6 +161,13 @@ impl AgentService {
         }
     }
 
+    /// Helper function to check if a line is an argument point (bullet point or numbered)
+    fn is_argument_point(line: &str) -> bool {
+        line.trim().starts_with("-") || 
+        line.trim().starts_with("*") || 
+        (line.trim().len() > 2 && line.trim()[0..2].chars().all(|c| c.is_ascii_digit() || c == '.'))
+    }
+
     /// Compute the actual proposal analysis (without caching)
     async fn compute_proposal_analysis(
         &self,
@@ -323,17 +330,19 @@ impl AgentService {
                 Message::new(Role::User, &user_prompt),
             ])
             .build()
-            .map_err(|e| Error::Internal(e.to_string()))?;
+            .map_err(|e| crate::utils::error::Error::Internal(e.to_string()))?;
 
         let response = self
             .openrouter
             .send_chat_completion(&request)
             .await
-            .map_err(|e| Error::Internal(e.to_string()))?;
+            .map_err(|e| crate::utils::error::Error::Internal(e.to_string()))?;
 
         let content = response.choices[0]
             .content()
-            .ok_or(Error::Internal("No content in response".to_string()))?
+            .ok_or(crate::utils::error::Error::Internal(
+                "No content in response".to_string(),
+            ))?
             .to_string();
 
         // Clean the response content - remove markdown code blocks if present
@@ -608,8 +617,7 @@ impl AgentService {
                     }
 
                     // Extract argument points (often bullet points or numbered)
-                    if line.trim().starts_with("-") || line.trim().starts_with("*") || 
-                       (line.trim().len() > 2 && line.trim()[0..2].chars().all(|c| c.is_ascii_digit() || c == '.')) {
+                    if Self::is_argument_point(line) {
                         let arg = line.trim().trim_start_matches(|c: char| c == '-' || c == '*' || c == '.' || c.is_ascii_digit() || c.is_whitespace()).trim().to_string();
                         if !arg.is_empty() {
                             match current_section {
