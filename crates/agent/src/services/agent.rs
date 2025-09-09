@@ -558,7 +558,8 @@ impl AgentService {
         };
 
         // Try to parse the response as ProposalArguments
-        match serde_json::from_str::<crate::models::analysis::ProposalArguments>(&cleaned_content) {
+        use crate::models::analysis::ProposalArguments;
+        match serde_json::from_str::<ProposalArguments>(&cleaned_content) {
             Ok(arguments) => {
                 // Ensure we have at least one argument on each side
                 if arguments.for_proposal.is_empty() || arguments.against.is_empty() {
