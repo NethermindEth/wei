@@ -27,7 +27,11 @@ fn is_valid_date_format(date: &str) -> bool {
 }
 
 use crate::{
-    api::{error::ApiError, error_utils::{log_and_convert_api_error, OperationContext}, routes::AppState},
+    api::{
+        error::ApiError,
+        error_utils::{log_and_convert_api_error, OperationContext},
+        routes::AppState,
+    },
     models::{
         analysis::{AnalyzeResponse, ProposalArguments},
         CustomEvaluationRequest, CustomEvaluationResponse, DeepResearchApiResponse,

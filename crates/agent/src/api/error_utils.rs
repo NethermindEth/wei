@@ -60,7 +60,10 @@ impl OperationContext {
 }
 
 /// Helper function to log errors and convert them to ApiError
-pub fn log_and_convert_api_error<E: std::fmt::Debug + std::fmt::Display>(context: OperationContext, err: E) -> ApiError {
+pub fn log_and_convert_api_error<E: std::fmt::Debug + std::fmt::Display>(
+    context: OperationContext,
+    err: E,
+) -> ApiError {
     error!("Failed to {}: {:?}", context.error_message(), err);
     ApiError::internal_error(format!("Failed to {}: {}", context.error_message(), err))
 }

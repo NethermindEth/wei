@@ -1,11 +1,11 @@
 //! Main agent service
 
+use crate::models::analysis::ProposalArguments;
 use openrouter_rs::{api::chat::ChatCompletionRequest, types::Role, Message, OpenRouterClient};
 use serde_json;
 use std::collections::HashMap;
 use std::future::Future;
 use tracing::{debug, error, info};
-use crate::models::analysis::ProposalArguments;
 
 use crate::{
     db::{
@@ -20,9 +20,9 @@ use crate::{
         Proposal,
     },
     prompts::{
-        custom_evaluation::generate_custom_evaluation_prompt, ANALYZE_PROPOSAL_PROMPT,
+        custom_evaluation::generate_custom_evaluation_prompt,
+        proposal_arguments::PROPOSAL_ARGUMENTS_PROMPT, ANALYZE_PROPOSAL_PROMPT,
         DEEP_RESEARCH_PROMPT, ROADMAP_GENERATION_PROMPT,
-        proposal_arguments::PROPOSAL_ARGUMENTS_PROMPT,
     },
     services::cache::{CacheService, CacheableQuery, CachedResponse},
     utils::{
@@ -163,9 +163,12 @@ impl AgentService {
 
     /// Helper function to check if a line is an argument point (bullet point or numbered)
     fn is_argument_point(line: &str) -> bool {
-        line.trim().starts_with("-") || 
-        line.trim().starts_with("*") || 
-        (line.trim().len() > 2 && line.trim()[0..2].chars().all(|c| c.is_ascii_digit() || c == '.'))
+        line.trim().starts_with("-")
+            || line.trim().starts_with("*")
+            || (line.trim().len() > 2
+                && line.trim()[0..2]
+                    .chars()
+                    .all(|c| c.is_ascii_digit() || c == '.'))
     }
 
     /// Compute the actual proposal analysis (without caching)
@@ -537,7 +540,6 @@ impl AgentService {
         &self,
         proposal: &Proposal,
     ) -> Result<crate::models::analysis::ProposalArguments> {
-      
         let request = ChatCompletionRequest::builder()
             .model(self.config.roadmap_model_name.clone()) // Use model from config
             .messages(vec![
@@ -574,10 +576,16 @@ impl AgentService {
                 if arguments.for_proposal.is_empty() || arguments.against.is_empty() {
                     let mut args = arguments;
                     if args.for_proposal.is_empty() {
-                        args.for_proposal.push("No supporting arguments could be identified for this proposal".to_string());
+                        args.for_proposal.push(
+                            "No supporting arguments could be identified for this proposal"
+                                .to_string(),
+                        );
                     }
                     if args.against.is_empty() {
-                        args.against.push("No opposing arguments could be identified for this proposal".to_string());
+                        args.against.push(
+                            "No opposing arguments could be identified for this proposal"
+                                .to_string(),
+                        );
                     }
                     Ok(args)
                 } else {
@@ -591,7 +599,7 @@ impl AgentService {
                     }
                     Ok(args)
                 }
-            },
+            }
             Err(e) => {
                 error!("Failed to parse arguments response: {}", e);
                 error!("Raw response: {}", content);
@@ -608,17 +616,35 @@ impl AgentService {
                     let line_lower = line.trim().to_lowercase();
 
                     // Detect section headers
-                    if line_lower.contains("for") || line_lower.contains("supporting") || line_lower.contains("pros") || line_lower.contains("pro:") {
+                    if line_lower.contains("for")
+                        || line_lower.contains("supporting")
+                        || line_lower.contains("pros")
+                        || line_lower.contains("pro:")
+                    {
                         current_section = Some("for");
                         continue;
-                    } else if line_lower.contains("against") || line_lower.contains("opposing") || line_lower.contains("cons") || line_lower.contains("con:") {
+                    } else if line_lower.contains("against")
+                        || line_lower.contains("opposing")
+                        || line_lower.contains("cons")
+                        || line_lower.contains("con:")
+                    {
                         current_section = Some("against");
                         continue;
                     }
 
                     // Extract argument points (often bullet points or numbered)
                     if Self::is_argument_point(line) {
-                        let arg = line.trim().trim_start_matches(|c: char| c == '-' || c == '*' || c == '.' || c.is_ascii_digit() || c.is_whitespace()).trim().to_string();
+                        let arg = line
+                            .trim()
+                            .trim_start_matches(|c: char| {
+                                c == '-'
+                                    || c == '*'
+                                    || c == '.'
+                                    || c.is_ascii_digit()
+                                    || c.is_whitespace()
+                            })
+                            .trim()
+                            .to_string();
                         if !arg.is_empty() {
                             match current_section {
                                 Some("for") => for_args.push(arg),
@@ -631,10 +657,13 @@ impl AgentService {
 
                 // If we couldn't extract anything meaningful, provide fallback
                 if for_args.is_empty() {
-                    for_args.push("Could not extract supporting arguments from the response".to_string());
+                    for_args.push(
+                        "Could not extract supporting arguments from the response".to_string(),
+                    );
                 }
                 if against_args.is_empty() {
-                    against_args.push("Could not extract opposing arguments from the response".to_string());
+                    against_args
+                        .push("Could not extract opposing arguments from the response".to_string());
                 }
 
                 Ok(crate::models::analysis::ProposalArguments {
