@@ -324,7 +324,7 @@ impl AgentService {
         );
 
         let request = ChatCompletionRequest::builder()
-            .model("perplexity/sonar-pro".to_string()) // Use Sonar DeepResearch Pro model
+            .model(self.config.roadmap_model_name.clone()) // Use model from config
             .messages(vec![
                 Message::new(Role::System, DEEP_RESEARCH_PROMPT),
                 Message::new(Role::User, &user_prompt),
@@ -539,7 +539,7 @@ impl AgentService {
     ) -> Result<crate::models::analysis::ProposalArguments> {
       
         let request = ChatCompletionRequest::builder()
-            .model("perplexity/sonar-pro".to_string()) // Use Perplexity for better reasoning
+            .model(self.config.roadmap_model_name.clone()) // Use model from config
             .messages(vec![
                 Message::new(Role::System, PROPOSAL_ARGUMENTS_PROMPT),
                 Message::new(Role::User, serde_json::to_string(&proposal)?.as_str()),
