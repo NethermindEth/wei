@@ -5,6 +5,7 @@ use serde_json;
 use std::collections::HashMap;
 use std::future::Future;
 use tracing::{debug, error, info};
+use crate::models::analysis::ProposalArguments;
 
 use crate::{
     db::{
@@ -558,7 +559,6 @@ impl AgentService {
         };
 
         // Try to parse the response as ProposalArguments
-        use crate::models::analysis::ProposalArguments;
         match serde_json::from_str::<ProposalArguments>(&cleaned_content) {
             Ok(arguments) => {
                 // Ensure we have at least one argument on each side
