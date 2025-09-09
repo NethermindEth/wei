@@ -18,7 +18,8 @@ pub const HANDLER_GET_PROPOSAL_ARGUMENTS_SUMMARY: &str = "Get arguments for and 
 
 /// Description of the get proposal arguments handler
 pub const HANDLER_GET_PROPOSAL_ARGUMENTS_DESCRIPTION: &str =
-    "Returns a list of arguments for and against the given proposal";
+    "Returns a list of arguments for and against the given proposal. These arguments are generated using AI analysis of the proposal content and community context.";
+
 /// Description of the generate roadmap handler
 pub const HANDLER_GENERATE_ROADMAP_DESCRIPTION: &str = "Generate a comprehensive roadmap for a protocol, DAO, company, or other entity using AI analysis of problems, interventions, and fitness functions.";
 
