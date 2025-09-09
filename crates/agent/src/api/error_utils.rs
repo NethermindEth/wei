@@ -40,27 +40,27 @@ impl OperationContext {
     /// Get a standardized error message for this operation context
     pub fn error_message(&self) -> &'static str {
         match self {
-            Self::AnalyzeProposal => "Error analyzing proposal",
-            Self::GetProposalArguments => "Error retrieving proposal arguments",
-            Self::CustomEvaluateProposal => "Error performing custom evaluation",
-            Self::GetAnalysis => "Error retrieving analysis",
-            Self::GetProposalAnalyses => "Error retrieving proposal analyses",
-            Self::SearchRelatedProposals => "Error searching for related proposals",
-            Self::AnalyzeCommunity => "Error analyzing community",
-            Self::GetCommunityAnalysis => "Error retrieving community analysis",
-            Self::GenerateRoadmap => "Error generating roadmap",
-            Self::GetCachedRoadmap => "Error retrieving cached roadmap",
-            Self::ListCachedQueries => "Error listing cached queries",
-            Self::GetCacheStats => "Error retrieving cache statistics",
-            Self::InvalidateCache => "Error invalidating cache",
-            Self::RefreshCache => "Error refreshing cache",
-            Self::CleanupCache => "Error cleaning up expired cache",
+            Self::AnalyzeProposal => "analyze proposal",
+            Self::GetProposalArguments => "retrieve proposal arguments",
+            Self::CustomEvaluateProposal => "perform custom evaluation",
+            Self::GetAnalysis => "retrieve analysis",
+            Self::GetProposalAnalyses => "retrieve proposal analyses",
+            Self::SearchRelatedProposals => "search for related proposals",
+            Self::AnalyzeCommunity => "analyze community",
+            Self::GetCommunityAnalysis => "retrieve community analysis",
+            Self::GenerateRoadmap => "generate roadmap",
+            Self::GetCachedRoadmap => "retrieve cached roadmap",
+            Self::ListCachedQueries => "list cached queries",
+            Self::GetCacheStats => "retrieve cache statistics",
+            Self::InvalidateCache => "invalidate cache",
+            Self::RefreshCache => "refresh cache",
+            Self::CleanupCache => "clean up expired cache",
         }
     }
 }
 
 /// Helper function to log errors and convert them to ApiError
 pub fn log_and_convert_api_error<E: std::fmt::Debug + std::fmt::Display>(context: OperationContext, err: E) -> ApiError {
-    error!("{}: {:?}", context.error_message(), err);
-    ApiError::internal_error(format!("{}", err))
+    error!("Failed to {}: {:?}", context.error_message(), err);
+    ApiError::internal_error(format!("Failed to {}: {}", context.error_message(), err))
 }
