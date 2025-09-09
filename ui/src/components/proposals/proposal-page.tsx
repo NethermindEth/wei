@@ -4,7 +4,8 @@ import * as React from "react";
 
 import { ChevronDownIcon, ChevronUpIcon, ArrowPathIcon, ClockIcon, CheckCircleIcon, XCircleIcon, PaperAirplaneIcon } from "@heroicons/react/24/outline";
 import { CommunityAnalysis } from "../community/CommunityAnalysis";
-import { Proposal, useProposals } from "../../hooks/useProposals";
+import { Proposal } from "../../hooks/useProposals";
+import { useProposal } from "../../hooks/useProposal";
 import { ApiService } from "../../services/api";
 import { AnalysisResponse, ProposalArguments, CustomEvaluationRequest, CustomEvaluationResponse } from "../../types/proposal";
 import ReactMarkdown from 'react-markdown';
@@ -53,7 +54,6 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
   const [backendResult, setBackendResult] = React.useState<AnalysisResponse | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [argumentsState, setArgumentsState] = React.useState<ArgumentsState>({ status: 'idle', data: null, error: null });
-  const [selectedProposal, setSelectedProposal] = React.useState<Proposal | null>(null);
   const [isProposalExpanded, setIsProposalExpanded] = React.useState(false);
   const [activeSection, setActiveSection] = React.useState<'feedback' | 'discussion' | 'related' | 'arguments'>('feedback');
   
@@ -62,8 +62,8 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
   const [isCustomEvaluating, setIsCustomEvaluating] = React.useState(false);
   const [customResults, setCustomResults] = React.useState<Array<CustomEvaluationResponse & { timestamp: number, criteria: string }>>([]);
 
-  // Fetch proposals for search functionality
-  const { proposals: allProposals } = useProposals(1000);
+  // Fetch the specific proposal by ID directly
+  const { proposal: selectedProposal, loading: proposalLoading, error: proposalError } = useProposal(proposalId);
 
   const analyzeProposal = React.useCallback(async (proposal: Proposal, forceRefresh = false) => {
     setIsLoading(true);
@@ -109,20 +109,13 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
     }
   }, []);
 
-  // Find the specific proposal by ID
+  // Auto-analyze the proposal when it's loaded
   React.useEffect(() => {
-    if (allProposals.length > 0) {
-      const proposal = allProposals.find(p => p.id === proposalId);
-      
-      if (proposal) {
-        setSelectedProposal(proposal);
-        // Auto-analyze the proposal when it's loaded
-        analyzeProposal(proposal);
-        // Fetch proposal arguments separately
-        fetchProposalArguments(proposal);
-      }
+    if (selectedProposal) {
+      // Auto-analyze the proposal when it's loaded
+      analyzeProposal(selectedProposal);
     }
-  }, [allProposals, proposalId, analyzeProposal, fetchProposalArguments]);
+  }, [selectedProposal, analyzeProposal]);
 
   const handleRefreshAnalysis = async () => {
     if (selectedProposal) {
@@ -185,16 +178,24 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
   };
 
 
+  if (proposalLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="text-white/60 mb-2">Loading proposal...</div>
+          <div className="h-4 w-4 border-2 border-t-[--color-accent] border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin mx-auto"></div>
+        </div>
+      </div>
+    );
+  }
+  
   if (!selectedProposal) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
           <div className="text-white/60 mb-2">
-            {allProposals.length === 0 ? "Loading proposals..." : `Proposal with ID "${proposalId}" not found`}
+            {proposalError ? proposalError.message : `Proposal with ID "${proposalId}" not found`}
           </div>
-          {allProposals.length === 0 && (
-            <div className="h-4 w-4 border-2 border-t-[--color-accent] border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin mx-auto"></div>
-          )}
         </div>
       </div>
     );
