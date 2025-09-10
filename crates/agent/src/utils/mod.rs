@@ -8,3 +8,6 @@ pub mod error;
 
 /// Markdown parsing utilities
 pub mod markdown;
+
+/// Proposal utility functions
+pub mod proposal;
