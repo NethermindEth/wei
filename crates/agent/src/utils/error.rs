@@ -1,7 +1,7 @@
 //! Error types for the agent service
 
-use thiserror::Error;
 use crate::models::eip_error::EipError;
+use thiserror::Error;
 
 /// Agent service error
 #[allow(dead_code)] // TODO: Remove after development phase

@@ -1,9 +1,9 @@
 /// Database query macros to reduce repetition in SQLx query building
 
 /// Macro for building and executing a SQLx query with parameters
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```
 /// let result = db_query!(pool, "DELETE FROM cache_entries WHERE cache_key = $1", cache_key).await?;
 /// ```
@@ -23,9 +23,9 @@ macro_rules! db_query {
 }
 
 /// Macro for building and executing a SQLx query that returns a single row
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```
 /// let row = db_query_one!(pool, "SELECT * FROM cache_entries WHERE cache_key = $1", cache_key).await?;
 /// ```
@@ -45,9 +45,9 @@ macro_rules! db_query_one {
 }
 
 /// Macro for building and executing a SQLx query that returns an optional row
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```
 /// let row = db_query_optional!(pool, "SELECT * FROM cache_entries WHERE cache_key = $1", cache_key).await?;
 /// ```
@@ -67,9 +67,9 @@ macro_rules! db_query_optional {
 }
 
 /// Macro for building and executing a SQLx query that returns all rows
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```
 /// let rows = db_query_all!(pool, "SELECT * FROM cache_entries WHERE expires_at > $1", now).await?;
 /// ```
@@ -89,9 +89,9 @@ macro_rules! db_query_all {
 }
 
 /// Macro for building and executing a SQLx query that maps to a specific type
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```
 /// let row = db_query_as_one!(CacheEntryRow, pool, "SELECT * FROM cache_entries WHERE cache_key = $1", cache_key).await?;
 /// ```
@@ -111,9 +111,9 @@ macro_rules! db_query_as_one {
 }
 
 /// Macro for building and executing a SQLx query that maps to a specific type and returns an optional row
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```
 /// let row = db_query_as_optional!(CacheEntryRow, pool, "SELECT * FROM cache_entries WHERE cache_key = $1", cache_key).await?;
 /// ```
@@ -133,9 +133,9 @@ macro_rules! db_query_as_optional {
 }
 
 /// Macro for building and executing a SQLx query that maps to a specific type and returns all rows
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```
 /// let rows = db_query_as_all!(CacheEntryRow, pool, "SELECT * FROM cache_entries WHERE expires_at > $1", now).await?;
 /// ```

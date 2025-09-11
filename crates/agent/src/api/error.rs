@@ -1,13 +1,13 @@
 //! Error handling for the API
 
+use crate::models::eip_error::EipError;
+use crate::utils::error::Error;
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
     Json,
 };
 use serde::Serialize;
-use crate::models::eip_error::EipError;
-use crate::utils::error::Error;
 
 /// API error response structure
 #[derive(Serialize)]
@@ -88,40 +88,44 @@ impl From<Error> for ApiError {
         match error {
             // Handle database errors
             Error::Database(e) => ApiError::internal_error(format!("Database error: {}", e)),
-            
+
             // Handle HTTP request errors
             Error::HttpRequest(e) => ApiError::internal_error(format!("HTTP error: {}", e)),
-            
+
             // Handle serialization errors
             Error::Serialization(e) => ApiError::internal_error(format!("JSON error: {}", e)),
-            
+
             // Handle configuration errors
-            Error::Configuration(e) => ApiError::internal_error(format!("Configuration error: {}", e)),
-            
+            Error::Configuration(e) => {
+                ApiError::internal_error(format!("Configuration error: {}", e))
+            }
+
             // Handle AI service errors
             Error::AIService(msg) => ApiError::internal_error(format!("AI service error: {}", msg)),
-            
+
             // Handle analysis not found errors
-            Error::AnalysisNotFound { id } => ApiError::not_found(format!("Analysis not found: {}", id)),
-            
+            Error::AnalysisNotFound { id } => {
+                ApiError::not_found(format!("Analysis not found: {}", id))
+            }
+
             // Handle webhook errors
             Error::Webhook(msg) => ApiError::internal_error(format!("Webhook error: {}", msg)),
-            
+
             // Handle authentication errors
             Error::Authentication(msg) => ApiError::unauthorized(msg),
-            
+
             // Handle OpenRouter errors
             Error::OpenRouter(e) => ApiError::internal_error(format!("OpenRouter error: {}", e)),
-            
+
             // Handle chat builder errors
             Error::ChatBuilder(e) => ApiError::internal_error(format!("Chat builder error: {}", e)),
-            
+
             // Handle response errors
             Error::Response(e) => ApiError::internal_error(format!("Response error: {}", e)),
-            
+
             // Handle internal errors
             Error::Internal(msg) => ApiError::internal_error(msg),
-            
+
             // Handle EIP-specific errors
             Error::Eip(eip_error) => match eip_error {
                 EipError::NotFound(eip_number) => {

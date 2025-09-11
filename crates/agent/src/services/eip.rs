@@ -693,45 +693,49 @@ impl EipService {
             match request.send().await {
                 Ok(response) => {
                     let status = response.status();
-                    
+
                     // Handle specific HTTP status codes with appropriate errors
                     match status {
                         StatusCode::NOT_FOUND => {
                             return Err(Error::Eip(EipError::NotFound(eip_number)));
-                        },
+                        }
                         StatusCode::TOO_MANY_REQUESTS => {
                             error!("Rate limit exceeded for EIP-{}", eip_number);
                             if attempts == max_attempts {
-                                return Err(Error::Eip(EipError::RateLimitExceeded(
-                                    format!("GitHub API rate limit exceeded for EIP-{}", eip_number)
-                                )));
+                                return Err(Error::Eip(EipError::RateLimitExceeded(format!(
+                                    "GitHub API rate limit exceeded for EIP-{}",
+                                    eip_number
+                                ))));
                             }
                             continue;
-                        },
+                        }
                         StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => {
                             error!("Authentication error for EIP-{}: {}", eip_number, status);
-                            return Err(Error::Eip(EipError::GitHubError(
-                                format!("Authentication error: {}", status)
-                            )));
-                        },
+                            return Err(Error::Eip(EipError::GitHubError(format!(
+                                "Authentication error: {}",
+                                status
+                            ))));
+                        }
                         StatusCode::GATEWAY_TIMEOUT | StatusCode::REQUEST_TIMEOUT => {
                             error!("Timeout error for EIP-{}", eip_number);
                             if attempts == max_attempts {
-                                return Err(Error::Eip(EipError::Timeout(
-                                    format!("Request timed out for EIP-{}", eip_number)
-                                )));
+                                return Err(Error::Eip(EipError::Timeout(format!(
+                                    "Request timed out for EIP-{}",
+                                    eip_number
+                                ))));
                             }
                             continue;
-                        },
+                        }
                         _ if status.is_success() => {
                             // Continue with successful response
-                        },
+                        }
                         _ => {
                             error!("Failed to fetch EIP-{} content: {}", eip_number, status);
                             if attempts == max_attempts {
-                                return Err(Error::Eip(EipError::GitHubError(
-                                    format!("GitHub API error: {}", status)
-                                )));
+                                return Err(Error::Eip(EipError::GitHubError(format!(
+                                    "GitHub API error: {}",
+                                    status
+                                ))));
                             }
                             continue;
                         }
@@ -768,9 +772,10 @@ impl EipService {
                                 Err(e) => {
                                     error!("Failed to parse EIP-{} content: {}", eip_number, e);
                                     if attempts == max_attempts {
-                                        return Err(Error::Eip(EipError::ParseError(
-                                            format!("Failed to parse EIP-{} content: {}", eip_number, e)
-                                        )));
+                                        return Err(Error::Eip(EipError::ParseError(format!(
+                                            "Failed to parse EIP-{} content: {}",
+                                            eip_number, e
+                                        ))));
                                     }
                                     continue;
                                 }
@@ -779,9 +784,10 @@ impl EipService {
                         Err(e) => {
                             error!("Failed to get response text for EIP-{}: {}", eip_number, e);
                             if attempts == max_attempts {
-                                return Err(Error::Eip(EipError::GitHubError(
-                                    format!("Failed to read response for EIP-{}: {}", eip_number, e)
-                                )));
+                                return Err(Error::Eip(EipError::GitHubError(format!(
+                                    "Failed to read response for EIP-{}: {}",
+                                    eip_number, e
+                                ))));
                             }
                             continue;
                         }
@@ -792,21 +798,24 @@ impl EipService {
                     // Check if it's a timeout error
                     if e.is_timeout() {
                         if attempts == max_attempts {
-                            return Err(Error::Eip(EipError::Timeout(
-                                format!("Request timed out for EIP-{}", eip_number)
-                            )));
+                            return Err(Error::Eip(EipError::Timeout(format!(
+                                "Request timed out for EIP-{}",
+                                eip_number
+                            ))));
                         }
                     } else if e.is_connect() {
                         if attempts == max_attempts {
-                            return Err(Error::Eip(EipError::NetworkError(
-                                format!("Connection error for EIP-{}: {}", eip_number, e)
-                            )));
+                            return Err(Error::Eip(EipError::NetworkError(format!(
+                                "Connection error for EIP-{}: {}",
+                                eip_number, e
+                            ))));
                         }
                     } else {
                         if attempts == max_attempts {
-                            return Err(Error::Eip(EipError::GitHubError(
-                                format!("Request error for EIP-{}: {}", eip_number, e)
-                            )));
+                            return Err(Error::Eip(EipError::GitHubError(format!(
+                                "Request error for EIP-{}: {}",
+                                eip_number, e
+                            ))));
                         }
                     }
                     continue;
@@ -909,7 +918,7 @@ impl EipService {
         if let (Some(page), Some(page_size)) = (page, page_size) {
             let page = page.max(1); // Ensure page is at least 1
             let start = (page - 1) * page_size;
-            
+
             // Return the requested page
             return Ok(proposals.into_iter().skip(start).take(page_size).collect());
         }

@@ -7,7 +7,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
-use tracing::{debug};
+use tracing::debug;
 
 use crate::db::repositories::cache::{CacheConfig, CacheRepository};
 use crate::utils::error::Result;
@@ -79,31 +79,31 @@ impl CacheableQuery {
     /// Get a human-readable description of the cache query
     pub fn cache_description(&self) -> String {
         let mut desc = format!("{}:{}", self.method, self.endpoint);
-        
+
         if !self.query_params.is_empty() {
-            let params: Vec<String> = self.query_params
+            let params: Vec<String> = self
+                .query_params
                 .iter()
                 .map(|(k, v)| format!("{k}={v}"))
                 .collect();
             desc.push_str(&format!(" with params {}", params.join(", ")));
         }
-        
+
         if self.body.is_some() {
             desc.push_str(" with request body");
         }
-        
+
         desc
     }
-    
+
     /// Get the cache key for this query
     pub fn cache_key(&self) -> String {
         self.to_cache_key()
     }
-    
+
     /// Create a community analysis query
     pub fn community_analysis(topic: &str) -> Self {
-        Self::new("/community", "POST")
-            .with_param("topic", topic)
+        Self::new("/community", "POST").with_param("topic", topic)
     }
 
     /// Generate a unique cache key for this query
@@ -169,7 +169,11 @@ impl CacheService {
     }
 
     /// Get a cached value or compute it if not found
-    pub async fn cache_or_compute<T, F, Fut>(&self, query: &CacheableQuery, compute_fn: F) -> Result<CachedResponse<T>>
+    pub async fn cache_or_compute<T, F, Fut>(
+        &self,
+        query: &CacheableQuery,
+        compute_fn: F,
+    ) -> Result<CachedResponse<T>>
     where
         T: Serialize + for<'de> Deserialize<'de> + Send + Sync,
         F: FnOnce() -> Fut,
@@ -201,7 +205,7 @@ impl CacheService {
                 "user_context": query.user_context,
             }
         });
-        
+
         let metadata_clone = metadata.clone();
 
         // Store in cache
@@ -225,7 +229,7 @@ impl CacheService {
         let _ = self.repository.delete(&cache_key).await;
         Ok(true)
     }
-    
+
     /// Invalidate a specific cache entry (alias for invalidate)
     pub async fn invalidate_query(&self, query: &CacheableQuery) -> Result<bool> {
         self.invalidate(query).await
@@ -268,7 +272,11 @@ impl CacheService {
     }
 
     /// Refresh a cached value by recomputing it
-    pub async fn refresh<T, F, Fut>(&self, query: &CacheableQuery, compute_fn: F) -> Result<CachedResponse<T>>
+    pub async fn refresh<T, F, Fut>(
+        &self,
+        query: &CacheableQuery,
+        compute_fn: F,
+    ) -> Result<CachedResponse<T>>
     where
         T: Serialize + for<'de> Deserialize<'de> + Send + Sync,
         F: FnOnce() -> Fut,
@@ -289,7 +297,7 @@ impl CacheService {
                 "user_context": query.user_context,
             }
         });
-        
+
         let metadata_clone = metadata.clone();
 
         // Store in cache
@@ -309,7 +317,7 @@ impl CacheService {
     /// Get cache statistics
     pub async fn get_stats(&self) -> Result<CacheStats> {
         let repo_stats = self.repository.get_stats().await?;
-        
+
         Ok(CacheStats {
             total_entries: repo_stats.total_entries,
             active_entries: repo_stats.active_entries,

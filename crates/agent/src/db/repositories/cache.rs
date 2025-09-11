@@ -1,7 +1,7 @@
 //! Generic cache repository for all API endpoints
 
 use crate::utils::error::Result;
-use crate::{db_query, db_query_as_one, db_query_as_optional, db_query_as_all};
+use crate::{db_query, db_query_as_all, db_query_as_one, db_query_as_optional};
 use chrono::{DateTime, Duration, Utc};
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
@@ -34,7 +34,7 @@ struct CountRow {
 }
 
 /// Cache store implementation type
-/// 
+///
 /// This enum replaces the trait-based approach to avoid issues with async generic methods
 /// in trait objects. It provides a concrete type for the cache store implementation.
 #[derive(Clone)]
@@ -130,7 +130,7 @@ impl CacheRepository {
                         expires_at = EXCLUDED.expires_at,
                         metadata = EXCLUDED.metadata
                     "#;
-                
+
                 let metadata_json = serde_json::to_value(metadata)?;
                 db_query!(
                     &store.pool,
@@ -185,8 +185,9 @@ impl CacheRepository {
                     FROM cache_entries
                     WHERE cache_key = $1 AND expires_at > $2
                     "#;
-                
-                let row = db_query_as_optional!(CacheEntryRow, &store.pool, query_str, cache_key, now)?;
+
+                let row =
+                    db_query_as_optional!(CacheEntryRow, &store.pool, query_str, cache_key, now)?;
 
                 match row {
                     Some(row) => Ok(Some(CacheEntry {
@@ -217,7 +218,11 @@ impl CacheRepository {
     pub async fn delete(&self, cache_key: &str) -> Result<bool> {
         match &self.store {
             CacheStoreImpl::Database(store) => {
-                let result = db_query!(&store.pool, "DELETE FROM cache_entries WHERE cache_key = $1", cache_key)?;
+                let result = db_query!(
+                    &store.pool,
+                    "DELETE FROM cache_entries WHERE cache_key = $1",
+                    cache_key
+                )?;
 
                 Ok(result.rows_affected() > 0)
             }
@@ -234,25 +239,30 @@ impl CacheRepository {
         match &self.store {
             CacheStoreImpl::Database(store) => {
                 let pattern = format!("%{}%", key_pattern);
-                let result = db_query!(&store.pool, "DELETE FROM cache_entries WHERE cache_key LIKE $1", pattern)?;
+                let result = db_query!(
+                    &store.pool,
+                    "DELETE FROM cache_entries WHERE cache_key LIKE $1",
+                    pattern
+                )?;
 
                 Ok(result.rows_affected())
             }
             CacheStoreImpl::Memory(store) => {
                 // DashMap doesn't have a direct retain method like HashMap
                 // We need to collect keys first to avoid iterator invalidation
-                let keys_to_remove: Vec<String> = store.cache
+                let keys_to_remove: Vec<String> = store
+                    .cache
                     .iter()
                     .filter(|entry| entry.key().contains(key_pattern))
                     .map(|entry| entry.key().clone())
                     .collect();
-                
+
                 // Remove the collected keys
                 let count = keys_to_remove.len() as u64;
                 for key in keys_to_remove {
                     store.cache.remove(&key);
                 }
-                
+
                 Ok(count)
             }
         }
@@ -264,25 +274,30 @@ impl CacheRepository {
 
         match &self.store {
             CacheStoreImpl::Database(store) => {
-                let result = db_query!(&store.pool, "DELETE FROM cache_entries WHERE expires_at <= $1", now)?;
+                let result = db_query!(
+                    &store.pool,
+                    "DELETE FROM cache_entries WHERE expires_at <= $1",
+                    now
+                )?;
 
                 Ok(result.rows_affected())
             }
             CacheStoreImpl::Memory(store) => {
                 // DashMap doesn't have a direct retain method like HashMap
                 // We need to collect keys first to avoid iterator invalidation
-                let keys_to_remove: Vec<String> = store.cache
+                let keys_to_remove: Vec<String> = store
+                    .cache
                     .iter()
                     .filter(|entry| entry.value().expires_at <= now)
                     .map(|entry| entry.key().clone())
                     .collect();
-                
+
                 // Remove the collected keys
                 let count = keys_to_remove.len() as u64;
                 for key in &keys_to_remove {
                     store.cache.remove(key);
                 }
-                
+
                 Ok(count)
             }
         }
@@ -295,11 +310,20 @@ impl CacheRepository {
         match &self.store {
             CacheStoreImpl::Database(store) => {
                 // Get total count
-                let total_count_row = db_query_as_one!(CountRow, &store.pool, "SELECT COUNT(*) as count FROM cache_entries")?;
+                let total_count_row = db_query_as_one!(
+                    CountRow,
+                    &store.pool,
+                    "SELECT COUNT(*) as count FROM cache_entries"
+                )?;
                 let total_count = total_count_row.count as u64;
-                
+
                 // Get expired count
-                let expired_count_row = db_query_as_one!(CountRow, &store.pool, "SELECT COUNT(*) as count FROM cache_entries WHERE expires_at <= $1", now)?;
+                let expired_count_row = db_query_as_one!(
+                    CountRow,
+                    &store.pool,
+                    "SELECT COUNT(*) as count FROM cache_entries WHERE expires_at <= $1",
+                    now
+                )?;
                 let expired_count = expired_count_row.count as u64;
 
                 let active_count = total_count - expired_count;
@@ -313,13 +337,14 @@ impl CacheRepository {
             CacheStoreImpl::Memory(store) => {
                 // DashMap provides thread-safe access without explicit locking
                 let total_entries = store.cache.len() as u64;
-                
+
                 // Count expired entries
-                let expired_entries = store.cache
+                let expired_entries = store
+                    .cache
                     .iter()
                     .filter(|entry| entry.value().expires_at <= now)
                     .count() as u64;
-                
+
                 let active_entries = total_entries - expired_entries;
 
                 Ok(CacheStats {
@@ -343,7 +368,7 @@ impl CacheRepository {
                     WHERE expires_at > $1
                     ORDER BY cache_key
                     "#;
-                
+
                 let rows = db_query_as_all!(CacheKeyRow, &store.pool, query_str, now)?;
 
                 let active_keys = rows.into_iter().map(|row| row.cache_key).collect();
@@ -352,7 +377,8 @@ impl CacheRepository {
             }
             CacheStoreImpl::Memory(store) => {
                 // DashMap provides thread-safe access without explicit locking
-                let active_keys: Vec<String> = store.cache
+                let active_keys: Vec<String> = store
+                    .cache
                     .iter()
                     .filter(|entry| entry.value().expires_at > now)
                     .map(|entry| entry.key().clone())

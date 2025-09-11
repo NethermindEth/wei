@@ -21,22 +21,35 @@ impl EipDiscussionService {
 
     /// Fetch discussions for a specific EIP from all available sources
     pub async fn fetch_discussions(&self, eip_number: u32) -> Result<Vec<EipDiscussion>> {
-        info!("Fetching discussions for EIP-{} from all sources", eip_number);
-        
+        info!(
+            "Fetching discussions for EIP-{} from all sources",
+            eip_number
+        );
+
         // Try to fetch discussions from GitHub first
         match self.fetch_github_discussions(eip_number).await {
             Ok(discussions) if !discussions.is_empty() => {
-                info!("Found {} GitHub discussions for EIP-{}", discussions.len(), eip_number);
+                info!(
+                    "Found {} GitHub discussions for EIP-{}",
+                    discussions.len(),
+                    eip_number
+                );
                 Ok(discussions)
             }
             Ok(_) => {
                 // No GitHub discussions found, try other sources
-                warn!("No GitHub discussions found for EIP-{}, trying other sources", eip_number);
+                warn!(
+                    "No GitHub discussions found for EIP-{}, trying other sources",
+                    eip_number
+                );
                 self.fetch_from_other_sources(eip_number).await
             }
             Err(e) => {
                 // Error fetching from GitHub, try other sources
-                warn!("Error fetching GitHub discussions for EIP-{}: {}", eip_number, e);
+                warn!(
+                    "Error fetching GitHub discussions for EIP-{}: {}",
+                    eip_number, e
+                );
                 self.fetch_from_other_sources(eip_number).await
             }
         }
@@ -51,9 +64,12 @@ impl EipDiscussionService {
     async fn fetch_from_other_sources(&self, eip_number: u32) -> Result<Vec<EipDiscussion>> {
         // In a real implementation, this would fetch from Ethereum forums, mailing lists, etc.
         // For now, we'll return an empty list with a note about where to find discussions
-        
-        info!("No discussions found for EIP-{} from available sources", eip_number);
-        
+
+        info!(
+            "No discussions found for EIP-{} from available sources",
+            eip_number
+        );
+
         // Return an informational note instead of fake data
         let discussions = vec![
             EipDiscussion {
@@ -70,7 +86,7 @@ impl EipDiscussionService {
                 vote: None,
             }
         ];
-        
+
         Ok(discussions)
     }
 }

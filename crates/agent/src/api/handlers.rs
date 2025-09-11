@@ -33,22 +33,21 @@ use crate::{
         routes::AppState,
     },
     models::{
+        analysis::{AnalyzeResponse, ProposalArguments},
         eip::EipProposal,
         eip_error::EipError,
-        analysis::{AnalyzeResponse, ProposalArguments},
         CustomEvaluationRequest, CustomEvaluationResponse, DeepResearchApiResponse,
-        DeepResearchRequest, EipFilterRequest, EipResponse, EipsResponse,
-        HealthResponse, Proposal, RoadmapApiResponse, RoadmapRequest,
+        DeepResearchRequest, EipFilterRequest, EipResponse, EipsResponse, HealthResponse, Proposal,
+        RoadmapApiResponse, RoadmapRequest,
     },
-    utils::error::Error,
     services::{
         agent::AgentServiceTrait,
         cache::{CacheableQuery, CachedQueryInfo, CachedResponse},
         eip::EipService,
         exa::{ExaService, RelatedProposal},
     },
+    utils::error::Error,
 };
-
 
 use crate::swagger::descriptions;
 use chrono::Utc;
@@ -268,7 +267,9 @@ pub async fn analyze_community(
         result: cached_response.data,
         from_cache: cached_response.from_cache,
         created_at: cached_response.cached_at.unwrap_or_else(|| Utc::now()),
-        expires_at: cached_response.expires_at.unwrap_or_else(|| Utc::now() + chrono::Duration::hours(24)),
+        expires_at: cached_response
+            .expires_at
+            .unwrap_or_else(|| Utc::now() + chrono::Duration::hours(24)),
     }))
 }
 
@@ -786,7 +787,6 @@ pub async fn get_eip(
                                 let discussion_service = crate::services::eip_discussions::EipDiscussionService::new(
                                     state.config.github_token.clone()
                                 );
-                                
                                 // For EIP-1559, we want to show discussions if possible, but not fail if they can't be fetched
                                 // This is a special case where we prefer showing partial data over failing completely
                                 match discussion_service.fetch_discussions(eip_number).await {
@@ -819,7 +819,6 @@ pub async fn get_eip(
                                     let discussion_service = crate::services::eip_discussions::EipDiscussionService::new(
                                         state.config.github_token.clone()
                                     );
-                                    
                                     match discussion_service.fetch_discussions(eip_number).await {
                                         Ok(discussions) => {
                                             // Discussions found from fallback
@@ -842,7 +841,6 @@ pub async fn get_eip(
                 },
                 Err(e) => {
                     warn!("Failed to fetch EIP-{} from GitHub: {}", eip_number, e);
-                    
                     // For certain error types, we want to return a proper error
                     // But since we're in a closure that must return Result<EipProposal, Error>,
                     // we need to handle specific cases differently
@@ -851,10 +849,9 @@ pub async fn get_eip(
                     } else if let Error::Eip(EipError::RateLimitExceeded(_)) = &e {
                         // Creating fallback due to rate limit
                     }
-                    // For all errors, we'll continue with fallback data
-                    
+                    // For all errors, we'll continue with fallback data 
                     // Create fallback data directly
-                    let mut eip = EipProposal {
+                    let mut eip = EipProposal{
                         eip_number,
                         title: format!("EIP-{}", eip_number),
                         author: vec!["Unknown".to_string()],
@@ -874,7 +871,6 @@ pub async fn get_eip(
                         let discussion_service = crate::services::eip_discussions::EipDiscussionService::new(
                             state.config.github_token.clone()
                         );
-                        
                         match discussion_service.fetch_discussions(eip_number).await {
                             Ok(discussions) => {
                                 // Discussions found for fallback EIP
@@ -962,7 +958,7 @@ pub async fn list_eips(
             // Get pagination parameters from request or use defaults
             let page = filter.page.unwrap_or(1).max(1); // Ensure page is at least 1
             let page_size = filter.page_size.unwrap_or(20).min(100); // Default 20, max 100
-            
+
             // Fetch EIPs with filtering and pagination at the data source level
             let eips = match eip_service
                 .fetch_eips(
@@ -1002,7 +998,7 @@ pub async fn list_eips(
     // We can use the data directly from the cache
     let page = filter.page.unwrap_or(1).max(1); // Ensure page is at least 1
     let page_size = filter.page_size.unwrap_or(20).min(100); // Default 20, max 100
-    
+
     // Since we're paginating at the data source level, we need to estimate total
     // This is an approximation based on the number of EIPs we have
     // In a production system, we would want to add a count query
@@ -1019,7 +1015,7 @@ pub async fn list_eips(
             page + 1 // Assume there's at least one more page
         }
     };
-    
+
     // Use the data directly from the cache - it's already paginated
     let paged_eips = cached_response.data;
 
