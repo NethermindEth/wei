@@ -58,6 +58,10 @@ pub struct Config {
     /// Exa API key for search functionality
     #[arg(env = "WEI_AGENT_EXA_API_KEY", long)]
     pub exa_api_key: Option<String>,
+
+    /// GitHub API token for EIP fetching
+    #[arg(env = "WEI_AGENT_GITHUB_TOKEN", long)]
+    pub github_token: Option<String>,
 }
 
 impl Config {

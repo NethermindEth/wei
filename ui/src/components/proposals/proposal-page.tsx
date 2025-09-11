@@ -10,6 +10,8 @@ import { ApiService } from "../../services/api";
 import { AnalysisResponse, ProposalArguments, CustomEvaluationRequest, CustomEvaluationResponse } from "../../types/proposal";
 import ReactMarkdown from 'react-markdown';
 import { RelatedProposals } from "./related-proposals";
+import { isEipProposal, getEipNumberFromProposalId } from "../../utils/eip-adapters";
+import { Eip } from "../../types/eip";
 
 interface ProposalPageProps {
   proposalId: string;
@@ -61,24 +63,34 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
   const [customCriteria, setCustomCriteria] = React.useState<string>("");
   const [isCustomEvaluating, setIsCustomEvaluating] = React.useState(false);
   const [customResults, setCustomResults] = React.useState<Array<CustomEvaluationResponse & { timestamp: number, criteria: string }>>([]);
+  
+  // EIP-related states
+  const [eipData, setEipData] = React.useState<Eip | null>(null);
+  const [eipLoading, setEipLoading] = React.useState(false);
+  const [eipError, setEipError] = React.useState<string | null>(null);
+  
+  // Check if this is an EIP proposal
+  const isEip = isEipProposal(proposalId);
+  const eipNumber = isEip ? getEipNumberFromProposalId(proposalId) : null;
 
   // Fetch the specific proposal by ID directly
   const { proposal: selectedProposal, loading: proposalLoading, error: proposalError } = useProposal(proposalId);
+  
+  // We removed the debug logging effect for proposal data
 
   const analyzeProposal = React.useCallback(async (proposal: Proposal, forceRefresh = false) => {
     setIsLoading(true);
     setError(null);
     
     try {
+      // Use the same analysis approach for both regular proposals and EIPs
       const description = `${proposal.title}\n\n${proposal.body}`;
       const proposalData = { description };
-      console.log('Analyzing proposal:', proposalData);
+      // Analysis in progress
       
       const response = forceRefresh 
         ? await ApiService.refreshProposalAnalysis(proposalData)
         : await ApiService.analyzeProposal(proposalData);
-      
-    
       
       setBackendResult(response);
     } catch (err) {
@@ -104,21 +116,71 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
         setArgumentsState({ status: 'error', data: null, error: 'No arguments data received from analysis' });
       }
     } catch (err) {
-      console.error('Error fetching proposal arguments:', err);
+      console.error('Error fetching proposal arguments:', err instanceof Error ? err.message : err);
       setArgumentsState({ status: 'error', data: null, error: 'Failed to fetch proposal arguments. Please try again.' });
     }
   }, []);
 
+  // Fetch EIP data if this is an EIP proposal
+  React.useEffect(() => {
+    if (isEip && eipNumber) {
+      const fetchEipData = async () => {
+        setEipLoading(true);
+        setEipError(null);
+        try {
+          const data = await ApiService.getEip(eipNumber, true); // Include discussions
+          setEipData(data.eip);
+          
+          // Create a proposal object from EIP data for analysis
+          if (data.eip) {
+            const eipProposal: Proposal = {
+              id: `eip-${data.eip.eip_number}`,
+              title: `EIP-${data.eip.eip_number}: ${data.eip.title}`,
+              body: data.eip.content || data.eip.description,
+              author: Array.isArray(data.eip.author) ? data.eip.author.join(', ') : data.eip.author
+            };
+            
+            // Analyze the EIP as if it were a proposal
+            analyzeProposal(eipProposal);
+            fetchProposalArguments(eipProposal);
+          }
+        } catch (err) {
+          console.error('Failed to fetch EIP data:', err instanceof Error ? err.message : err);
+          setEipError(err instanceof Error ? err.message : 'Failed to fetch EIP data');
+        } finally {
+          setEipLoading(false);
+        }
+      };
+      
+      fetchEipData();
+    }
+  }, [isEip, eipNumber, analyzeProposal, fetchProposalArguments]);
+
   // Auto-analyze the proposal when it's loaded
   React.useEffect(() => {
-    if (selectedProposal) {
-      // Auto-analyze the proposal when it's loaded
+    if (selectedProposal && !isEip) {
+      // Only analyze regular proposals here, EIPs are handled separately
       analyzeProposal(selectedProposal);
+      // Also fetch arguments for regular proposals
+      fetchProposalArguments(selectedProposal);
     }
-  }, [selectedProposal, analyzeProposal]);
+  }, [selectedProposal, analyzeProposal, fetchProposalArguments, isEip]);
 
   const handleRefreshAnalysis = async () => {
-    if (selectedProposal) {
+    if (isEip && eipData) {
+      // Create a proposal object from EIP data for analysis
+      const eipProposal: Proposal = {
+        id: `eip-${eipData.eip_number}`,
+        title: `EIP-${eipData.eip_number}: ${eipData.title}`,
+        body: eipData.content || eipData.description,
+        author: Array.isArray(eipData.author) ? eipData.author.join(', ') : eipData.author
+      };
+      
+      await Promise.all([
+        analyzeProposal(eipProposal, true),
+        fetchProposalArguments(eipProposal)
+      ]);
+    } else if (selectedProposal) {
       await Promise.all([
         analyzeProposal(selectedProposal, true),
         fetchProposalArguments(selectedProposal)
@@ -131,7 +193,7 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
   };
 
   const handleCustomEvaluate = async () => {
-    if (!selectedProposal) {
+    if (!selectedProposal && !(isEip && eipData)) {
       setError("Please select a proposal to evaluate");
       return;
     }
@@ -145,7 +207,14 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
     setError(null);
 
     try {
-      const content = `${selectedProposal.title}\n\n${selectedProposal.body}`;
+      let content = '';
+      
+      if (isEip && eipData) {
+        content = `EIP-${eipData.eip_number}: ${eipData.title}\n\n${eipData.content || eipData.description}`;
+      } else if (selectedProposal) {
+        content = `${selectedProposal.title}\n\n${selectedProposal.body}`;
+      }
+      
       const request: CustomEvaluationRequest = {
         content,
         custom_criteria: customCriteria
@@ -178,23 +247,41 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
   };
 
 
-  if (proposalLoading) {
+  // Loading state for both regular proposals and EIPs
+  if ((proposalLoading && !isEip) || (eipLoading && isEip)) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
-          <div className="text-white/60 mb-2">Loading proposal...</div>
-          <div className="h-4 w-4 border-2 border-t-[--color-accent] border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin mx-auto"></div>
+          <div className="text-white/60 mb-2">
+            {isEip ? `Loading EIP-${eipNumber}...` : "Loading proposal..."}
+          </div>
+          <div className="h-6 w-6 border-2 border-t-[--color-accent] border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin mx-auto"></div>
         </div>
       </div>
     );
   }
   
-  if (!selectedProposal) {
+  // Error state for both regular proposals and EIPs
+  if ((!selectedProposal && !isEip) || (isEip && eipError)) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
           <div className="text-white/60 mb-2">
-            {proposalError ? proposalError.message : `Proposal with ID "${proposalId}" not found`}
+            {isEip && eipError ? eipError : 
+             proposalError ? proposalError.message : 
+             `Proposal with ID "${proposalId}" not found`}
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!selectedProposal && !isEip) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="text-white/60 mb-2">
+            Proposal not found
           </div>
         </div>
       </div>
@@ -226,25 +313,21 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
                           : 'text-white/70 hover:text-white hover:bg-white/10'
                       }`}
                     >
-                      Discussion Centers
+                      Discussion
                     </button>
                     <button
                       onClick={() => setActiveSection('related')}
-                      className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                        activeSection === 'related'
-                          ? 'bg-blue-600 text-white'
-                          : 'text-white/70 hover:text-white hover:bg-white/10'
-                      }`}
+                      className={`px-3 py-2 text-sm rounded-md ${activeSection === 'related' 
+                        ? 'bg-white/10 text-white' 
+                        : 'text-white/60 hover:text-white hover:bg-white/5'}`}
                     >
-                      Related Proposals
+                      Related
                     </button>
                     <button
                       onClick={() => setActiveSection('arguments')}
-                      className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                        activeSection === 'arguments'
-                          ? 'bg-blue-600 text-white'
-                          : 'text-white/70 hover:text-white hover:bg-white/10'
-                      }`}
+                      className={`px-3 py-2 text-sm rounded-md ${activeSection === 'arguments' 
+                        ? 'bg-white/10 text-white' 
+                        : 'text-white/60 hover:text-white hover:bg-white/5'}`}
                     >
                       Proposal Arguments
                     </button>
@@ -257,7 +340,7 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
               {/* Proposal Title */}
               <div className="mb-4">
                 <h1 className="text-2xl font-semibold text-white/90 mb-3 break-words">
-                  {selectedProposal.space?.id ? (
+                  {selectedProposal?.space?.id ? (
                     <a
                       href={`https://snapshot.org/#/${selectedProposal.space.id}/proposal/${selectedProposal.id}`}
                       target="_blank"
@@ -268,27 +351,27 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
                       {selectedProposal.title}
                     </a>
                   ) : (
-                    selectedProposal.title
+                    selectedProposal?.title
                   )}
                 </h1>
                 <div className="flex items-center gap-4 text-sm text-white/60">
-                  {selectedProposal.author && (
+                  {selectedProposal?.author && (
                     <span>By: {selectedProposal.author}</span>
                   )}
-                  {selectedProposal.space && (
+                  {selectedProposal?.space && (
                     <span>Space: {selectedProposal.space.name}</span>
                   )}
                 </div>
               </div>
 
-              {/* Proposal Content Dropdown */}
+              {/* Content Dropdown */}
               <div className="rounded-lg border border-white/10 bg-white/5 overflow-hidden">
                 <button
                   onClick={() => setIsProposalExpanded(!isProposalExpanded)}
                   className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-white/5 transition-colors"
                 >
                   <h2 className="text-lg font-semibold text-white/90">
-                    Proposal Content
+                    Proposal Content 
                   </h2>
                   <div className="ml-4 flex-shrink-0">
                     {isProposalExpanded ? (
@@ -304,12 +387,12 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
                     <div className="prose prose-invert max-w-none mt-4">
                       <ReactMarkdown
                         components={{
-                          h1: (props) => <h1 className="text-xl font-bold mb-4 text-white/90" {...props} />,
-                          h2: (props) => <h2 className="text-lg font-bold mb-3 text-white/90" {...props} />,
-                          h3: (props) => <h3 className="text-md font-bold mb-2 text-white/90" {...props} />,
-                          p: (props) => <p className="mb-4 text-white/80" {...props} />,
-                          ul: (props) => <ul className="list-disc pl-5 mb-4 text-white/80" {...props} />,
-                          ol: (props) => <ol className="list-decimal pl-5 mb-4 text-white/80" {...props} />,
+                          h1: (props) => <h1 className="text-xl font-bold mb-4" {...props} />,
+                          h2: (props) => <h2 className="text-lg font-bold mb-3" {...props} />,
+                          h3: (props) => <h3 className="text-md font-bold mb-2" {...props} />,
+                          p: (props) => <p className="mb-4" {...props} />,
+                          ul: (props) => <ul className="list-disc pl-5 mb-4" {...props} />,
+                          ol: (props) => <ol className="list-decimal pl-5 mb-4" {...props} />,
                           li: (props) => <li className="mb-1" {...props} />,
                           a: (props) => <a className="text-blue-400 hover:underline" {...props} />,
                           code: ({inline, ...props}: {inline?: boolean, children?: React.ReactNode, className?: string}) => 
@@ -317,7 +400,7 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
                           pre: (props) => <pre className="bg-gray-800 p-3 rounded mb-4 overflow-x-auto text-white/90" {...props} />
                         }}
                       >
-                        {selectedProposal.body || ''}
+                        {isEip && eipData ? eipData.content || eipData.description : selectedProposal?.body || ''}
                       </ReactMarkdown>
                     </div>
                   </div>
@@ -605,7 +688,7 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
                         <div className="flex justify-end">
                           <button
                             onClick={handleCustomEvaluate}
-                            disabled={isCustomEvaluating || !selectedProposal || !customCriteria.trim()}
+                            disabled={isCustomEvaluating || (!selectedProposal && !(isEip && eipData)) || !customCriteria.trim()}
                             className="inline-flex h-9 items-center justify-center gap-2 px-4 py-2 rounded-md bg-[--color-accent] text-white shadow transition-colors hover:bg-[--color-accent]/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[--color-accent] disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
                             aria-label="Run Custom Evaluation"
                           >
@@ -630,7 +713,7 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
                 {activeSection === 'discussion' && (
                   <div className="rounded-lg border border-white/10 bg-white/5 p-6">
                     <CommunityAnalysis 
-                      topic={selectedProposal.title}
+                      topic={isEip && eipData ? `EIP-${eipData.eip_number}: ${eipData.title}` : selectedProposal?.title || ''}
                       variant="proposal"
                     />
                   </div>
@@ -639,8 +722,8 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
                 {activeSection === 'related' && (
                   <div className="rounded-lg border border-white/10 bg-white/5 p-6">
                     <RelatedProposals 
-                      proposalText={selectedProposal.body || ''}
-                      proposalTitle={selectedProposal.title}
+                      proposalText={isEip && eipData ? eipData.content || eipData.description : selectedProposal?.body || ''}
+                      proposalTitle={isEip && eipData ? `EIP-${eipData.eip_number}: ${eipData.title}` : selectedProposal?.title || ''}
                     />
                   </div>
                 )}
@@ -651,11 +734,11 @@ export function ProposalPage({ proposalId }: ProposalPageProps) {
                       <h2 className="text-lg font-semibold text-white/90">Proposal Arguments</h2>
                       <button
                         onClick={() => selectedProposal && fetchProposalArguments(selectedProposal)}
-                        className="flex items-center gap-1 text-sm text-white/60 hover:text-white transition-colors"
-                        disabled={argumentsState.status === 'loading'}
+                        disabled={argumentsState.status === 'loading' || !selectedProposal}
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-white/70 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
                       >
-                        <ArrowPathIcon className={`w-4 h-4 ${argumentsState.status === 'loading' ? 'animate-spin' : ''}`} />
-                        <span>Refresh</span>
+                        <ArrowPathIcon className="w-4 h-4" />
+                        Refresh
                       </button>
                     </div>
                     

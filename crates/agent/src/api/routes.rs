@@ -163,6 +163,15 @@ pub fn create_router(
                 .post(handlers::generate_roadmap)
                 .options(|_: Request| async { "" }),
         )
+        // EIP routes
+        .route(
+            "/eip",
+            get(handlers::list_eips).options(|_: Request| async { "" }),
+        )
+        .route(
+            "/eip/:eip_number",
+            get(handlers::get_eip).options(|_: Request| async { "" }),
+        )
         // Cache management routes
         .route(
             "/cache",

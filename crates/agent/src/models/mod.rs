@@ -11,6 +11,10 @@ pub mod analysis;
 pub mod custom_evaluation;
 /// Deep research data model
 pub mod deepresearch;
+/// Ethereum Improvement Proposals data model
+pub mod eip;
+/// EIP error types
+pub mod eip_error;
 /// Health check response model
 pub mod health;
 /// Proposal data model
@@ -43,6 +47,7 @@ pub use deepresearch::{
     DeepResearchApiResponse, DeepResearchRequest, DeepResearchResponse, DeepResearchResult,
     DiscussionResource,
 };
+pub use eip::{EipDiscussion, EipFilterRequest, EipProposal, EipResponse, EipVote, EipsResponse};
 pub use health::HealthResponse;
 pub use proposal::Proposal;
 pub use roadmap::{RoadmapApiResponse, RoadmapRequest, RoadmapResponse, RoadmapResult};

@@ -7,5 +7,7 @@
 pub mod core;
 /// Database migration management
 pub mod migrations;
+/// SQL query macros
+pub mod macros;
 /// Repository implementations for data access
 pub mod repositories;

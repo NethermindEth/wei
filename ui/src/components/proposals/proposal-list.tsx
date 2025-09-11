@@ -67,9 +67,12 @@ export function ProposalList({ onSelectProposal, selectedProposalId, spaceId }: 
     <div className="grid gap-3 overflow-hidden">
       <h2 className="text-lg font-medium text-white/90 break-words">Select a Proposal</h2>
       
-      {proposals.length === 0 && loading ? (
+      {loading && proposals.length === 0 ? (
         <div className="p-4 text-center">
-          <p className="text-[#9fb5cc]">Loading proposals...</p>
+          <div className="flex flex-col items-center justify-center">
+            <div className="h-6 w-6 border-2 border-t-[--color-accent] border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin mb-2"></div>
+            <p className="text-[#9fb5cc]">Loading proposals...</p>
+          </div>
         </div>
       ) : proposals.length === 0 ? (
         <div className="p-4 text-center">

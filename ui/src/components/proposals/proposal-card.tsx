@@ -45,8 +45,8 @@ export function ProposalCard({ proposal, onClick, isSelected }: ProposalCardProp
       >
         <h3 className="font-medium text-white/90 mb-2 break-words line-clamp-2 overflow-hidden">{proposal.title}</h3>
         <p className="text-sm text-white/70 mb-3 break-words line-clamp-2 overflow-hidden flex-1">{truncatedPreview}</p>
-        <div className="flex items-center justify-between flex-wrap gap-2 mt-auto">
-          <span className="text-xs text-[#9fb5cc] truncate">{proposal.author ? `By: ${proposal.author}` : ''}</span>
+        <div className="flex items-center justify-between gap-2 mt-auto">
+          <span className="text-xs text-[#9fb5cc] truncate max-w-[60%]">{proposal.author ? `By: ${proposal.author}` : ''}</span>
           <button 
             onClick={handleViewFullContent}
             className="text-xs px-2 py-1 bg-white/10 hover:bg-white/20 rounded text-white/80 transition-colors shrink-0"

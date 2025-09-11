@@ -26,3 +26,11 @@ pub const HANDLER_GENERATE_ROADMAP_DESCRIPTION: &str = "Generate a comprehensive
 /// Description of the get cached roadmap handler
 pub const HANDLER_GET_CACHED_ROADMAP_DESCRIPTION: &str =
     "Retrieve cached roadmap results for a given set of parameters.";
+
+/// Description of the get EIP handler
+pub const HANDLER_GET_EIP_DESCRIPTION: &str =
+    "Retrieve a specific Ethereum Improvement Proposal (EIP) by its number with optional discussions and votes.";
+
+/// Description of the list EIPs handler
+pub const HANDLER_LIST_EIPS_DESCRIPTION: &str =
+    "List Ethereum Improvement Proposals (EIPs) with optional filtering by type, category, status, and author.";
