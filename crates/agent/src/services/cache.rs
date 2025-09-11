@@ -120,7 +120,7 @@ impl CacheableQuery {
 
         // Add body if present
         if let Some(body) = &self.body {
-            query_string.push_str(&format!(":{}", body.to_string()));
+            query_string.push_str(&format!(":{}", body));
         }
 
         // Add user context if present

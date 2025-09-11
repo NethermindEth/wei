@@ -74,6 +74,12 @@ impl MemoryCacheStore {
     }
 }
 
+impl Default for MemoryCacheStore {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Repository for generic caching operations
 #[derive(Clone)]
 pub struct CacheRepository {

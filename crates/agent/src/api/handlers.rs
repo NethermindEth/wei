@@ -6,7 +6,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tracing::{debug, error, warn};
+use tracing::{error, warn};
 use utoipa::ToSchema;
 
 /// Helper function to validate date format (YYYY-MM-DD)
@@ -266,7 +266,7 @@ pub async fn analyze_community(
     Ok(Json(DeepResearchApiResponse {
         result: cached_response.data,
         from_cache: cached_response.from_cache,
-        created_at: cached_response.cached_at.unwrap_or_else(|| Utc::now()),
+        created_at: cached_response.cached_at.unwrap_or_else(Utc::now),
         expires_at: cached_response
             .expires_at
             .unwrap_or_else(|| Utc::now() + chrono::Duration::hours(24)),

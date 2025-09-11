@@ -810,13 +810,11 @@ impl EipService {
                                 eip_number, e
                             ))));
                         }
-                    } else {
-                        if attempts == max_attempts {
-                            return Err(Error::Eip(EipError::GitHubError(format!(
-                                "Request error for EIP-{}: {}",
-                                eip_number, e
-                            ))));
-                        }
+                    } else if attempts == max_attempts {
+                        return Err(Error::Eip(EipError::GitHubError(format!(
+                            "Request error for EIP-{}: {}",
+                            eip_number, e
+                        ))));
                     }
                     continue;
                 }

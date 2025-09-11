@@ -1,4 +1,4 @@
-/// Database query macros to reduce repetition in SQLx query building
+//! Database query macros to reduce repetition in SQLx query building
 
 /// Macro for building and executing a SQLx query with parameters
 ///
