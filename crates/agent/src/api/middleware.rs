@@ -161,3 +161,44 @@ where
         }),
     }
 }
+
+/// JWT auth middleware
+pub async fn jwt_auth<S>(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    mut request: Request,
+    next: Next,
+) -> Result<Response, ApiError>
+where
+    S: Send + Sync,
+{
+    let auth_header = headers
+        .get("Authorization")
+        .and_then(|h| h.to_str().ok())
+        .ok_or_else(|| ApiError::unauthorized("Missing Authorization header"))?;
+
+    // Extract the token from "Bearer <token>"
+    let token = auth_header.strip_prefix("Bearer ").ok_or_else(|| {
+        ApiError::unauthorized("Invalid Authorization header format. Expected 'Bearer <token>'")
+    })?;
+
+    // Verify the token and get claims
+    let claims = state.clerk_service.verify_token(token).await.map_err(|e| {
+        error!("Failed to verify Clerk token: {}", e);
+        ApiError::unauthorized("Invalid token")
+    })?;
+
+    // Get user information from Clerk API
+    let user = state
+        .clerk_service
+        .get_user(&claims.sub)
+        .await
+        .map_err(|e| {
+            error!("Failed to get user from Clerk: {}", e);
+            ApiError::internal_error("Failed to retrieve user information")
+        })?;
+
+    request.extensions_mut().insert(user.clone());
+
+    Ok(next.run(request).await)
+}

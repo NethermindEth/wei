@@ -58,6 +58,14 @@ pub struct Config {
     /// Exa API key for search functionality
     #[arg(env = "WEI_AGENT_EXA_API_KEY", long)]
     pub exa_api_key: Option<String>,
+
+    /// Clerk publishable key
+    #[arg(env = "CLERK_PUBLISHABLE_KEY", long)]
+    pub clerk_publishable_key: Option<String>,
+
+    /// Clerk secret key
+    #[arg(env = "CLERK_SECRET_KEY", long)]
+    pub clerk_secret_key: Option<String>,
 }
 
 impl Config {

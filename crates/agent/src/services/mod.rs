@@ -7,6 +7,8 @@
 pub mod agent;
 /// Cache service for all API endpoints
 pub mod cache;
+/// Clerk authentication service
+pub mod clerk;
 /// Exa search service for finding related proposals
 pub mod exa;
 /// Webhook service for receiving events

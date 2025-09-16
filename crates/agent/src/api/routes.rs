@@ -18,10 +18,10 @@ use crate::{
     api::{
         error::ErrorResponse,
         handlers,
-        middleware::{api_key_auth, handle_error_middleware},
+        middleware::{api_key_auth, handle_error_middleware, jwt_auth},
     },
     config::Config,
-    services::cache::CacheService,
+    services::{cache::CacheService, clerk::ClerkService},
     swagger::handlers::{openapi_handler, swagger_ui_handler},
     AgentService,
 };
@@ -35,6 +35,8 @@ pub struct AppState {
     pub agent_service: AgentService,
     /// Cache service for managing cached responses
     pub cache_service: CacheService,
+    /// Clerk service
+    pub clerk_service: ClerkService,
 }
 
 impl FromRef<AppState> for Config {
@@ -48,6 +50,7 @@ pub fn create_router(
     config: &Config,
     agent_service: AgentService,
     cache_service: CacheService,
+    clerk_service: ClerkService,
 ) -> Router {
     let tracing_layer = TraceLayer::new_for_http()
         .make_span_with(DefaultMakeSpan::new().include_headers(true))
@@ -61,6 +64,7 @@ pub fn create_router(
         config: config.clone(),
         agent_service,
         cache_service,
+        clerk_service,
     };
 
     // Configure CORS
@@ -77,15 +81,26 @@ pub fn create_router(
             .allow_methods(AllowMethods::list([
                 Method::GET,
                 Method::POST,
+                Method::PUT,
+                Method::DELETE,
                 Method::OPTIONS,
+                Method::HEAD,
             ]))
             .allow_headers([
                 header::CONTENT_TYPE,
                 header::AUTHORIZATION,
                 header::ACCEPT,
                 header::HeaderName::from_static("x-api-key"),
+                header::HeaderName::from_static("x-requested-with"),
+                header::HeaderName::from_static("origin"),
+                header::HeaderName::from_static("referer"),
+                header::HeaderName::from_static("user-agent"),
             ])
-            .expose_headers([header::HeaderName::from_static("x-api-key")])
+            .expose_headers([
+                header::HeaderName::from_static("x-api-key"),
+                header::CONTENT_TYPE,
+                header::HeaderName::from_static("x-request-id"),
+            ])
     } else {
         // Otherwise, use the exact list of allowed origins
         let mut cors_layer = CorsLayer::new();
@@ -110,8 +125,14 @@ pub fn create_router(
                 header::AUTHORIZATION,
                 header::ACCEPT,
                 header::HeaderName::from_static("x-api-key"),
+                header::HeaderName::from_static("x-bearer-token"),
             ])
-            .expose_headers([header::HeaderName::from_static("x-api-key")])
+            .expose_headers([
+                header::HeaderName::from_static("x-api-key"),
+                header::HeaderName::from_static("x-bearer-token"),
+                header::CONTENT_TYPE,
+                header::HeaderName::from_static("x-request-id"),
+            ])
             .allow_credentials(true)
     };
 
@@ -120,6 +141,20 @@ pub fn create_router(
         .route("/health", get(handlers::health))
         .route("/api-docs/openapi.json", get(openapi_handler))
         .route("/api-docs", get(swagger_ui_handler));
+
+    let clerk_auth_routes = Router::new()
+        .route(
+            "/user/me",
+            get(handlers::get_current_user).options(|_: Request| async { "" }),
+        )
+        .route_layer(middleware::from_fn_with_state(
+            state.clone(),
+            api_key_auth::<AppState>,
+        ))
+        .route_layer(middleware::from_fn_with_state(
+            state.clone(),
+            jwt_auth::<AppState>,
+        ));
 
     // Protected routes that require API key authentication
     let protected_routes = Router::new()
@@ -231,6 +266,7 @@ pub fn create_router(
     // Combine routes
     public_routes
         .merge(protected_routes)
+        .merge(clerk_auth_routes)
         .fallback(custom_fallback)
         // Use a simpler error handling approach
         .layer(axum::error_handling::HandleErrorLayer::new(|_| async {

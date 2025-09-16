@@ -17,6 +17,8 @@ pub mod health;
 pub mod proposal;
 /// Roadmap data model
 pub mod roadmap;
+/// User data model for Clerk integration
+pub mod user;
 /// Webhook event data model
 pub mod webhook;
 
@@ -46,4 +48,8 @@ pub use deepresearch::{
 pub use health::HealthResponse;
 pub use proposal::Proposal;
 pub use roadmap::{RoadmapApiResponse, RoadmapRequest, RoadmapResponse, RoadmapResult};
+pub use user::{
+    ClerkClaims, EmailAddress, ExternalAccount, IdentificationLink, Passkey, PhoneNumber,
+    SamlAccount, SamlConnection, User, UserResponse, Verification, Web3Wallet,
+};
 pub use webhook::WebhookEvent;

@@ -1,6 +1,7 @@
 use std::net::SocketAddr;
 
 use agent::api::create_router;
+use agent::services::clerk::ClerkService;
 use clap::Parser;
 use tokio::net::TcpListener;
 use tracing::{error, info};
@@ -55,8 +56,9 @@ async fn main() -> agent::Result<()> {
     // Initialize cache service
     let cache_repo = CacheRepository::new(db);
     let cache_service = CacheService::new(cache_repo);
+    let clerk_service = ClerkService::new(config.clone());
 
-    let app = create_router(&config, agent_service, cache_service);
+    let app = create_router(&config, agent_service, cache_service, clerk_service);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
     let listener = TcpListener::bind(addr).await.unwrap();
