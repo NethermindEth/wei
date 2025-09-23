@@ -27,6 +27,11 @@ class Task(TypedDict):
     dependencies: List[str]
     evidence: List[str]
 
+class ArgumentsDict(TypedDict):
+    """Arguments for and against a proposal."""
+    for_proposal: List[str]
+    against: List[str]
+
 class AgentState(TypedDict):
     """The state of the proposal analysis agent."""
     # Input
@@ -43,6 +48,7 @@ class AgentState(TypedDict):
     hypotheses: List[Dict[str, Any]]
     verified_claims: List[ClaimEvidence]
     rag_results: Optional[List[Dict[str, Any]]]
+    arguments: ArgumentsDict  # Arguments for and against the proposal
     
     # Output
     tasks: List[Task]

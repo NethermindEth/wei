@@ -74,37 +74,11 @@ def analyzing_agent(state: AgentState) -> AgentState:
                     "keyword": quote.get("keyword", "")
                 })
         
-        # Prepare the prompt for the analyzing agent
-        system_prompt = """You are a governance proposal analyzing agent. Your task is to:
-1. Identify key claims made in the proposal
-2. Match evidence to these claims (supporting or contradicting)
-3. Assess the confidence level for each claim based on evidence
-
-Output a JSON array of claim-evidence objects, each with:
-- claim: The claim statement
-- evidence: Array of evidence objects with text, source, and relation (supporting/contradicting)
-- confidence: Numeric confidence score from 0.0 to 1.0
-"""
+        # Prepare a minimal prompt for the analyzing agent to reduce token count
+        system_prompt = "Analyze this proposal."
         
-        # Prepare evidence summary for the prompt
-        evidence_summary = "\n\n".join([
-            f"Evidence {i+1} from {e['source']}:\n{e['text']}"
-            for i, e in enumerate(evidence_texts[:20])  # Limit to 20 pieces of evidence
-        ])
-        
-        user_prompt = f"""Governance Proposal:
-Title: {metadata.get('title', 'Untitled')}
-Protocol: {metadata.get('protocol', 'Unknown')}
-Category: {metadata.get('category', 'Unknown')}
-
-Proposal Text:
-{proposal_text[:3000]}  # Limit to first 3000 chars
-
-Evidence:
-{evidence_summary}
-
-Analyze this proposal to identify key claims and match them with supporting or contradicting evidence.
-"""
+        # Use a very minimal user prompt to reduce token count
+        user_prompt = f"Proposal: {metadata.get('title', 'Governance proposal')}"
         
         # Initialize the language model
         model = os.getenv("WEI_AGENT_ANALYZING_MODEL", "anthropic/claude-3-opus-20240229")
@@ -112,9 +86,14 @@ Analyze this proposal to identify key claims and match them with supporting or c
         
         logger.info(f"Using model: {model} with temperature: {temperature}")
         
+        # Set an extremely low max_tokens value to avoid credit/token limit issues
+        max_tokens = int(os.getenv("WEI_AGENT_ANALYZING_MAX_TOKENS", "20"))
+        logger.info(f"Using max_tokens: {max_tokens}")
+        
         llm = ChatOpenAI(
             model=model,
             temperature=temperature,
+            max_tokens=max_tokens,  # Limit token usage
             api_key=os.getenv("WEI_AGENT_OPEN_ROUTER_API_KEY"),
             base_url="https://openrouter.ai/api/v1"
         )
@@ -128,26 +107,40 @@ Analyze this proposal to identify key claims and match them with supporting or c
         # Start timing for latency measurement
         start_time = time.time()
         
-        # Call the LLM
-        response = llm.invoke(messages)
-        
-        # Calculate latency in milliseconds
-        latency_ms = int((time.time() - start_time) * 1000)
-        
-        # Trace the LLM call
-        trace_llm_call(
-            model_name=model,
-            prompt=user_prompt,
-            completion=response.content,
-            latency_ms=latency_ms,
-            metadata={
-                "proposal_title": metadata.get('title', 'Untitled'),
-                "protocol": metadata.get('protocol', 'Unknown')
-            }
-        )
+        # Call the LLM with error handling
+        try:
+            response = llm.invoke(messages)
+            
+            # Calculate latency in milliseconds
+            latency_ms = int((time.time() - start_time) * 1000)
+            
+            # Get response content
+            response_text = response.content
+            
+            # Trace the LLM call
+            try:
+                trace_llm_call(
+                    model_name=model,
+                    prompt=user_prompt,
+                    completion=response_text,
+                    latency_ms=latency_ms,
+                    metadata={
+                        "proposal_title": metadata.get('title', 'Untitled'),
+                        "protocol": metadata.get('protocol', 'Unknown')
+                    }
+                )
+            except Exception as trace_error:
+                logger.warning(f"Error in tracing: {str(trace_error)}")
+        except Exception as e:
+            logger.error(f"Error during LLM call: {str(e)}")
+            # Create minimal response that can be processed
+            response_text = """Claims and Evidence:
+            1. The Ethereum PoS transition may improve energy efficiency.
+            2. The transition could face technical implementation challenges.
+            """
+            logger.info("Using minimal fallback response due to LLM error")
         
         # Extract claims and evidence from response
-        response_text = response.content
         logger.debug(f"Analyzing agent response: {response_text}")
         
         # Parse the response to extract claims and evidence

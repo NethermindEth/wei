@@ -100,6 +100,12 @@ def rag_fallback(state: AgentState) -> AgentState:
         
         state["evidence_summary"] = evidence_summary + rag_summary
         
+        # Preserve arguments from previous nodes if they exist
+        if "arguments" in state:
+            logger.info(f"Preserving arguments in RAG fallback: {state['arguments']}")
+        else:
+            logger.warning("No arguments found in state during RAG fallback")
+        
         logger.info(f"Executed {len(limited_queries)} RAG queries with {sum(len(item.get('results', [])) for item in rag_results)} total results")
         
         return state
