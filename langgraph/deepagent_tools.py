@@ -1,18 +1,19 @@
-"""
-DeepAgent Tools Module
+"""DeepAgent Tools Module
 
-This module provides tools for the deepagent-based proposal analyzer.
-It includes functions for generating arguments for and against proposals.
+This module defines custom tools for use with the deepagents package.
+These tools are designed to work with the DeepAgent system for proposal analysis.
 """
 
 import logging
-import os
 import json
 import time
-import re
-import requests
-from typing import Dict, Any, List, Optional, Union
-from langchain_core.tools import tool
+import os
+from typing import Dict, Any, List, Optional, Callable
+from functools import wraps
+from deepagents.tools import tool
+
+# Import utilities
+from utils import extract_json, measure_execution_time
 
 # Configure logging
 logging.basicConfig(
@@ -235,8 +236,9 @@ JSON response:
             "against": [f"The implementation of {title} may present technical challenges."]
         }
 
+@measure_execution_time
 def extract_json_from_completion(completion: str) -> Dict[str, Any]:
-    """Extract JSON from LLM completion.
+    """Extract JSON from LLM completion using the utility function.
     
     Args:
         completion: The raw completion from the LLM
@@ -247,17 +249,12 @@ def extract_json_from_completion(completion: str) -> Dict[str, Any]:
     Raises:
         ValueError: If JSON cannot be extracted
     """
-    import re
-    import json
-    
-    # Try to extract JSON from the completion using regex
-    json_match = re.search(r'\{[\s\S]*\}', completion)
-    if json_match:
-        json_str = json_match.group(0)
-        return json.loads(json_str)
-    
-    # If no JSON found, try to parse the whole completion
-    return json.loads(completion)
+    try:
+        # Use the utility function from utils.py
+        return extract_json(completion)
+    except ValueError as e:
+        logger.error(f"Error extracting JSON: {e}")
+        raise ValueError(f"Could not extract valid JSON from completion: {e}")
 
 
 def validate_arguments_structure(arguments: Dict[str, Any]) -> None:
@@ -303,6 +300,7 @@ def ensure_minimum_arguments(arguments: Dict[str, List[str]], title: str, protoc
     return result
 
 
+@measure_execution_time
 def extract_arguments_from_text(completion: str, title: str, protocol: str) -> Dict[str, List[str]]:
     """Extract arguments from text when JSON parsing fails.
     
@@ -319,19 +317,67 @@ def extract_arguments_from_text(completion: str, title: str, protocol: str) -> D
     for_arguments = []
     against_arguments = []
     
-    # Try to extract arguments using regex
-    for_section = re.search(r'(?:Arguments? for|FOR)[:\s]+(.*?)(?:Arguments? against|AGAINST|$)', completion, re.DOTALL | re.IGNORECASE)
-    against_section = re.search(r'(?:Arguments? against|AGAINST)[:\s]+(.*?)(?:$)', completion, re.DOTALL | re.IGNORECASE)
+    logger.info(f"Attempting to extract arguments from raw text of length {len(completion)}")
     
-    if for_section:
-        for_text = for_section.group(1).strip()
-        for_args = re.findall(r'(?:\d+\.|-|\*)\s*(.*?)(?=(?:\d+\.|-|\*)|$)', for_text, re.DOTALL)
-        for_arguments = [arg.strip() for arg in for_args if arg.strip()]
+    # Try multiple patterns for extracting arguments for the proposal
+    for_patterns = [
+        r'(?:Arguments? for|FOR)[:\s]+(.*?)(?:Arguments? against|AGAINST|$)',
+        r'"for_proposal"\s*:\s*\[([^\]]+)\]',
+        r'for_proposal[:\s]+(.*?)(?:against|$)'
+    ]
     
-    if against_section:
-        against_text = against_section.group(1).strip()
-        against_args = re.findall(r'(?:\d+\.|-|\*)\s*(.*?)(?=(?:\d+\.|-|\*)|$)', against_text, re.DOTALL)
-        against_arguments = [arg.strip() for arg in against_args if arg.strip()]
+    for pattern in for_patterns:
+        for_section = re.search(pattern, completion, re.DOTALL | re.IGNORECASE)
+        if for_section:
+            for_text = for_section.group(1).strip()
+            # Try different item patterns
+            item_patterns = [
+                r'(?:\d+\.|-|\*)\s*(.*?)(?=(?:\d+\.|-|\*)|$)',
+                r'"([^"]+)"',  # Quoted items
+                r'([^,\n]+)'  # Comma or newline separated
+            ]
+            
+            for item_pattern in item_patterns:
+                for_args = re.findall(item_pattern, for_text, re.DOTALL)
+                if for_args:
+                    for_arguments = [arg.strip().rstrip(',"').lstrip('"') for arg in for_args if arg.strip()]
+                    if for_arguments:
+                        break
+            
+            if for_arguments:  # If we found arguments, stop trying patterns
+                break
+    
+    # Try multiple patterns for extracting arguments against the proposal
+    against_patterns = [
+        r'(?:Arguments? against|AGAINST)[:\s]+(.*?)(?:$)',
+        r'"against"\s*:\s*\[([^\]]+)\]',
+        r'against[:\s]+(.*?)(?:$)'
+    ]
+    
+    for pattern in against_patterns:
+        against_section = re.search(pattern, completion, re.DOTALL | re.IGNORECASE)
+        if against_section:
+            against_text = against_section.group(1).strip()
+            # Try different item patterns
+            item_patterns = [
+                r'(?:\d+\.|-|\*)\s*(.*?)(?=(?:\d+\.|-|\*)|$)',
+                r'"([^"]+)"',  # Quoted items
+                r'([^,\n]+)'  # Comma or newline separated
+            ]
+            
+            for item_pattern in item_patterns:
+                against_args = re.findall(item_pattern, against_text, re.DOTALL)
+                if against_args:
+                    against_arguments = [arg.strip().rstrip(',"').lstrip('"') for arg in against_args if arg.strip()]
+                    if against_arguments:
+                        break
+            
+            if against_arguments:  # If we found arguments, stop trying patterns
+                break
+    
+    # Clean up arguments - remove any that are too short or contain only punctuation
+    for_arguments = [arg for arg in for_arguments if len(arg) > 10 and not all(c in '.,;:!?-"' for c in arg)]
+    against_arguments = [arg for arg in against_arguments if len(arg) > 10 and not all(c in '.,;:!?-"' for c in arg)]
     
     # Ensure we have at least some arguments
     if not for_arguments:
@@ -339,6 +385,8 @@ def extract_arguments_from_text(completion: str, title: str, protocol: str) -> D
     
     if not against_arguments:
         against_arguments = [f"The implementation of {title} may present technical challenges."]
+    
+    logger.info(f"Extracted {len(for_arguments)} arguments for and {len(against_arguments)} arguments against")
     
     return {
         "for_proposal": for_arguments[:5],  # Limit to 5 most relevant

@@ -4,15 +4,17 @@ This module provides a simplified interface for tracing LLM calls and other oper
 import os
 import uuid
 import logging
-from typing import Dict, Any, List, Optional, TypeVar
+from typing import Dict, Any, List, Optional, TypeVar, Callable, Union
 from dotenv import load_dotenv
+
+# Import utilities from utils.py
+from utils import Metadata
 
 # Configure logging
 logger = logging.getLogger('langfuse_setup')
 
 # Type definitions for better type hinting
 T = TypeVar('T')
-Metadata = Dict[str, Any]
 Span = Any  # Ideally would be langfuse.Span but avoiding direct import dependency
 
 # Constants for environment variables
@@ -136,6 +138,71 @@ def create_span(name: str, metadata: Optional[Metadata] = None) -> Optional[Span
         logger.warning(f"Error creating span {name}: {e}")
         return None
 
+
+def trace_operation(
+    operation_type: str,
+    name: str,
+    input_data: Any,
+    output_data: Any,
+    latency_ms: float,
+    metadata: Optional[Metadata] = None,
+    metrics_calculator: Optional[Callable] = None
+) -> Optional[str]:
+    """Generic function to trace any operation with Langfuse.
+    
+    Args:
+        operation_type: Type of operation (llm, query, similarity, etc.)
+        name: Name of the span
+        input_data: Input data for the operation
+        output_data: Output data from the operation
+        latency_ms: Latency in milliseconds
+        metadata: Additional metadata
+        metrics_calculator: Optional function to calculate additional metrics
+        
+    Returns:
+        Span ID if successful, None otherwise
+    """
+    logger.info(f"{operation_type.title()} Operation: {name}")
+    logger.info(f"Latency: {latency_ms} ms")
+    
+    if not langfuse_available:
+        logger.debug("Langfuse not available")
+        return None
+    
+    try:
+        langfuse = get_langfuse_client()
+        if not langfuse:
+            return None
+        
+        # Prepare base metadata
+        base_metadata = validate_metadata(metadata)
+        base_metadata.update({
+            "operation_type": operation_type,
+            "latency_ms": latency_ms,
+        })
+        
+        # Calculate additional metrics if provided
+        if metrics_calculator:
+            metrics = metrics_calculator(input_data, output_data, latency_ms)
+            base_metadata.update(metrics)
+        
+        # Create span
+        with langfuse.start_as_current_span(name=name, metadata=base_metadata) as span:
+            # Score the span if metrics are available
+            if "quality_score" in base_metadata:
+                langfuse.score_current_span(
+                    name="quality", 
+                    value=base_metadata["quality_score"]
+                )
+        
+        langfuse.flush()
+        logger.info(f"{operation_type.title()} trace flushed")
+        
+        return span.id
+    except Exception as e:
+        logger.warning(f"Error tracing {operation_type} with Langfuse: {e}")
+        return None
+
 # Define a decorator for observing functions with Langfuse
 def observe_function(name=None, as_type=None):
     """Decorator for observing functions with Langfuse."""
@@ -199,6 +266,7 @@ def calculate_token_metrics(prompt: str, completion: str, latency_ms: float) -> 
     # Calculate ratios and rates with safeguards against division by zero
     token_ratio = completion_tokens / prompt_tokens if prompt_tokens > 0 else 0
     processing_time_per_token = latency_ms / completion_tokens if completion_tokens > 0 else 0
+    quality_score = min(1.0, len(completion) / 500)  # Example quality metric
     
     return {
         "prompt_length": len(prompt),
@@ -207,8 +275,23 @@ def calculate_token_metrics(prompt: str, completion: str, latency_ms: float) -> 
         "completion_tokens": completion_tokens,
         "total_tokens": total_tokens,
         "token_ratio": token_ratio,
-        "processing_time_per_token": processing_time_per_token
+        "processing_time_per_token": processing_time_per_token,
+        "quality_score": quality_score
     }
+
+
+def llm_metrics_calculator(prompt: str, completion: str, latency_ms: float) -> Dict[str, Any]:
+    """Calculate metrics for LLM calls.
+    
+    Args:
+        prompt: The prompt text
+        completion: The completion text
+        latency_ms: Processing latency in milliseconds
+        
+    Returns:
+        Dictionary of calculated metrics
+    """
+    return calculate_token_metrics(prompt, completion, latency_ms)
 
 
 def trace_llm_call_with_context(model_name: str, prompt: str, completion: str, latency_ms: float, metadata: Optional[Metadata] = None) -> Optional[str]:
@@ -228,59 +311,20 @@ def trace_llm_call_with_context(model_name: str, prompt: str, completion: str, l
     Returns:
         str: The trace ID or None if Langfuse is not available
     """
-    # Always log basic information to console
-    logger.info(f"LLM Call: {model_name}")
-    logger.info(f"Latency: {latency_ms} ms")
+    # Prepare base metadata
+    base_metadata = validate_metadata(metadata)
+    base_metadata["model"] = model_name
     
-    if not langfuse_available:
-        logger.debug("Langfuse not available")
-        return None
-    
-    try:
-        # Get the Langfuse client
-        langfuse = get_langfuse_client()
-        if not langfuse:
-            logger.warning("Could not get Langfuse client")
-            return None
-        
-        # Create a trace ID
-        trace_id = str(uuid.uuid4())
-        
-        # Calculate token metrics
-        token_metrics = calculate_token_metrics(prompt, completion, latency_ms)
-        
-        # Prepare base metadata
-        base_metadata = validate_metadata(metadata)
-        base_metadata["model"] = model_name
-        base_metadata["latency_ms"] = latency_ms
-        
-        # Create a trace using a context manager
-        with langfuse.start_as_current_span(name="llm_process", metadata=base_metadata) as span:
-            # Update the span with token metrics
-            span.update(metadata=token_metrics)
-            
-            # Create a nested generation for the LLM call
-            with langfuse.start_as_current_generation(
-                name="llm_generation",
-                model=model_name,
-                input=prompt,
-                output=completion,
-                metadata={**base_metadata, **token_metrics}
-            ) as generation:
-                pass  # The generation is automatically tracked
-            
-            # Score the current span based on completion quality
-            quality_score = min(1.0, len(completion) / 500)  # Example quality metric
-            langfuse.score_current_span(name="quality", value=quality_score)
-        
-        # Flush to ensure data is sent to Langfuse
-        langfuse.flush()
-        logger.info("Langfuse data flushed")
-        
-        return trace_id
-    except Exception as e:
-        logger.warning(f"Error tracing with Langfuse: {e}")
-        return None
+    # Use the generic trace_operation function
+    return trace_operation(
+        operation_type="llm",
+        name="llm_process",
+        input_data=prompt,
+        output_data=completion,
+        latency_ms=latency_ms,
+        metadata=base_metadata,
+        metrics_calculator=llm_metrics_calculator
+    )
 
 
 def extract_result_metadata(results: List[Dict[str, Any]], max_results: int = 5) -> Dict[str, Any]:
@@ -311,6 +355,34 @@ def extract_result_metadata(results: List[Dict[str, Any]], max_results: int = 5)
     return result_metadata
 
 
+def exa_metrics_calculator(query: str, results: List[Dict[str, Any]], latency_ms: float) -> Dict[str, Any]:
+    """Calculate metrics for Exa API queries.
+    
+    Args:
+        query: The query sent to Exa API
+        results: The results received from Exa API
+        latency_ms: The latency of the query in milliseconds
+        
+    Returns:
+        Dictionary of calculated metrics
+    """
+    # Extract basic metrics
+    metrics = {
+        "query": query,
+        "num_results": len(results) if isinstance(results, list) else 1,
+    }
+    
+    # Calculate quality score based on number of results
+    if isinstance(results, list) and results:
+        metrics["quality_score"] = min(1.0, len(results) / 10)  # Example quality metric
+    
+    # Extract result metadata
+    result_metadata = extract_result_metadata(results)
+    metrics.update(result_metadata)
+    
+    return metrics
+
+
 def trace_exa_query(query: str, results: List[Dict[str, Any]], latency_ms: float, metadata: Optional[Metadata] = None) -> Optional[str]:
     """
     Trace an Exa API query with Langfuse.
@@ -324,48 +396,16 @@ def trace_exa_query(query: str, results: List[Dict[str, Any]], latency_ms: float
     Returns:
         str: The span ID or None if Langfuse is not available
     """
-    logger.info(f"Exa Query: {query}")
-    logger.info(f"Latency: {latency_ms} ms")
-    
-    # Early return if Langfuse is not available
-    if not langfuse_available:
-        logger.debug("Langfuse not available")
-        return None
-    
-    try:
-        # Get the Langfuse client
-        langfuse = get_langfuse_client()
-        if not langfuse:
-            return None
-        
-        # Prepare base metadata
-        base_metadata = validate_metadata(metadata)
-        base_metadata.update({
-            "query": query,
-            "latency_ms": latency_ms,
-            "num_results": len(results) if isinstance(results, list) else 1,
-        })
-        
-        # Create a span for the Exa query
-        with langfuse.start_as_current_span(name="exa_query", metadata=base_metadata) as span:
-            # Extract and add result metadata
-            result_metadata = extract_result_metadata(results)
-            if result_metadata:
-                span.update(metadata=result_metadata)
-            
-            # Score the span based on number of results
-            if isinstance(results, list) and results:
-                quality_score = min(1.0, len(results) / 10)  # Example quality metric
-                langfuse.score_current_span(name="result_quality", value=quality_score)
-        
-        # Flush to ensure data is sent to Langfuse
-        langfuse.flush()
-        logger.info("Exa query trace flushed")
-        
-        return span.id
-    except Exception as e:
-        logger.warning(f"Error tracing Exa query with Langfuse: {e}")
-        return None
+    # Use the generic trace_operation function
+    return trace_operation(
+        operation_type="search",
+        name="exa_query",
+        input_data=query,
+        output_data=results,
+        latency_ms=latency_ms,
+        metadata=metadata,
+        metrics_calculator=exa_metrics_calculator
+    )
 
 
 def calculate_similarity_stats(scores: List[float], threshold: float = 0.7) -> Dict[str, float]:
@@ -404,6 +444,40 @@ def calculate_similarity_stats(scores: List[float], threshold: float = 0.7) -> D
     }
 
 
+def similarity_metrics_calculator(vectors: int, scores: List[float], latency_ms: float, threshold: float = 0.7) -> Dict[str, Any]:
+    """Calculate metrics for cosine similarity calculations.
+    
+    Args:
+        vectors: The number of vectors compared
+        scores: The similarity scores
+        latency_ms: The latency of the calculation in milliseconds
+        threshold: The similarity threshold used
+        
+    Returns:
+        Dictionary of calculated metrics
+    """
+    # Calculate statistics
+    stats = calculate_similarity_stats(scores, threshold)
+    
+    # Add basic metrics
+    metrics = {
+        "num_vectors": vectors,
+        "threshold": threshold,
+        **stats
+    }
+    
+    # Add top 5 scores if available
+    if scores:
+        top_scores = sorted(scores, reverse=True)[:5]
+        for i, score in enumerate(top_scores):
+            metrics[f"top_score_{i+1}"] = score
+    
+    # Add quality score based on average similarity
+    metrics["quality_score"] = min(1.0, stats["avg_score"])
+    
+    return metrics
+
+
 def trace_cosine_similarity(vectors: int, scores: List[float], threshold: float = 0.7, metadata: Optional[Metadata] = None) -> Optional[str]:
     """
     Trace cosine similarity calculations with Langfuse.
@@ -417,47 +491,17 @@ def trace_cosine_similarity(vectors: int, scores: List[float], threshold: float 
     Returns:
         str: The span ID or None if Langfuse is not available
     """
-    logger.info(f"Cosine Similarity: {len(scores)} comparisons")
+    # Prepare base metadata with threshold
+    base_metadata = validate_metadata(metadata)
+    base_metadata["threshold"] = threshold
     
-    # Early return if Langfuse is not available
-    if not langfuse_available:
-        logger.debug("Langfuse not available")
-        return None
-    
-    try:
-        # Get the Langfuse client
-        langfuse = get_langfuse_client()
-        if not langfuse:
-            return None
-        
-        # Calculate statistics
-        stats = calculate_similarity_stats(scores, threshold)
-        
-        # Prepare base metadata
-        base_metadata = validate_metadata(metadata)
-        base_metadata.update({
-            "num_vectors": vectors,
-            "threshold": threshold,
-            **stats
-        })
-        
-        # Create a span for the cosine similarity calculation
-        with langfuse.start_as_current_span(name="cosine_similarity", metadata=base_metadata) as span:
-            # Add top 5 scores if available
-            if scores:
-                top_scores = sorted(scores, reverse=True)[:5]
-                top_scores_metadata = {f"top_score_{i+1}": score for i, score in enumerate(top_scores)}
-                span.update(metadata=top_scores_metadata)
-            
-            # Score the span based on average similarity
-            avg_score = stats["avg_score"]
-            langfuse.score_current_span(name="similarity_quality", value=min(1.0, avg_score))
-        
-        # Flush to ensure data is sent to Langfuse
-        langfuse.flush()
-        logger.info("Cosine similarity trace flushed")
-        
-        return span.id
-    except Exception as e:
-        logger.warning(f"Error tracing cosine similarity with Langfuse: {e}")
-        return None
+    # Use the generic trace_operation function
+    return trace_operation(
+        operation_type="similarity",
+        name="cosine_similarity",
+        input_data=vectors,
+        output_data=scores,
+        latency_ms=0,  # No latency measurement for this operation
+        metadata=base_metadata,
+        metrics_calculator=lambda v, s, l: similarity_metrics_calculator(v, s, l, threshold)
+    )

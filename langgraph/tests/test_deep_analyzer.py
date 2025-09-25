@@ -1,21 +1,24 @@
 """
 Test script for the deep proposal analyzer.
-
 This script tests the refactored implementation of the proposal analyzer
 using the deepagents package with Langfuse tracing for monitoring and debugging.
 """
 
 import logging
-import time
-import json
-import os
 import sys
+import os
+import json
+import time
 import logging
-from pathlib import Path
+from typing import Dict, Any, List, Tuple, Optional
 from dotenv import load_dotenv
 
 # Import helper to add parent directory to path
 import import_helper
+
+# Import utilities
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils import setup_logging, measure_execution_time
 
 # Now we can import modules from the parent directory
 try:
@@ -39,26 +42,22 @@ print(f"Current directory: {current_dir}")
 
 
 # Configure logging
-def setup_logging():
-    """Set up logging for the test script."""
+def configure_test_logging():
+    """Set up logging for the test script using the utility function."""
     # First, make sure any existing handlers are removed
     for handler in logging.root.handlers[:]: 
         logging.root.removeHandler(handler)
 
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.StreamHandler(),
-            logging.FileHandler('test_deep_analyzer.log', mode='w')  # 'w' mode to overwrite the file
-        ]
+    # Use the utility function from utils.py
+    logger = setup_logging(
+        name='test_deep_analyzer',
+        log_file='test_deep_analyzer.log',
+        level=logging.INFO
     )
     
     # Make sure other loggers also log to our handlers
     logging.getLogger('langfuse').setLevel(logging.DEBUG)
     
-    # Create a logger for this module
-    logger = logging.getLogger('test_deep_analyzer')
     return logger
 
 # Dictionary to store trace IDs
@@ -68,6 +67,7 @@ trace_ids = {}
 CHECKMARK = "✓"
 
 
+@measure_execution_time
 def generate_tasks_and_blockers(result, metadata, proposal_text):
     """
     Generate meaningful tasks and blockers based on the proposal analysis.
@@ -132,6 +132,7 @@ def generate_tasks_and_blockers(result, metadata, proposal_text):
     
     return tasks, blockers
 
+@measure_execution_time
 def test_proposal_analysis(proposal_text, metadata, test_name="default"):
     """Run a test of the proposal analyzer with the given proposal and metadata.
     
@@ -358,7 +359,7 @@ def main():
     """Run tests of the deep proposal analyzer."""
     # Set up logging
     global logger
-    logger = setup_logging()
+    logger = configure_test_logging()
     logger.info("Logging initialized")
     
     # Define Langfuse host and log file

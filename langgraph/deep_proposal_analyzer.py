@@ -21,6 +21,9 @@ from deepagent_tools import deepagent_tools
 from deepagent_subagents import deepagent_subagents
 from langgraph.graph import StateGraph
 
+# Import utilities
+from utils import extract_section_with_patterns, determine_section_status, setup_logging, measure_execution_time
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -33,6 +36,7 @@ logging.basicConfig(
 logger = logging.getLogger('deep_proposal_analyzer')
 
 
+@measure_execution_time
 def trace_search_queries(web_queries: List[str], indexed_queries: List[str], metadata: Dict[str, Any]) -> None:
     """Trace search queries and similarity calculations.
     
@@ -55,7 +59,7 @@ def trace_search_queries(web_queries: List[str], indexed_queries: List[str], met
         {"title": f"{metadata.get('protocol', 'Unknown')} Governance Framework", "url": "https://example.com/governance", "score": 0.78}
     ]
     
-    # Common metadata for all queries
+    # Common metadata for all queries using safe_get from utils
     base_metadata = {
         "protocol": metadata.get('protocol', 'Unknown'),
         "proposal_id": metadata.get('id', 'Unknown'),
@@ -389,6 +393,81 @@ def generate_evaluation_report(result: Dict[str, Any]) -> Dict[str, Any]:
     logger.info("Evaluation report generated successfully")
     return evaluation_report
 
+
+@measure_execution_time
+def extract_evaluation_report(content: str, arguments: Dict[str, List[str]]) -> Dict[str, Any]:
+    """Extract an evaluation report from the proposal content using utility functions.
+    
+    Args:
+        content: The proposal content
+        arguments: Arguments for and against the proposal
+        
+    Returns:
+        A dictionary containing the evaluation report
+    """
+    # Extract sections using utility functions
+    summary_patterns = [
+        r"Summary:(.*?)(?:\n\n|\n#|$)",
+        r"\*\*Summary\*\*:(.*?)(?:\n\n|\n#|$)",
+        r"# Summary(.*?)(?:\n\n|\n#|$)",
+        r"^(.*?)(?:\n\n|\n#)",  # Try first paragraph if nothing else matches
+    ]
+    summary = extract_section_with_patterns(content, summary_patterns, min_length=30) or "No summary available"
+    
+    # Extract goals and motivation
+    goals_patterns = [
+        r"(?:Goals|Motivation|Objectives):(.*?)(?:\n\n|\n#|$)",
+        r"\*\*(?:Goals|Motivation|Objectives)\*\*:(.*?)(?:\n\n|\n#|$)",
+        r"# (?:Goals|Motivation|Objectives)(.*?)(?:\n\n|\n#|$)",
+    ]
+    goals_motivation = extract_section_with_patterns(content, goals_patterns)
+    
+    # Extract technical specifications
+    tech_patterns = [
+        r"(?:Technical|Implementation|Specification):(.*?)(?:\n\n|\n#|$)",
+        r"\*\*(?:Technical|Implementation|Specification)\*\*:(.*?)(?:\n\n|\n#|$)",
+        r"# (?:Technical|Implementation|Specification)(.*?)(?:\n\n|\n#|$)",
+    ]
+    tech_specs = extract_section_with_patterns(content, tech_patterns)
+    
+    # Extract overall evaluation
+    eval_patterns = [
+        r"(?:Evaluation|Assessment|Conclusion|Overall):(.*?)(?:\n\n|\n#|$)",
+        r"\*\*(?:Evaluation|Assessment|Conclusion|Overall)\*\*:(.*?)(?:\n\n|\n#|$)",
+        r"# (?:Evaluation|Assessment|Conclusion|Overall)(.*?)(?:\n\n|\n#|$)",
+    ]
+    evaluation = extract_section_with_patterns(content, eval_patterns)
+    
+    # Use utility function to determine section status
+    goals_status = determine_section_status(content, goals_motivation, ["goal", "motivation", "objective"])
+    measurable_status = determine_section_status(content, "", ["metric", "measure", "outcome"])
+    budget_status = {
+        "status": "n/a" if "budget" not in content.lower() else "pass",
+        "justification": "This proposal does not request any funding" if "budget" not in content.lower() else "The proposal includes budget considerations",
+        "suggestions": []
+    }
+    tech_status = determine_section_status(content, tech_specs, ["technical", "implementation", "specification"])
+    
+    # Generate the evaluation report
+    evaluation_report = {
+        "summary": summary,
+        "goals_and_motivation": goals_status,
+        "measurable_outcomes": measurable_status,
+        "budget": budget_status,
+        "technical_specifications": tech_status,
+        "language_quality": {
+            "status": "pass",
+            "justification": "The proposal is well-written and clear",
+            "suggestions": []
+        },
+        "overall_evaluation": evaluation[:300] + "..." if len(evaluation) > 300 else evaluation,
+        "arguments": arguments
+    }
+    
+    logger.info("Evaluation report generated successfully using utility functions")
+    return evaluation_report
+
+
 def analyze_proposal(proposal: str, metadata: Dict[str, Any], export_json: bool = False, json_path: str = None) -> Dict[str, Any]:
     """
     Analyze a proposal using direct analysis instead of the deep agent due to API limitations.
@@ -505,61 +584,12 @@ def analyze_proposal(proposal: str, metadata: Dict[str, Any], export_json: bool 
         
         logger.info(f"Generated arguments directly: {direct_arguments}")
         
-        # Extract summary from the proposal
-        import re
-        summary = ""
+        # Use our utility function to extract the evaluation report
+        logger.info("Using extract_evaluation_report utility function")
+        evaluation_report = extract_evaluation_report(proposal, direct_arguments)
         
-        # Try to find a summary section
-        summary_match = re.search(r"(?:Summary|Abstract):(.*?)(?:\n\n|\n#|$)", proposal, re.DOTALL | re.IGNORECASE)
-        if summary_match:
-            summary = summary_match.group(1).strip()
-        else:
-            # Use the first paragraph as a summary
-            first_para = proposal.split('\n\n')[0]
-            summary = first_para[:300] + "..." if len(first_para) > 300 else first_para
-        
-        # Extract motivation
-        motivation = ""
-        motivation_match = re.search(r"(?:Motivation|Goals|Objectives):(.*?)(?:\n\n|\n#|$)", proposal, re.DOTALL | re.IGNORECASE)
-        if motivation_match:
-            motivation = motivation_match.group(1).strip()
-        
-        # Extract technical specifications
-        tech_specs = ""
-        tech_match = re.search(r"(?:Technical|Implementation|Specification):(.*?)(?:\n\n|\n#|$)", proposal, re.DOTALL | re.IGNORECASE)
-        if tech_match:
-            tech_specs = tech_match.group(1).strip()
-        
-        # Create an evaluation report
-        evaluation_report = {
-            "summary": summary,
-            "goals_and_motivation": {
-                "status": "pass" if motivation else "fail",
-                "justification": motivation[:200] + "..." if len(motivation) > 200 else motivation,
-                "suggestions": ["Clearly articulate the goals and motivation of the proposal"] if not motivation else []
-            },
-            "measurable_outcomes": {
-                "status": "pass" if "metric" in proposal.lower() or "measure" in proposal.lower() else "fail",
-                "justification": "The proposal includes measurable outcomes" if "metric" in proposal.lower() or "measure" in proposal.lower() else "The proposal does not clearly define measurable outcomes",
-                "suggestions": ["Define specific metrics to measure the success of the proposal"] if not ("metric" in proposal.lower() or "measure" in proposal.lower()) else []
-            },
-            "budget": {
-                "status": "n/a" if "budget" not in proposal.lower() else "pass",
-                "justification": "This proposal does not request any funding" if "budget" not in proposal.lower() else "The proposal includes budget considerations",
-                "suggestions": []
-            },
-            "technical_specifications": {
-                "status": "pass" if tech_specs or "technical" in proposal.lower() or "implementation" in proposal.lower() else "fail",
-                "justification": tech_specs[:200] + "..." if len(tech_specs) > 200 else tech_specs or "The proposal includes technical specifications",
-                "suggestions": ["Provide more detailed technical specifications"] if not tech_specs else []
-            },
-            "language_quality": {
-                "status": "pass",
-                "justification": "The proposal is well-written and clear",
-                "suggestions": []
-            },
-            "arguments": direct_arguments
-        }
+        # Extract summary for backward compatibility
+        summary = evaluation_report["summary"]
         
         # Create the final output
         analysis_result = {
