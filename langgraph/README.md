@@ -1,55 +1,37 @@
-# Wei Notebook: Proposal Analysis System Tutorial
+# Wei Notebook: Deep Proposal Analysis System
 
 ## Overview
 
-Wei Notebook is an advanced proposal analysis system designed to evaluate governance proposals for blockchain protocols. It uses a multi-agent workflow with LLM-powered components to analyze proposals, extract key insights, and provide structured evaluations.
+Wei Notebook is an advanced proposal analysis system designed to evaluate governance proposals for blockchain protocols. This implementation uses the deepagent package to provide a more powerful and flexible analysis approach.
 
 ## System Architecture
 
-The system is built around a workflow of specialized agents that work together to analyze proposals:
+The system is built around the deepagent package, which provides a flexible framework for creating powerful AI agents:
 
-1. **Planning Agent**: Creates a research plan based on the proposal
-2. **Search Tool**: Searches the web for relevant information
-3. **Indexer Tool**: Accesses canonical sources like EIPs, BIPs, and forum posts
-4. **Reader Tool**: Extracts content from documents and clips relevant quotes
-5. **Analyzing Agent**: Extracts claims and evidence from the quotes
-6. **Claim-Evidence Graph**: Builds a graph of claims and supporting evidence
-7. **Signal Detectors**: Identifies important signals in the data
-8. **Hypothesizer**: Generates hypotheses based on the signals
-9. **Skeptic Agent**: Critically evaluates the hypotheses
-10. **RAG Fallback**: Provides additional context when needed
-11. **Prioritizer Agent**: Prioritizes tasks and identifies blockers
-12. **Strategy Agent**: Develops a strategic roadmap for implementation
+1. **Deep Proposal Analyzer**: The main component that orchestrates the analysis process
+2. **Deepagent Tools**: Custom tools for proposal analysis, including argument generation
+3. **Deepagent Subagents**: Specialized subagents for different aspects of analysis
+4. **Langfuse Tracing**: Modern tracing implementation for observability
 
-### Workflow Visualization
-
-![Workflow Visualization](workflow_visualization.png)
-
-*The complete workflow of the proposal analysis system showing how components interact.*
-
-### Implementation Roadmap
-
-![Implementation Roadmap](roadmap_visualization.png)
-
-*The implementation roadmap showing the four phases of the proposal analysis process.*
 
 ## Key Files and Components
 
 ### Core Components
 
-- **proposal_analyzer.py**: The main workflow orchestrator that connects all agents
-- **agent_nodes.py**: Contains all the agent implementations
-- **agent_state.py**: Defines the state structure passed between agents
-- **agent_tools.py**: Implements tools for search, indexing, and reading
+- **deep_proposal_analyzer.py**: The main analyzer that orchestrates the analysis process
+- **deepagent_tools.py**: Implements custom tools for proposal analysis, including argument generation
+- **deepagent_subagents.py**: Contains specialized subagents for different aspects of analysis
+- **deep_adapter.py**: Adapter for integrating with the deepagent package
 
 ### Support Components
 
 - **disable_langchain_tracing.py**: Disables LangChain tracing for cleaner output
-- **langfuse_setup.py**: Provides tracing functionality for LLM calls
+- **langfuse_setup.py**: Provides modern tracing functionality for LLM calls
 
-### Entry Point
+### Testing
 
-- **proposal_analysis_example.py**: Example usage with a sample proposal
+- **tests/test_deep_analyzer.py**: Tests for the deep proposal analyzer
+- **tests/test_argument_generation.py**: Tests for the argument generation functionality
 
 ## Setting Up the Environment
 
@@ -65,9 +47,24 @@ The system is built around a workflow of specialized agents that work together t
 Create a `.env` file with the following variables:
 
 ```
+# API Keys
 WEI_AGENT_OPEN_ROUTER_API_KEY=your_openrouter_api_key
 WEI_AGENT_EXA_API_KEY=your_exa_api_key
+
+# Model Configuration
+WEI_AGENT_MODEL=anthropic/claude-3-opus-20240229
+WEI_AGENT_PLANNING_MODEL=anthropic/claude-3-opus-20240229
+WEI_AGENT_ANALYZING_MODEL=anthropic/claude-3-opus-20240229
+WEI_AGENT_ANALYZING_TEMPERATURE=0.2
+WEI_AGENT_ANALYZING_MAX_TOKENS=2000
+
+# Langfuse Configuration (Optional, for tracing)
+LANGFUSE_PUBLIC_KEY=your_langfuse_public_key_here
+LANGFUSE_SECRET_KEY=your_langfuse_secret_key_here
+LANGFUSE_HOST=https://cloud.langfuse.com
 ```
+
+You can also copy the `.env.example` file and fill in your API keys.
 
 ### Installation
 
@@ -82,8 +79,7 @@ WEI_AGENT_EXA_API_KEY=your_exa_api_key
 ### Basic Usage
 
 ```python
-from proposal_analyzer import analyze_proposal
-from agent_state import ProposalMetadata
+from deep_proposal_analyzer import analyze_proposal
 
 # Define your proposal text
 proposal_text = """
@@ -113,9 +109,8 @@ result = analyze_proposal(proposal_text, metadata)
 # Access the results
 tasks = result["tasks"]
 blockers = result["blockers"]
-evidence_summary = result["evidence_summary"]
-next_steps = result["next_steps"]
 evaluation_report = result["evaluation_report"]
+arguments = result["arguments"]  # Contains "for_proposal" and "against" lists
 ```
 
 ### Understanding the Results
@@ -196,14 +191,43 @@ The system uses Perplexity's Sonar-Pro model (via OpenRouter API) to generate de
 
 You can customize the analysis by modifying the agent prompts in `agent_nodes.py` or by adjusting the workflow in `proposal_analyzer.py`.
 
-### Tracing LLM Calls
+### Tracing LLM Calls with Langfuse
 
-The system uses a simplified tracing mechanism through `langfuse_setup.py`. Each LLM call is logged with:
+The system uses Langfuse for comprehensive tracing and observability. Tracing is implemented through `langfuse_setup.py` and provides:
 
-- Model name
-- Latency
-- Metadata
-- Trace ID
+#### Modern Tracing Features
+- Context managers with `with langfuse.start_as_current_span(...)` syntax
+- Decorator-based tracing with `@observe_function`
+- Automatic span and trace management
+- Nested spans and generations for complex workflows
+- Score tracking for quality metrics
+
+#### Comprehensive Observability
+- Model name, prompt, and completion tracking
+- Latency measurements and token usage statistics
+- Rich metadata for context and debugging
+- Hierarchical spans showing the full execution flow
+- Parent-child relationships between operations
+
+#### Setting Up Langfuse
+
+1. Sign up for a Langfuse account at [langfuse.com](https://langfuse.com)
+2. Get your public and secret keys from the Langfuse dashboard
+3. Add them to your `.env` file:
+   ```
+   LANGFUSE_PUBLIC_KEY=your_langfuse_public_key_here
+   LANGFUSE_SECRET_KEY=your_langfuse_secret_key_here
+   LANGFUSE_HOST=https://cloud.langfuse.com
+   ```
+4. The system will automatically use Langfuse for tracing if the keys are available
+
+#### Using Traces in Development
+
+When debugging, you can use the Langfuse dashboard to:
+- View the full execution flow of your analysis
+- Identify bottlenecks in the workflow
+- Debug errors in specific components
+- Monitor LLM usage and performance
 
 ### Adding Visualizations to the Notebook
 
@@ -269,7 +293,22 @@ This will generate a detailed implementation roadmap with milestones, resources,
 
 ### Debugging
 
-Use the trace IDs from LLM calls to track the flow of information through the system.
+#### Using Langfuse for Debugging
+
+The Langfuse dashboard provides powerful debugging capabilities:
+
+1. **Trace Explorer**: View all traces with filtering and search
+2. **Trace Details**: Examine the full execution flow of each analysis
+3. **Span Inspection**: Dive into specific operations to see inputs, outputs, and errors
+4. **LLM Call Analysis**: Review prompts, completions, and performance metrics
+
+#### Local Debugging
+
+If Langfuse is not configured, the system falls back to local logging:
+
+- Use the trace IDs from LLM calls to track the flow of information
+- Check the log files for detailed execution information
+- Set the logging level to DEBUG for more verbose output
 
 ## Extending the System
 

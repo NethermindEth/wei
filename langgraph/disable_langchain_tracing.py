@@ -1,6 +1,6 @@
 """
-Script to disable LangChain tracing and LangSmith integration.
-This script sets environment variables to disable LangChain tracing.
+Script to disable LangChain tracing and LangSmith integration, but keep Langfuse tracing enabled.
+This script sets environment variables to disable various tracing mechanisms.
 """
 import os
 
@@ -16,4 +16,7 @@ os.environ["LANGSMITH_API_KEY"] = ""
 os.environ["LANGSMITH_ENDPOINT"] = ""
 os.environ["LANGSMITH_PROJECT"] = ""
 
-print("LangChain tracing and LangSmith integration have been disabled.")
+# Note: Langfuse tracing is kept enabled
+# Langfuse credentials should be set in the .env file
+
+print("LangChain tracing and LangSmith integration have been disabled. Langfuse tracing remains enabled if credentials are provided.")
