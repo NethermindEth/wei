@@ -2,7 +2,6 @@
 This module provides a simplified interface for tracing LLM calls and other operations.
 """
 import os
-import uuid
 import logging
 from typing import Dict, Any, List, Optional, TypeVar, Callable, Union
 from dotenv import load_dotenv
