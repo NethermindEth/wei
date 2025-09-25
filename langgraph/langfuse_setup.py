@@ -1,16 +1,25 @@
 """Langfuse integration for the Wei Agent.
-This module provides a simplified interface for tracing LLM calls.
+This module provides a simplified interface for tracing LLM calls and other operations.
 """
 import os
 import uuid
-import time
 import logging
-import functools
+from typing import Dict, Any, List, Optional, TypeVar
 from dotenv import load_dotenv
-from contextlib import contextmanager
 
 # Configure logging
 logger = logging.getLogger('langfuse_setup')
+
+# Type definitions for better type hinting
+T = TypeVar('T')
+Metadata = Dict[str, Any]
+Span = Any  # Ideally would be langfuse.Span but avoiding direct import dependency
+
+# Constants for environment variables
+ENV_PUBLIC_KEY = "LANGFUSE_PUBLIC_KEY"
+ENV_SECRET_KEY = "LANGFUSE_SECRET_KEY"
+ENV_HOST = "LANGFUSE_HOST"
+DEFAULT_HOST = "https://cloud.langfuse.com"
 
 # Load environment variables
 load_dotenv()
@@ -25,14 +34,16 @@ try:
     from langfuse import Langfuse, get_client, observe
     
     # Get credentials from environment variables
-    public_key = os.getenv("LANGFUSE_PUBLIC_KEY")
-    secret_key = os.getenv("LANGFUSE_SECRET_KEY")
-    host = os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
+    public_key = os.getenv(ENV_PUBLIC_KEY)
+    secret_key = os.getenv(ENV_SECRET_KEY)
+    host = os.getenv(ENV_HOST, DEFAULT_HOST)
     
     if public_key and secret_key:
         logger.info("Found Langfuse credentials in environment variables")
-        logger.info(f"LANGFUSE_PUBLIC_KEY: {public_key[:5]}...{public_key[-5:] if len(public_key) > 10 else ''}")
-        logger.info(f"LANGFUSE_HOST: {host}")
+        # Mask credentials for security in logs
+        masked_key = f"{public_key[:5]}...{public_key[-5:] if len(public_key) > 10 else ''}"
+        logger.info(f"{ENV_PUBLIC_KEY}: {masked_key}")
+        logger.info(f"{ENV_HOST}: {host}")
     else:
         logger.warning("Langfuse credentials not found in environment variables")
     
@@ -53,7 +64,7 @@ try:
             logger.warning("Langfuse client authentication failed")
             langfuse_available = False
     else:
-        logger.warning("Langfuse API keys not found in environment variables")
+        logger.warning(f"{ENV_PUBLIC_KEY} and {ENV_SECRET_KEY} must both be set")
         langfuse_client = None
 except ImportError:
     logger.warning("Langfuse package not installed. Install with: pip install langfuse")
@@ -63,14 +74,67 @@ except Exception as e:
     langfuse_client = None
 
 def get_langfuse_client():
-    """Get the Langfuse client."""
-    if langfuse_available:
-        try:
-            return get_client()
-        except Exception as e:
-            logger.warning(f"Error getting Langfuse client: {e}")
+    """Get the Langfuse client.
+    
+    Returns:
+        The Langfuse client if available, otherwise None.
+    """
+    if not langfuse_available:
+        return None
+        
+    try:
+        return get_client()
+    except Exception as e:
+        logger.warning(f"Error getting Langfuse client: {e}")
+        return None
+
+
+def validate_metadata(metadata: Optional[Metadata]) -> Metadata:
+    """Validate and normalize metadata.
+    
+    Args:
+        metadata: The metadata to validate
+        
+    Returns:
+        A validated metadata dictionary
+    """
+    if metadata is None:
+        return {}
+        
+    if not isinstance(metadata, dict):
+        logger.warning(f"Invalid metadata type: {type(metadata)}, expected dict")
+        return {}
+        
+    return metadata
+
+
+def create_span(name: str, metadata: Optional[Metadata] = None) -> Optional[Span]:
+    """Create a span with error handling.
+    
+    Args:
+        name: The name of the span
+        metadata: Optional metadata for the span
+        
+    Returns:
+        A span object if successful, otherwise None
+    """
+    if not langfuse_available:
+        logger.debug(f"Langfuse not available, skipping span creation for {name}")
+        return None
+    
+    try:
+        client = get_langfuse_client()
+        if not client:
+            logger.warning("Could not get Langfuse client")
             return None
-    return None
+            
+        metadata = validate_metadata(metadata)
+        span = client.start_span(name=name, metadata=metadata)
+        logger.info(f"Created span: {name}")
+        return span
+    except Exception as e:
+        logger.warning(f"Error creating span {name}: {e}")
+        return None
 
 # Define a decorator for observing functions with Langfuse
 def observe_function(name=None, as_type=None):
@@ -117,7 +181,37 @@ def trace_llm_call(model_name, prompt, completion, latency_ms, metadata=None, pa
     return completion
 
 
-def trace_llm_call_with_context(model_name, prompt, completion, latency_ms, metadata=None):
+def calculate_token_metrics(prompt: str, completion: str, latency_ms: float) -> Dict[str, float]:
+    """Calculate metrics related to tokens and processing time.
+    
+    Args:
+        prompt: The prompt text
+        completion: The completion text
+        latency_ms: Processing latency in milliseconds
+        
+    Returns:
+        Dictionary of calculated metrics
+    """
+    prompt_tokens = len(prompt.split())
+    completion_tokens = len(completion.split())
+    total_tokens = prompt_tokens + completion_tokens
+    
+    # Calculate ratios and rates with safeguards against division by zero
+    token_ratio = completion_tokens / prompt_tokens if prompt_tokens > 0 else 0
+    processing_time_per_token = latency_ms / completion_tokens if completion_tokens > 0 else 0
+    
+    return {
+        "prompt_length": len(prompt),
+        "completion_length": len(completion),
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "total_tokens": total_tokens,
+        "token_ratio": token_ratio,
+        "processing_time_per_token": processing_time_per_token
+    }
+
+
+def trace_llm_call_with_context(model_name: str, prompt: str, completion: str, latency_ms: float, metadata: Optional[Metadata] = None) -> Optional[str]:
     """
     Trace an LLM call with Langfuse using context managers.
     
@@ -152,19 +246,18 @@ def trace_llm_call_with_context(model_name, prompt, completion, latency_ms, meta
         # Create a trace ID
         trace_id = str(uuid.uuid4())
         
+        # Calculate token metrics
+        token_metrics = calculate_token_metrics(prompt, completion, latency_ms)
+        
+        # Prepare base metadata
+        base_metadata = validate_metadata(metadata)
+        base_metadata["model"] = model_name
+        base_metadata["latency_ms"] = latency_ms
+        
         # Create a trace using a context manager
-        with langfuse.start_as_current_span(name="llm_process", metadata={
-            "model": model_name,
-            "latency_ms": latency_ms,
-            **(metadata or {})
-        }) as span:
-            # Update the span with additional information
-            span.update(metadata={
-                "prompt_length": len(prompt),
-                "completion_length": len(completion),
-                "token_ratio": len(completion.split()) / len(prompt.split()) if len(prompt.split()) > 0 else 0,
-                "processing_time_per_token": latency_ms / len(completion.split()) if len(completion.split()) > 0 else 0
-            })
+        with langfuse.start_as_current_span(name="llm_process", metadata=base_metadata) as span:
+            # Update the span with token metrics
+            span.update(metadata=token_metrics)
             
             # Create a nested generation for the LLM call
             with langfuse.start_as_current_generation(
@@ -172,25 +265,13 @@ def trace_llm_call_with_context(model_name, prompt, completion, latency_ms, meta
                 model=model_name,
                 input=prompt,
                 output=completion,
-                metadata={
-                    "latency_ms": latency_ms,
-                    "input_tokens": len(prompt.split()),
-                    "output_tokens": len(completion.split()),
-                    **(metadata or {})
-                }
+                metadata={**base_metadata, **token_metrics}
             ) as generation:
-                # Update the generation with additional information
-                generation.update(metadata={
-                    "completion_tokens": len(completion.split()),
-                    "prompt_tokens": len(prompt.split()),
-                    "total_tokens": len(prompt.split()) + len(completion.split())
-                })
+                pass  # The generation is automatically tracked
             
-            # Score the current span
-            langfuse.score_current_span(
-                name="quality",
-                value=min(1.0, len(completion) / 500)  # Example quality metric
-            )
+            # Score the current span based on completion quality
+            quality_score = min(1.0, len(completion) / 500)  # Example quality metric
+            langfuse.score_current_span(name="quality", value=quality_score)
         
         # Flush to ensure data is sent to Langfuse
         langfuse.flush()
@@ -202,7 +283,35 @@ def trace_llm_call_with_context(model_name, prompt, completion, latency_ms, meta
         return None
 
 
-def trace_exa_query(query, results, latency_ms, metadata=None):
+def extract_result_metadata(results: List[Dict[str, Any]], max_results: int = 5) -> Dict[str, Any]:
+    """Extract metadata from search results.
+    
+    Args:
+        results: List of search results
+        max_results: Maximum number of results to process
+        
+    Returns:
+        Dictionary of extracted metadata
+    """
+    result_metadata = {}
+    
+    if not isinstance(results, list) or not results:
+        return result_metadata
+    
+    # Process only up to max_results to avoid excessive data
+    for i, result in enumerate(results[:max_results]):
+        if not isinstance(result, dict):
+            continue
+            
+        # Extract common fields from result
+        for field in ["title", "url", "score", "relevance_score"]:
+            if field in result:
+                result_metadata[f"result_{i}_{field}"] = result[field]
+    
+    return result_metadata
+
+
+def trace_exa_query(query: str, results: List[Dict[str, Any]], latency_ms: float, metadata: Optional[Metadata] = None) -> Optional[str]:
     """
     Trace an Exa API query with Langfuse.
     
@@ -218,6 +327,7 @@ def trace_exa_query(query, results, latency_ms, metadata=None):
     logger.info(f"Exa Query: {query}")
     logger.info(f"Latency: {latency_ms} ms")
     
+    # Early return if Langfuse is not available
     if not langfuse_available:
         logger.debug("Langfuse not available")
         return None
@@ -226,35 +336,25 @@ def trace_exa_query(query, results, latency_ms, metadata=None):
         # Get the Langfuse client
         langfuse = get_langfuse_client()
         if not langfuse:
-            logger.warning("Could not get Langfuse client")
             return None
         
-        # Create a span for the Exa query
-        with langfuse.start_as_current_span(name="exa_query", metadata={
+        # Prepare base metadata
+        base_metadata = validate_metadata(metadata)
+        base_metadata.update({
             "query": query,
             "latency_ms": latency_ms,
             "num_results": len(results) if isinstance(results, list) else 1,
-            **(metadata or {})
-        }) as span:
-            # Add detailed information about each result
-            if isinstance(results, list) and len(results) > 0:
-                for i, result in enumerate(results[:5]):  # Limit to first 5 results to avoid too much data
-                    result_metadata = {}
-                    if isinstance(result, dict):
-                        if "title" in result:
-                            result_metadata[f"result_{i}_title"] = result["title"]
-                        if "url" in result:
-                            result_metadata[f"result_{i}_url"] = result["url"]
-                        if "score" in result:
-                            result_metadata[f"result_{i}_score"] = result["score"]
-                        if "relevance_score" in result:
-                            result_metadata[f"result_{i}_relevance"] = result["relevance_score"]
-                    
-                    if result_metadata:
-                        span.update(metadata=result_metadata)
+        })
+        
+        # Create a span for the Exa query
+        with langfuse.start_as_current_span(name="exa_query", metadata=base_metadata) as span:
+            # Extract and add result metadata
+            result_metadata = extract_result_metadata(results)
+            if result_metadata:
+                span.update(metadata=result_metadata)
             
             # Score the span based on number of results
-            if isinstance(results, list):
+            if isinstance(results, list) and results:
                 quality_score = min(1.0, len(results) / 10)  # Example quality metric
                 langfuse.score_current_span(name="result_quality", value=quality_score)
         
@@ -268,7 +368,43 @@ def trace_exa_query(query, results, latency_ms, metadata=None):
         return None
 
 
-def trace_cosine_similarity(vectors, scores, threshold=0.7, metadata=None):
+def calculate_similarity_stats(scores: List[float], threshold: float = 0.7) -> Dict[str, float]:
+    """Calculate statistics for similarity scores.
+    
+    Args:
+        scores: List of similarity scores
+        threshold: Threshold for considering a score as high
+        
+    Returns:
+        Dictionary of calculated statistics
+    """
+    if not scores:
+        return {
+            "avg_score": 0.0,
+            "max_score": 0.0,
+            "min_score": 0.0,
+            "above_threshold": 0,
+            "above_threshold_percent": 0.0,
+            "num_comparisons": 0
+        }
+    
+    avg_score = sum(scores) / len(scores)
+    max_score = max(scores)
+    min_score = min(scores)
+    above_threshold = sum(1 for score in scores if score >= threshold)
+    above_threshold_percent = (above_threshold / len(scores)) * 100
+    
+    return {
+        "avg_score": avg_score,
+        "max_score": max_score,
+        "min_score": min_score,
+        "above_threshold": above_threshold,
+        "above_threshold_percent": above_threshold_percent,
+        "num_comparisons": len(scores)
+    }
+
+
+def trace_cosine_similarity(vectors: int, scores: List[float], threshold: float = 0.7, metadata: Optional[Metadata] = None) -> Optional[str]:
     """
     Trace cosine similarity calculations with Langfuse.
     
@@ -283,6 +419,7 @@ def trace_cosine_similarity(vectors, scores, threshold=0.7, metadata=None):
     """
     logger.info(f"Cosine Similarity: {len(scores)} comparisons")
     
+    # Early return if Langfuse is not available
     if not langfuse_available:
         logger.debug("Langfuse not available")
         return None
@@ -291,34 +428,29 @@ def trace_cosine_similarity(vectors, scores, threshold=0.7, metadata=None):
         # Get the Langfuse client
         langfuse = get_langfuse_client()
         if not langfuse:
-            logger.warning("Could not get Langfuse client")
             return None
         
         # Calculate statistics
-        avg_score = sum(scores) / len(scores) if scores else 0
-        max_score = max(scores) if scores else 0
-        min_score = min(scores) if scores else 0
-        above_threshold = sum(1 for score in scores if score >= threshold)
+        stats = calculate_similarity_stats(scores, threshold)
+        
+        # Prepare base metadata
+        base_metadata = validate_metadata(metadata)
+        base_metadata.update({
+            "num_vectors": vectors,
+            "threshold": threshold,
+            **stats
+        })
         
         # Create a span for the cosine similarity calculation
-        with langfuse.start_as_current_span(name="cosine_similarity", metadata={
-            "num_vectors": vectors,
-            "num_comparisons": len(scores),
-            "threshold": threshold,
-            "avg_score": avg_score,
-            "max_score": max_score,
-            "min_score": min_score,
-            "above_threshold": above_threshold,
-            "above_threshold_percent": (above_threshold / len(scores)) * 100 if scores else 0,
-            **(metadata or {})
-        }) as span:
-            # Add top 5 scores
+        with langfuse.start_as_current_span(name="cosine_similarity", metadata=base_metadata) as span:
+            # Add top 5 scores if available
             if scores:
                 top_scores = sorted(scores, reverse=True)[:5]
-                for i, score in enumerate(top_scores):
-                    span.update(metadata={f"top_score_{i+1}": score})
+                top_scores_metadata = {f"top_score_{i+1}": score for i, score in enumerate(top_scores)}
+                span.update(metadata=top_scores_metadata)
             
             # Score the span based on average similarity
+            avg_score = stats["avg_score"]
             langfuse.score_current_span(name="similarity_quality", value=min(1.0, avg_score))
         
         # Flush to ensure data is sent to Langfuse

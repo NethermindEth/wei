@@ -210,32 +210,13 @@ JSON response:
         
         # Parse the JSON response
         try:
-            # Try to extract JSON from the completion
-            import re
-            json_match = re.search(r'\{[\s\S]*\}', completion)
-            if json_match:
-                json_str = json_match.group(0)
-                arguments = json.loads(json_str)
-            else:
-                # If no JSON found, try to parse the whole completion
-                arguments = json.loads(completion)
+            arguments = extract_json_from_completion(completion)
             
             # Validate the structure
-            if not isinstance(arguments, dict):
-                raise ValueError("Response is not a dictionary")
-            
-            if "for_proposal" not in arguments or "against" not in arguments:
-                raise ValueError("Response missing required keys")
-            
-            if not isinstance(arguments["for_proposal"], list) or not isinstance(arguments["against"], list):
-                raise ValueError("Arguments must be lists")
+            validate_arguments_structure(arguments)
             
             # Ensure we have at least some arguments
-            if not arguments["for_proposal"]:
-                arguments["for_proposal"] = [f"The {title} proposal aims to improve {protocol}."]
-            
-            if not arguments["against"]:
-                arguments["against"] = [f"The implementation of {title} may present technical challenges."]
+            arguments = ensure_minimum_arguments(arguments, title, protocol)
             
             logger.info(f"Successfully parsed arguments: {len(arguments['for_proposal'])} for, {len(arguments['against'])} against")
             return arguments
@@ -245,34 +226,7 @@ JSON response:
             logger.error(f"Raw completion: {completion}")
             
             # Fall back to extracting arguments from text
-            for_arguments = []
-            against_arguments = []
-            
-            # Try to extract arguments using regex
-            for_section = re.search(r'(?:Arguments? for|FOR)[:\s]+(.*?)(?:Arguments? against|AGAINST|$)', completion, re.DOTALL | re.IGNORECASE)
-            against_section = re.search(r'(?:Arguments? against|AGAINST)[:\s]+(.*?)(?:$)', completion, re.DOTALL | re.IGNORECASE)
-            
-            if for_section:
-                for_text = for_section.group(1).strip()
-                for_args = re.findall(r'(?:\d+\.|-|\*)\s*(.*?)(?=(?:\d+\.|-|\*)|$)', for_text, re.DOTALL)
-                for_arguments = [arg.strip() for arg in for_args if arg.strip()]
-            
-            if against_section:
-                against_text = against_section.group(1).strip()
-                against_args = re.findall(r'(?:\d+\.|-|\*)\s*(.*?)(?=(?:\d+\.|-|\*)|$)', against_text, re.DOTALL)
-                against_arguments = [arg.strip() for arg in against_args if arg.strip()]
-            
-            # Ensure we have at least some arguments
-            if not for_arguments:
-                for_arguments = [f"The {title} proposal aims to improve {protocol}."]
-            
-            if not against_arguments:
-                against_arguments = [f"The implementation of {title} may present technical challenges."]
-            
-            return {
-                "for_proposal": for_arguments[:5],  # Limit to 5 most relevant
-                "against": against_arguments[:5]  # Limit to 5 most relevant
-            }
+            return extract_arguments_from_text(completion, title, protocol)
     
     except Exception as e:
         logger.error(f"Error generating arguments with LLM: {str(e)}")
@@ -280,6 +234,117 @@ JSON response:
             "for_proposal": [f"The {title} proposal aims to improve {protocol}."],
             "against": [f"The implementation of {title} may present technical challenges."]
         }
+
+def extract_json_from_completion(completion: str) -> Dict[str, Any]:
+    """Extract JSON from LLM completion.
+    
+    Args:
+        completion: The raw completion from the LLM
+        
+    Returns:
+        Extracted JSON as a dictionary
+        
+    Raises:
+        ValueError: If JSON cannot be extracted
+    """
+    import re
+    import json
+    
+    # Try to extract JSON from the completion using regex
+    json_match = re.search(r'\{[\s\S]*\}', completion)
+    if json_match:
+        json_str = json_match.group(0)
+        return json.loads(json_str)
+    
+    # If no JSON found, try to parse the whole completion
+    return json.loads(completion)
+
+
+def validate_arguments_structure(arguments: Dict[str, Any]) -> None:
+    """Validate the structure of the arguments dictionary.
+    
+    Args:
+        arguments: The arguments dictionary to validate
+        
+    Raises:
+        ValueError: If the structure is invalid
+    """
+    if not isinstance(arguments, dict):
+        raise ValueError("Response is not a dictionary")
+    
+    if "for_proposal" not in arguments or "against" not in arguments:
+        raise ValueError("Response missing required keys")
+    
+    if not isinstance(arguments["for_proposal"], list) or not isinstance(arguments["against"], list):
+        raise ValueError("Arguments must be lists")
+
+
+def ensure_minimum_arguments(arguments: Dict[str, List[str]], title: str, protocol: str) -> Dict[str, List[str]]:
+    """Ensure there are at least some arguments in each category.
+    
+    Args:
+        arguments: The arguments dictionary
+        title: The proposal title
+        protocol: The protocol name
+        
+    Returns:
+        Updated arguments dictionary with fallback arguments if needed
+    """
+    result = arguments.copy()
+    
+    # Ensure we have at least some arguments for the proposal
+    if not result.get("for_proposal"):
+        result["for_proposal"] = [f"The {title} proposal aims to improve {protocol}."]
+    
+    # Ensure we have at least some arguments against the proposal
+    if not result.get("against"):
+        result["against"] = [f"The implementation of {title} may present technical challenges."]
+    
+    return result
+
+
+def extract_arguments_from_text(completion: str, title: str, protocol: str) -> Dict[str, List[str]]:
+    """Extract arguments from text when JSON parsing fails.
+    
+    Args:
+        completion: The raw completion from the LLM
+        title: The proposal title
+        protocol: The protocol name
+        
+    Returns:
+        Dictionary with for_proposal and against arguments
+    """
+    import re
+    
+    for_arguments = []
+    against_arguments = []
+    
+    # Try to extract arguments using regex
+    for_section = re.search(r'(?:Arguments? for|FOR)[:\s]+(.*?)(?:Arguments? against|AGAINST|$)', completion, re.DOTALL | re.IGNORECASE)
+    against_section = re.search(r'(?:Arguments? against|AGAINST)[:\s]+(.*?)(?:$)', completion, re.DOTALL | re.IGNORECASE)
+    
+    if for_section:
+        for_text = for_section.group(1).strip()
+        for_args = re.findall(r'(?:\d+\.|-|\*)\s*(.*?)(?=(?:\d+\.|-|\*)|$)', for_text, re.DOTALL)
+        for_arguments = [arg.strip() for arg in for_args if arg.strip()]
+    
+    if against_section:
+        against_text = against_section.group(1).strip()
+        against_args = re.findall(r'(?:\d+\.|-|\*)\s*(.*?)(?=(?:\d+\.|-|\*)|$)', against_text, re.DOTALL)
+        against_arguments = [arg.strip() for arg in against_args if arg.strip()]
+    
+    # Ensure we have at least some arguments
+    if not for_arguments:
+        for_arguments = [f"The {title} proposal aims to improve {protocol}."]
+    
+    if not against_arguments:
+        against_arguments = [f"The implementation of {title} may present technical challenges."]
+    
+    return {
+        "for_proposal": for_arguments[:5],  # Limit to 5 most relevant
+        "against": against_arguments[:5]  # Limit to 5 most relevant
+    }
+
 
 # List of all tools available for deepagents
 deepagent_tools = [generate_proposal_arguments]

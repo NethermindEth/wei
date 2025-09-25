@@ -13,7 +13,7 @@ import logging
 import os
 import json
 import time
-from typing import Dict, Any, List, Optional, Union
+from typing import Dict, Any, List, Optional
 from dotenv import load_dotenv
 from deepagents import create_deep_agent
 from langchain_openai import ChatOpenAI
@@ -31,6 +31,64 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger('deep_proposal_analyzer')
+
+
+def trace_search_queries(web_queries: List[str], indexed_queries: List[str], metadata: Dict[str, Any]) -> None:
+    """Trace search queries and similarity calculations.
+    
+    Args:
+        web_queries: List of web search queries
+        indexed_queries: List of indexed search queries
+        metadata: Metadata about the proposal
+    """
+    # Import tracing functions if not already imported
+    try:
+        from langfuse_setup import trace_exa_query, trace_cosine_similarity
+    except ImportError:
+        logger.warning("Langfuse tracing not available for search queries")
+        return
+    
+    # Simulate search results for demonstration purposes
+    # In a real implementation, these would be actual search results
+    mock_web_results = [
+        {"title": "Impact Analysis of Protocol Changes", "url": "https://example.com/impact", "score": 0.85},
+        {"title": f"{metadata.get('protocol', 'Unknown')} Governance Framework", "url": "https://example.com/governance", "score": 0.78}
+    ]
+    
+    # Common metadata for all queries
+    base_metadata = {
+        "protocol": metadata.get('protocol', 'Unknown'),
+        "proposal_id": metadata.get('id', 'Unknown'),
+        "proposal_title": metadata.get('title', 'Untitled')
+    }
+    
+    # Trace web queries
+    for query in web_queries:
+        trace_exa_query(
+            query=query,
+            results=mock_web_results,
+            latency_ms=150,  # Simulated latency
+            metadata={**base_metadata, "query_type": "web"}
+        )
+    
+    # Trace indexed queries
+    for query in indexed_queries:
+        trace_exa_query(
+            query=query,
+            results=[{"title": "Similar Proposal Example", "url": "https://example.com/similar", "score": 0.92}],
+            latency_ms=80,  # Simulated latency
+            metadata={**base_metadata, "query_type": "indexed"}
+        )
+    
+    # Trace cosine similarity calculations
+    # Simulated cosine similarity scores
+    cosine_scores = [0.92, 0.85, 0.78, 0.65, 0.61, 0.55, 0.48, 0.42]
+    trace_cosine_similarity(
+        vectors=8,
+        scores=cosine_scores,
+        threshold=0.7,
+        metadata={**base_metadata, "comparison_type": "proposal_similarity"}
+    )
 
 # Load environment variables
 load_dotenv()
@@ -356,7 +414,7 @@ def analyze_proposal(proposal: str, metadata: Dict[str, Any], export_json: bool 
     
     # Import Langfuse for tracing
     try:
-        from langfuse_setup import trace_llm_call, trace_exa_query, trace_cosine_similarity, get_langfuse_client
+        from langfuse_setup import trace_llm_call, trace_exa_query, trace_cosine_similarity, get_langfuse_client, create_span
         logger.info("Langfuse tracing enabled for all operations")
         langfuse_client = get_langfuse_client()
         use_langfuse = langfuse_client is not None
@@ -366,6 +424,27 @@ def analyze_proposal(proposal: str, metadata: Dict[str, Any], export_json: bool 
     except Exception as e:
         logger.error(f"Error setting up Langfuse tracing: {str(e)}")
         use_langfuse = False
+        
+    def create_tracing_span(name: str, metadata: Dict[str, Any] = None) -> Optional[Any]:
+        """Create a tracing span if Langfuse is available.
+        
+        Args:
+            name: Name of the span
+            metadata: Metadata to include in the span
+            
+        Returns:
+            The span object or None if tracing is not available
+        """
+        if not use_langfuse or not langfuse_client:
+            return None
+            
+        try:
+            span = langfuse_client.start_span(name=name, metadata=metadata or {})
+            logger.info(f"Started {name} span")
+            return span
+        except Exception as span_err:
+            logger.error(f"Error starting {name} span: {str(span_err)}")
+            return None
     
     try:
         logger.info("Using direct analysis instead of deep agent due to API limitations")
@@ -374,22 +453,16 @@ def analyze_proposal(proposal: str, metadata: Dict[str, Any], export_json: bool 
         logger.info("Generating arguments directly")
         from deepagent_tools import generate_proposal_arguments
         
-        # Start a span for argument generation if Langfuse is available
-        argument_generation_span = None
-        if use_langfuse:
-            try:
-                argument_generation_span = langfuse_client.start_span(
-                    name="argument_generation",
-                    metadata={
-                        "proposal_title": metadata.get('title', 'Untitled'),
-                        "protocol": metadata.get('protocol', 'Unknown'),
-                        "category": metadata.get('category', 'Unknown'),
-                        "proposal_length": len(proposal)
-                    }
-                )
-                logger.info("Started argument generation span")
-            except Exception as span_err:
-                logger.error(f"Error starting argument generation span: {str(span_err)}")
+        # Start a span for argument generation
+        argument_generation_span = create_tracing_span(
+            name="argument_generation",
+            metadata={
+                "proposal_title": metadata.get('title', 'Untitled'),
+                "protocol": metadata.get('protocol', 'Unknown'),
+                "category": metadata.get('category', 'Unknown'),
+                "proposal_length": len(proposal)
+            }
+        )
         
         # Generate arguments
         start_time = time.time()
@@ -510,57 +583,10 @@ def analyze_proposal(proposal: str, metadata: Dict[str, Any], export_json: bool 
         # Trace search queries if Langfuse is available
         if use_langfuse:
             try:
-                # Simulate search results for demonstration purposes
-                # In a real implementation, these would be actual search results
-                mock_web_results = [
-                    {"title": "Impact Analysis of Protocol Changes", "url": "https://example.com/impact", "score": 0.85},
-                    {"title": f"{metadata.get('protocol', 'Unknown')} Governance Framework", "url": "https://example.com/governance", "score": 0.78}
-                ]
-                
-                # Trace web queries
-                for query in web_queries:
-                    trace_exa_query(
-                        query=query,
-                        results=mock_web_results,
-                        latency_ms=150,  # Simulated latency
-                        metadata={
-                            "query_type": "web",
-                            "protocol": metadata.get('protocol', 'Unknown'),
-                            "proposal_id": metadata.get('id', 'Unknown')
-                        }
-                    )
-                
-                # Trace indexed queries
-                for query in indexed_queries:
-                    trace_exa_query(
-                        query=query,
-                        results=[{"title": "Similar Proposal Example", "url": "https://example.com/similar", "score": 0.92}],
-                        latency_ms=80,  # Simulated latency
-                        metadata={
-                            "query_type": "indexed",
-                            "protocol": metadata.get('protocol', 'Unknown'),
-                            "proposal_id": metadata.get('id', 'Unknown')
-                        }
-                    )
-                
-                # Trace cosine similarity calculations
-                # Simulated cosine similarity scores
-                cosine_scores = [0.92, 0.85, 0.78, 0.65, 0.61, 0.55, 0.48, 0.42]
-                trace_cosine_similarity(
-                    vectors=8,
-                    scores=cosine_scores,
-                    threshold=0.7,
-                    metadata={
-                        "comparison_type": "proposal_similarity",
-                        "protocol": metadata.get('protocol', 'Unknown'),
-                        "proposal_id": metadata.get('id', 'Unknown')
-                    }
-                )
-                
+                trace_search_queries(web_queries, indexed_queries, metadata)
                 logger.info("Traced search queries and cosine similarity calculations")
             except Exception as trace_err:
                 logger.error(f"Error tracing search queries: {str(trace_err)}")
-        
         
         # Add LLM usage information for backward compatibility
         analysis_result["llm_usage"] = {
