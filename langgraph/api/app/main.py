@@ -97,7 +97,6 @@ async def health():
 @app.get("/info")
 async def info():
     """Get information about the application."""
-    import os
     
     return {
         "name": PROJECT_NAME,
@@ -127,7 +126,6 @@ _initialization_complete = False
 async def startup_event():
     """Startup event handler."""
     global _initialization_complete
-    import os
     logger.info("Starting up application")
     
     # Skip database initialization if TESTING is set
@@ -168,7 +166,6 @@ async def startup_event():
                 logger.info("Tables do not exist. Running migrations...")
                 
                 # Run migrations using the SQL script
-                import os
                 migration_file = os.path.join(
                     os.path.dirname(os.path.abspath(__file__)),
                     '..',

@@ -29,7 +29,7 @@ from app.schemas import (
     AnalysisResponse, ArgumentsRequest, CacheEntry, CacheInvalidateRequest,
     CacheListResponse, CacheRefreshRequest, CacheStats, ChatRequest,
     ChatResponse, CustomEvaluationRequest, CustomEvaluationResponse,
-    ProposalArguments, ProposalRequest, WebhookEventResponse
+    ProposalArguments, ProposalRequest, WebhookEventResponse, EvaluationResult
 )
 from app.services.langgraph.context import Context
 from app.services.langgraph.graph import graph

@@ -194,8 +194,29 @@ def test_client(setup_database) -> TestClient:
             "details": "Test details"
         }
     
+    # Mock the AnalysisService methods
+    mock_service = MagicMock()
+    mock_service.get_proposal_arguments = AsyncMock(return_value={
+        "for_proposal": ["Test supporting argument."],
+        "against": ["Test opposing argument."]
+    })
+    mock_service.analyze_proposal = AsyncMock(return_value={
+        "id": uuid.uuid4(),
+        "proposal_id": "test-proposal-id",
+        "result": "pass",
+        "confidence": 0.85,
+        "details": "Test details",
+        "created_at": datetime.now(),
+        "updated_at": datetime.now(),
+        "arguments": {
+            "for_proposal": ["Test supporting argument."],
+            "against": ["Test opposing argument."]
+        }
+    })
+    
     # Apply patches
     with patch('app.api.routes.get_session', return_value=override_get_session()), \
+         patch('app.api.dependencies.get_analysis_service', return_value=mock_service), \
          patch('app.api.routes.graph.ainvoke', side_effect=mock_ainvoke):
         
         # Create test client
@@ -274,13 +295,72 @@ async def async_client() -> AsyncClient:
             }
         }
     
+    # Mock the AnalysisService methods
+    mock_service = MagicMock()
+    mock_service.get_proposal_arguments = AsyncMock(return_value={
+        "for_proposal": ["Test supporting argument."],
+        "against": ["Test opposing argument."]
+    })
+    mock_service.analyze_proposal = AsyncMock(return_value={
+        "id": uuid.uuid4(),
+        "proposal_id": "test-proposal-id",
+        "result": "pass",
+        "confidence": 0.85,
+        "details": "Test details",
+        "created_at": datetime.now(),
+        "updated_at": datetime.now(),
+        "arguments": {
+            "for_proposal": ["Test supporting argument."],
+            "against": ["Test opposing argument."]
+        }
+    })
+    mock_service.get_analysis_by_id = AsyncMock(return_value={
+        "id": uuid.uuid4(),
+        "proposal_id": "test-proposal-id",
+        "result": "pass",
+        "confidence": 0.85,
+        "details": "Test details",
+        "created_at": datetime.now(),
+        "updated_at": datetime.now()
+    })
+    mock_service.get_analysis_by_proposal_id = AsyncMock(return_value={
+        "id": uuid.uuid4(),
+        "proposal_id": "test-proposal-id",
+        "result": "pass",
+        "confidence": 0.85,
+        "details": "Test details",
+        "created_at": datetime.now(),
+        "updated_at": datetime.now()
+    })
+    mock_service.get_analyses_by_proposal_id = AsyncMock(return_value=[{
+        "id": uuid.uuid4(),
+        "proposal_id": "test-proposal-id",
+        "result": "pass",
+        "confidence": 0.85,
+        "details": "Test details",
+        "created_at": datetime.now(),
+        "updated_at": datetime.now()
+    }])
+    mock_service.custom_evaluate_proposal = AsyncMock(return_value={
+        "summary": "Test summary",
+        "response_map": {
+            "test_criterion": {
+                "status": "pass",
+                "justification": "Test justification",
+                "suggestions": ["Test suggestion"]
+            }
+        }
+    })
+    mock_service.chat = AsyncMock(return_value="Test response")
+    mock_service.search_related_proposals = AsyncMock(return_value=[
+        {"id": "1", "title": "Test Proposal 1", "score": 0.95},
+        {"id": "2", "title": "Test Proposal 2", "score": 0.85}
+    ])
+    
     # Apply patches
     with patch('app.api.routes.get_session', return_value=override_get_session()), \
-         patch('app.api.routes.graph.ainvoke', side_effect=mock_ainvoke), \
-         patch('app.api.routes.create_analysis', side_effect=mock_create_analysis), \
-         patch('app.api.routes.get_analysis_by_id', side_effect=mock_get_analysis_by_id), \
-         patch('app.api.routes.find_analysis_by_proposal_id', side_effect=mock_find_analysis_by_proposal_id), \
-         patch('app.api.routes.find_analyses_by_proposal_id', side_effect=mock_find_analyses_by_proposal_id):
+         patch('app.api.dependencies.get_analysis_service', return_value=mock_service), \
+         patch('app.api.routes.graph.ainvoke', side_effect=mock_ainvoke):
         
         # Create async test client
         async with AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:

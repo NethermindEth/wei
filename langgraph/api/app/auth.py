@@ -6,7 +6,7 @@ Authentication module for the application.
 import logging
 
 # Third-party imports
-from fastapi import Depends, HTTPException, Security, status
+from fastapi import HTTPException, Security, status
 from fastapi.security import APIKeyHeader
 from starlette.requests import Request
 
