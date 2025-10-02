@@ -2,8 +2,9 @@
 Configuration module for the application.
 """
 
-import os
+# Standard library imports
 import logging
+import os
 from typing import Optional, List, Any
 
 # Configure logging

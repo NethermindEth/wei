@@ -4,15 +4,19 @@ Core database module
 This module contains the core database types and functions.
 """
 
+# Standard library imports
 import asyncio
 import logging
+import os
 from typing import Optional, Tuple
 
+# Third-party imports
 import sqlalchemy
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.sql import text
 
+# Local application imports
 from app.config import (
     DATABASE_URL, DATABASE_NAME, DB_ECHO_LOG,
     DB_POOL_SIZE, DB_MAX_OVERFLOW, DB_POOL_TIMEOUT, DB_POOL_RECYCLE,

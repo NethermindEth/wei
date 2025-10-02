@@ -2,10 +2,12 @@
 Database models for the application.
 """
 
+# Standard library imports
 import uuid
 from datetime import datetime
 from typing import Optional
 
+# Third-party imports
 from sqlalchemy import (
     Boolean, Column, DateTime, Float, ForeignKey, 
     Integer, String, Text, func, text
@@ -13,6 +15,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 
+# Local application imports
 from app.db.core import Base
 
 

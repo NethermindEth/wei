@@ -5,11 +5,13 @@ This module provides robust JSON parsing functions that can handle various forma
 of JSON data, including those embedded in markdown code blocks or plain text.
 """
 
+# Standard library imports
 import json
 import logging
 import re
 from typing import Any, Dict, Optional, Tuple, Union
 
+# Local application imports
 from app.tracing import trace_json_parsing
 
 # Configure logging

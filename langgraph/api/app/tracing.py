@@ -5,12 +5,15 @@ This module provides comprehensive tracing and monitoring capabilities
 using Langfuse for the API server.
 """
 
+# Standard library imports
+import asyncio
 import logging
 import time
-from typing import Dict, Any, List, Optional, Union, Callable
 from contextlib import contextmanager
 from functools import wraps
+from typing import Dict, Any, List, Optional, Union, Callable
 
+# Local application imports
 from app.config import LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_HOST, LANGFUSE_PROJECT
 
 # Configure logging
@@ -186,5 +189,3 @@ def trace_json_parsing(content: str, result: Any, success: bool = True, error: O
     observation.submit()
 
 
-# Import asyncio at the end to avoid circular imports
-import asyncio

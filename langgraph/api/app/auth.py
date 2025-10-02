@@ -2,11 +2,15 @@
 Authentication module for the application.
 """
 
+# Standard library imports
 import logging
+
+# Third-party imports
 from fastapi import Depends, HTTPException, Security, status
 from fastapi.security import APIKeyHeader
 from starlette.requests import Request
 
+# Local application imports
 from app.config import API_KEYS, API_KEY_NAME
 
 # Configure logging

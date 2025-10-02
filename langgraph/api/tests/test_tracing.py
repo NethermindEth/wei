@@ -5,13 +5,17 @@ These tests focus on verifying that the API correctly traces function calls
 and spans for monitoring and debugging purposes.
 """
 
+# Standard library imports
+import sys
+from contextlib import contextmanager
+
+# Third-party imports
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock, AsyncMock
-from contextlib import contextmanager
-import sys
 
+# Local application imports
 from tests.test_base import BaseTest
 
 

@@ -2,13 +2,16 @@
 Middleware for the FastAPI application.
 """
 
+# Standard library imports
 import time
 import uuid
 from typing import Callable
 
+# Third-party imports
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
+# Local application imports
 from app.tracing import trace_span, get_langfuse_client
 
 

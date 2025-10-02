@@ -2,72 +2,39 @@
 API routes for the application.
 """
 
+# Standard library imports
+import asyncio
 import logging
+import os
+import sys
 import uuid
 from datetime import datetime
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Union
 
+# Third-party imports
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, status
+from langchain_core.messages import HumanMessage, AIMessage
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import text
 
+# Local application imports
 from app.auth import get_api_key
+from app.config import (
+    WEI_AGENT_AI_MODEL_PROVIDER, WEI_AGENT_AI_MODEL_NAME,
+    WEI_AGENT_OPEN_ROUTER_API_KEY, WEI_AGENT_EXA_API_KEY
+)
 from app.db import get_session
 from app.db.models import Analysis, WebhookEvent
-from app.utils import extract_json_from_markdown, try_extract_json_from_markdown
 from app.schemas import (
     AnalysisResponse, ArgumentsRequest, CacheEntry, CacheInvalidateRequest,
     CacheListResponse, CacheRefreshRequest, CacheStats, ChatRequest,
     ChatResponse, CustomEvaluationRequest, CustomEvaluationResponse,
     ProposalArguments, ProposalRequest, WebhookEventResponse
 )
-
-
-async def create_analysis(
-    db: AsyncSession,
-    proposal_id: str,
-    result: str,
-    confidence: float,
-    details: str,
-    arguments: Optional[Dict[str, List[str]]] = None
-) -> Analysis:
-    """
-    Create and save an analysis record in the database.
-    """
-    # Create analysis record
-    analysis = Analysis(
-        proposal_id=proposal_id,
-        result=result,
-        confidence=confidence,
-        details=details,
-    )
-    
-    # Add arguments if provided
-    if arguments:
-        analysis.arguments = arguments
-    
-    # Save to database
-    db.add(analysis)
-    await db.commit()
-    await db.refresh(analysis)
-    
-    return analysis
-
-# Import the graph
-import sys
-import os
-import asyncio
-
-# Import from local services
-from app.services.langgraph.graph import graph
 from app.services.langgraph.context import Context
-from langchain_core.messages import HumanMessage, AIMessage
-
-# Import config and tracing
-from app.config import (
-    WEI_AGENT_AI_MODEL_PROVIDER, WEI_AGENT_AI_MODEL_NAME,
-    WEI_AGENT_OPEN_ROUTER_API_KEY, WEI_AGENT_EXA_API_KEY
-)
+from app.services.langgraph.graph import graph
 from app.tracing import trace_function, trace_span
+from app.utils import extract_json_from_markdown, try_extract_json_from_markdown
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -316,6 +283,39 @@ async def custom_evaluate_proposal(
         )
 
 
+# Database operations
+
+async def create_analysis(
+    db: AsyncSession,
+    proposal_id: str,
+    result: str,
+    confidence: float,
+    details: str,
+    arguments: Optional[Dict[str, List[str]]] = None
+) -> Analysis:
+    """
+    Create and save an analysis record in the database.
+    """
+    # Create analysis record
+    analysis = Analysis(
+        proposal_id=proposal_id,
+        result=result,
+        confidence=confidence,
+        details=details,
+    )
+    
+    # Add arguments if provided
+    if arguments:
+        analysis.arguments = arguments
+    
+    # Save to database
+    db.add(analysis)
+    await db.commit()
+    await db.refresh(analysis)
+    
+    return analysis
+
+
 async def get_analysis_by_id(db: AsyncSession, id: uuid.UUID) -> Analysis:
     """
     Get an analysis by ID from the database.
@@ -329,6 +329,42 @@ async def get_analysis_by_id(db: AsyncSession, id: uuid.UUID) -> Analysis:
         )
     
     return analysis
+
+
+async def find_analysis_by_proposal_id(db: AsyncSession, proposal_id: str) -> Analysis:
+    """
+    Find an analysis by proposal ID in the database.
+    """
+    from sqlalchemy import select
+    query = select(Analysis).where(Analysis.proposal_id == proposal_id).order_by(Analysis.created_at.desc())
+    result = await db.execute(query)
+    analysis = result.scalar_one_or_none()
+    
+    if not analysis:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Analysis for proposal {proposal_id} not found",
+        )
+    
+    return analysis
+
+
+async def find_analyses_by_proposal_id(db: AsyncSession, proposal_id: str) -> List[Analysis]:
+    """
+    Find all analyses for a proposal in the database.
+    """
+    from sqlalchemy import select
+    query = select(Analysis).where(Analysis.proposal_id == proposal_id).order_by(Analysis.created_at.desc())
+    result = await db.execute(query)
+    analyses = result.scalars().all()
+    
+    if not analyses:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No analyses found for proposal {proposal_id}",
+        )
+    
+    return analyses
 
 
 @router.get("/pre-filter/{id}", response_model=AnalysisResponse)
@@ -364,24 +400,6 @@ async def get_analysis(
     return response
 
 
-async def find_analysis_by_proposal_id(db: AsyncSession, proposal_id: str) -> Analysis:
-    """
-    Find an analysis by proposal ID in the database.
-    """
-    from sqlalchemy import select
-    query = select(Analysis).where(Analysis.proposal_id == proposal_id).order_by(Analysis.created_at.desc())
-    result = await db.execute(query)
-    analysis = result.scalar_one_or_none()
-    
-    if not analysis:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Analysis for proposal {proposal_id} not found",
-        )
-    
-    return analysis
-
-
 @router.get("/pre-filter/proposals/{id}", response_model=AnalysisResponse)
 @trace_function("get_analysis_by_proposal_id")
 async def get_analysis_by_proposal_id(
@@ -413,24 +431,6 @@ async def get_analysis_by_proposal_id(
         response.arguments = ProposalArguments(**analysis.arguments)
     
     return response
-
-
-async def find_analyses_by_proposal_id(db: AsyncSession, proposal_id: str) -> List[Analysis]:
-    """
-    Find all analyses for a proposal in the database.
-    """
-    from sqlalchemy import select
-    query = select(Analysis).where(Analysis.proposal_id == proposal_id).order_by(Analysis.created_at.desc())
-    result = await db.execute(query)
-    analyses = result.scalars().all()
-    
-    if not analyses:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No analyses found for proposal {proposal_id}",
-        )
-    
-    return analyses
 
 
 @router.get("/pre-filter/proposal/{proposal_id}", response_model=List[AnalysisResponse])

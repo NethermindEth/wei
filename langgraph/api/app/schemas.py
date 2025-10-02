@@ -2,12 +2,19 @@
 Schema models for request/response data.
 """
 
+# Standard library imports
 from datetime import datetime
 from typing import Dict, List, Optional, Any, Union
 from uuid import UUID
 
+# Third-party imports
 from pydantic import BaseModel, Field
 
+# Schema groups
+
+#-----------------------------------------------------------------------------
+# 1. Request models
+#-----------------------------------------------------------------------------
 
 class ProposalRequest(BaseModel):
     """Request model for proposal analysis."""
@@ -32,6 +39,10 @@ class CustomEvaluationRequest(BaseModel):
     custom_criteria: Dict[str, Any] = Field(None, description="Custom evaluation criteria")
 
 
+#-----------------------------------------------------------------------------
+# 2. Shared models
+#-----------------------------------------------------------------------------
+
 class ProposalArguments(BaseModel):
     """Model for proposal arguments."""
     
@@ -53,6 +64,10 @@ class CustomEvaluationResponse(BaseModel):
     summary: str = Field(None, description="Summary of the evaluation")
     response_map: Dict[str, EvaluationResult] = Field(None, description="Map of criteria to evaluation results")
 
+
+#-----------------------------------------------------------------------------
+# 3. Response models
+#-----------------------------------------------------------------------------
 
 class AnalysisResponse(BaseModel):
     """Response model for proposal analysis."""

@@ -2,18 +2,22 @@
 Main module for the application.
 """
 
+# Standard library imports
+import logging
 import os
 import time
-import logging
+
+# Third-party imports
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.sql import text
 
+# Local application imports
 from app.api import router
 from app.db import init_db
-from app.tracing import initialize_langfuse
 from app.middleware import TracingMiddleware
+from app.tracing import initialize_langfuse
 
 # Configure logging
 log_level_name = os.getenv("LOG_LEVEL", "info").upper()
