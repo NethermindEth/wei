@@ -449,38 +449,53 @@ def main():
     
     # Example proposal text
     example_proposal = """
-    EIP-1559: Fee Market Change for ETH 1.0 Chain
-    
-    Simple Summary:
-    A transaction pricing mechanism that includes fixed-per-block network fee that is burned and dynamically expands/contracts block sizes to deal with transient congestion.
-    
-    Abstract:
-    There is a base fee per gas in protocol, which can move up or down by a maximum of 1/8 in each block. The base fee per gas is burned. Transactions specify the maximum fee per gas they are willing to give to miners to incentivize them to include their transaction (aka: priority fee). Transactions also specify the maximum fee per gas they are willing to pay total (aka: max fee), which covers both the priority fee and the block's network fee per gas (aka: base fee).
-    
-    The algorithm results in a gas target of 15M gas, with a base fee that adjusts to market conditions and that gets burned instead of paid to the miner. Miners only receive the priority fee.
-    
-    Motivation:
-    The current fee market for Ethereum is a first-price auction, where users submit transactions with bids ("gasprices") and miners choose transactions with the highest bids. This leads to inefficiencies:
-    
-    1. Needlessly high fees: users need to bid more than necessary to ensure their transactions are included
-    2. Slow inclusion: users sometimes wait for many blocks to avoid overpaying
-    3. Poor user experience: users need to manually adjust gasprices
-    
-    Technical Specification:
-    At the beginning of a block, the protocol calculates a "base fee" per gas based on the size of the previous block. The base fee increases when the previous block is larger than the target size, and decreases when the previous block is smaller than the target size. The base fee is burned.
-    
-    Users submit transactions with a "max fee" per gas they are willing to pay, and a "priority fee" per gas they are willing to pay to miners. The transaction will be included if the max fee is greater than the sum of the base fee and the priority fee. The user is refunded the difference between the max fee and the sum of the base fee and priority fee.
+    [Non-consitutional]: Top-up for Hackathon Continuation Program
+     Closed
+    Max Lomu
+    In Arbitrum DAO · 5mo ago · #bb750
+    Abstract
+    Arbitrum lacks an efficient mechanism to swap funds for projects, which has led to multiple challenges for service providers around token price changes. Specifically, the Hackathon Continuation Program is currently underfunded by $89,980 USD due to token price drop before RnDAO received any funds.
+    Beyond usual market risks, the program faced prolonged market risks due to delays as we worked with the Arbitrum Foundation on an improved fund management system for DAO-led investments, creating a valuable process template for the Arbitrum ecosystem, but exposing us to this situation.
+    This proposal suggests using a portion of the Domain Allocator (i.e. Questbook grant program) funds left over from the season 1 (a bit over $200k, due to be returned to the DAO) to "top up" the Hackathon Continuation Program and allow it to continue as approved by the DAO.
+    We'll also propose an option in the vote for the remaining funds from the Domain Allocator season 1, to be sent to the Treasury Management Committee to increase their stablecoin pool. Said pool could be used by service providers in the future to cover shortfalls as per a process to be designed by the TMC (see their first draft here).
+    Rationale
+    What's the current status and why did the shortfall happen?
+    The Hackathon Continuation Program is divided into two phases, with separate payments for each. The MSS holds enough funds to complete payments for projects in Phase 1 of the program and has some USDC remaining for Phase 2 but not enough to complete the program.
+    The complexity of this specific initiative (the first investment program setup via the DAO) meant we needed to figure out a system for fund management for investments. The initial approach proposed would have required additional bureaucracy (register RnDAO signers and the RnDAO multisig setup for project investments as part of the AF) and so, in cooperation with the Foundation, we devised an improved approach that would see RnDAO scheduling payments directly on the MSS while the MSS signers would approve payments.
+    The system devised can be used moving forward to facilitate future investment programs, unlocking a valuable milestone for the DAO to test investments and improve the ROI of ecosystem development programs. However, the money requested was to be paid in stables, and the conversion didn't happen immediately.
+    Seeing the market drop, in coordination with the AF, RnDAO tried to delay the swapping of funds as long as possible to allow for a market recovery; unfortunately, the price didn't recover in time, and it was required to swap at a reduced token price to meet the program obligations for Phase 1. Leading to a budget shortfall for Phase 2.
+    Advancing the program is time-sensitive, as the projects are now expecting the funding and support to progress. Any further delays could cause them to fail or migrate to other ecosystems.
+    Is this a precedent?
+    The funds left over from Season 1 of the Domain Allocator programs are due to be returned to the DAO. Authorising a transfer to the MSS for usage in the Hackathon Continuation Program (HCP) (while the rest of the funds are sent to the DAO/AF) would be a one-time action that would provide timely reassurance to the HCP projects. Given that the rest of the funds would be returned, this approach would not become a recurring mechanism in the DAO.
+    What about the Domain Allocator programs?
+    Both programs follow the same objective of supporting builders in Arbitrum.
+    The approach proposed in this proposal was suggested by @jojo as a viable route, given the small sums needed and the availability of the funds.
+    What about the Treasury Management Committee and the checking account?
+    The TMC V 1.2 proposal sets $ 15 million USD equivalent to be converted to Stables and serve as a reserve for service providers. The TMC has proposed a mechanism based on using the yield of this reserve, which will take time to accrue. As such, the proposed strategy can cover a short-term gap in the proposed mechanism.
+    Calculation of the exact amount:
+    As per the AF post (Hackathon Continuation Program - #149 by Arbitrum), 2 Arb were left after Phase 1. However, having eliminated one project that underdelivered from Phase 1, we have saed an additional $12k (held in the MSS). Bringing the shortfall for Phase 2 to: $101,980 - $12,000 = $89,980 USD.
+    Specifications
+    This proposal authorises the transfer of $89,980 USD of the leftover funds from the Season 1 Domain Allocator program's SAFE, to the Arbitrum Foundation, and from the AF to the MSS for the Hackathon Continuation Program.
+    This transfer route was selected for compliance reasons.
+    Addtionally, an option to send the leftover funds (after covering the 89k needed for the Hackathon Continuation program) to the Arbiturm Foundation and from there to the Treasury Management Committee.
+    Budget
+    No additional funds from the DAO are needed. Just the authorisation to use the leftover from Domain Allocator season 1.
+    Voting options
+    A. only top-up the HCP: top-up the HCP and leftover funds to the DAO
+    B. yes to both: top-up the HCP and leftover funds to the TMC
+    C. againts:all funds to the DAO (don't top-up the HCP nor TMC)
+    D. abstain
     """
     
     # Example metadata
     example_metadata = {
-        "title": "EIP-1559: Fee Market Change for ETH 1.0 Chain",
-        "protocol": "Ethereum",
-        "category": "Core",
-        "author": "Vitalik Buterin",
-        "date_submitted": "2019-04-13",
-        "id": "EIP-1559",
-        "url": "https://eips.ethereum.org/EIPS/eip-1559"
+        "title": "Top-up for Hackathon Continuation Program",
+        "protocol": "Arbitrum",
+        "category": "Treasury",
+        "author": "Max Lomu",
+        "date_submitted": "2025-04-25",
+        "id": "bb750",
+        "url": "https://forum.arbitrum.foundation/"
     }
     
     # Test case 1: Standard proposal analysis

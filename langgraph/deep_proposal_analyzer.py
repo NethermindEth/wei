@@ -183,7 +183,12 @@ Your final output should include:
 """
     
     # Initialize the language model
-    model = os.getenv("WEI_AGENT_MODEL", "anthropic/claude-3-opus-20240229")
+    provider = os.getenv("WEI_AGENT_AI_MODEL_PROVIDER")
+    name = os.getenv("WEI_AGENT_AI_MODEL_NAME")
+    if provider and name:
+        model = f"{provider}/{name}"
+    else:
+        model = os.getenv("WEI_AGENT_MODEL", "anthropic/claude-3-opus-20240229")
     temperature = float(os.getenv("WEI_AGENT_TEMPERATURE", "0.2"))
     
     logger.info(f"Using model: {model} with temperature: {temperature}")

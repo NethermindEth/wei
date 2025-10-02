@@ -70,7 +70,12 @@ def generate_proposal_arguments(proposal_text: str, metadata: Dict[str, str] = N
             use_langfuse = False
         
         # Initialize the language model with configurable parameters
-        model_name = os.getenv("WEI_AGENT_MODEL", "openai/gpt-3.5-turbo")
+        provider = os.getenv("WEI_AGENT_AI_MODEL_PROVIDER")
+        name = os.getenv("WEI_AGENT_AI_MODEL_NAME")
+        if provider and name:
+            model_name = f"{provider}/{name}"
+        else:
+            model_name = os.getenv("WEI_AGENT_MODEL", "openai/gpt-3.5-turbo")
         temperature = float(os.getenv("WEI_AGENT_ANALYZING_TEMPERATURE", "0.2"))
         max_tokens = int(os.getenv("WEI_AGENT_MAX_TOKENS", "400"))
         logger.info(f"Using model {model_name} with temperature: {temperature}, max_tokens: {max_tokens}")

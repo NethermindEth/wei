@@ -1,0 +1,94 @@
+planning_task:
+  description: >
+    Analyze the governance proposal titled "{proposal_title}" and determine the optimal research
+    strategy. Identify which aspects of the proposal require detailed investigation and which
+    specialized agents should focus on specific components. Consider technical complexity,
+    governance implications, and potential stakeholder impacts.
+  expected_output: >
+    A comprehensive research plan that includes:
+    1. Key areas requiring investigation
+    2. Specific research questions for each agent
+    3. Prioritization of research tasks
+    4. Timeline and coordination strategy
+    Formatted as markdown without '```'
+  agent: planner
+
+proposal_research_task:
+  description: >
+    Conduct thorough research on the governance proposal "{proposal_title}". Investigate its history,
+    context, precedents, and related discussions. Identify key stakeholders, their positions, and
+    potential impacts on the Ethereum ecosystem. The current year is {current_year}.
+  expected_output: >
+    A detailed analysis of the proposal including:
+    1. Historical context and precedents
+    2. Key stakeholders and their positions
+    3. Community discussions and sentiment
+    4. Potential ecosystem impacts
+    5. Relevant governance metrics
+    Formatted as markdown without '```'
+  agent: proposal_researcher
+
+protocol_research_task:
+  description: >
+    Analyze the technical aspects of the protocol related to the proposal "{proposal_title}".
+    Evaluate how the proposal might affect Ethereum's architecture, security, scalability,
+    and compatibility with the roadmap. Identify potential technical risks, benefits, and
+    implementation considerations.
+  expected_output: >
+    A technical analysis report including:
+    1. Protocol components affected by the proposal
+    2. Security implications
+    3. Scalability considerations
+    4. Compatibility with Ethereum roadmap
+    5. Technical risks and benefits
+    6. Implementation considerations
+    Formatted as markdown without '```'
+  agent: protocol_researcher
+
+report_analysis_task:
+  description: >
+    Synthesize the findings from the proposal and protocol research teams regarding "{proposal_title}".
+    Identify patterns, contradictions, and key insights across the research. Develop a
+    comprehensive analytical framework that integrates technical, governance, and stakeholder
+    perspectives.
+  expected_output: >
+    A comprehensive analytical report including:
+    1. Executive summary of key findings
+    2. Integrated analysis of technical and governance aspects
+    3. Identified patterns and contradictions
+    4. Key insights and implications
+    5. Preliminary recommendations
+    Formatted as markdown without '```'
+  agent: report_analyzer
+
+investigation_task:
+  description: >
+    Examine the intentions, motivations, and potential conflicts of interest behind the
+    "{proposal_title}" submission. Investigate the proposal submitter's history, affiliations,
+    and potential benefits from the proposal. Assess whether the proposal primarily serves
+    the broader Ethereum community or narrower interests.
+  expected_output: >
+    An investigative report including:
+    1. Submitter background and affiliations
+    2. Analysis of potential motivations
+    3. Identified conflicts of interest, if any
+    4. Assessment of alignment with community interests
+    5. Ethical considerations
+    Formatted as markdown without '```'
+  agent: investigator
+
+evaluation_task:
+  description: >
+    Review and evaluate the analyses produced by all agents regarding "{proposal_title}".
+    Identify gaps, inconsistencies, or areas requiring further investigation. Validate key
+    findings and ensure that governance recommendations are comprehensive, balanced, and
+    well-supported by evidence.
+  expected_output: >
+    An evaluation report including:
+    1. Assessment of analysis quality and completeness
+    2. Identified gaps or inconsistencies
+    3. Validation of key findings
+    4. Recommendations for further investigation
+    5. Final integrated governance recommendation
+    Formatted as markdown without '```'
+  agent: evaluator
