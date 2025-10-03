@@ -24,7 +24,7 @@ os.environ["TESTING"] = "True"
 
 from app.main import app
 from app.db.core import Base, get_session
-from app.config import DATABASE_URL
+from app.config import settings
 from app.db.models import Analysis, WebhookEvent
 
 # Use a unique test database for each test session
@@ -32,7 +32,7 @@ import time
 TEST_DATABASE_NAME = f"wei_agent_test_{int(time.time())}"
 
 # Use the same database URL but with the unique test database name
-TEST_DATABASE_URL = DATABASE_URL.replace(DATABASE_URL.split('/')[-1], TEST_DATABASE_NAME)
+TEST_DATABASE_URL = str(settings.DATABASE_URL).replace(str(settings.DATABASE_URL).split('/')[-1], TEST_DATABASE_NAME)
 
 # Create test engine with pooling disabled to avoid concurrency issues
 test_engine = create_async_engine(
@@ -77,7 +77,7 @@ async def setup_database():
     
     # Create the test database
     # Convert SQLAlchemy URL to asyncpg URL
-    system_db_url = DATABASE_URL.replace('postgresql+asyncpg://', 'postgresql://')
+    system_db_url = str(settings.DATABASE_URL).replace('postgresql+asyncpg://', 'postgresql://')
     system_db_url = system_db_url.rsplit('/', 1)[0] + '/postgres'
     conn = await asyncpg.connect(
         dsn=system_db_url,
@@ -113,7 +113,7 @@ async def setup_database():
     await test_engine.dispose()
     
     # Drop the test database after tests
-    system_db_url = DATABASE_URL.replace('postgresql+asyncpg://', 'postgresql://')
+    system_db_url = str(settings.DATABASE_URL).replace('postgresql+asyncpg://', 'postgresql://')
     system_db_url = system_db_url.rsplit('/', 1)[0] + '/postgres'
     conn = await asyncpg.connect(
         dsn=system_db_url,

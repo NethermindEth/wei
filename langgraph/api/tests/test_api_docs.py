@@ -21,7 +21,7 @@ class TestApiDocs(BaseTest):
     def test_openapi_schema(self, test_client: TestClient):
         """Test that the OpenAPI schema is accessible."""
         # Send request to get the OpenAPI schema
-        response = test_client.get("/api/v1/openapi.json")
+        response = test_client.get("/api/openapi.json")
         
         # Check response
         assert response.status_code == status.HTTP_200_OK
@@ -48,7 +48,7 @@ class TestApiDocs(BaseTest):
     def test_swagger_ui(self, test_client: TestClient):
         """Test that the Swagger UI is accessible."""
         # Send request to get the Swagger UI
-        response = test_client.get("/docs")
+        response = test_client.get("/api/docs")
         
         # Check response
         assert response.status_code == status.HTTP_200_OK
@@ -63,7 +63,7 @@ class TestApiDocs(BaseTest):
     def test_redoc(self, test_client: TestClient):
         """Test that the ReDoc UI is accessible."""
         # Send request to get the ReDoc UI
-        response = test_client.get("/redoc")
+        response = test_client.get("/api/redoc")
         
         # Check response
         assert response.status_code == status.HTTP_200_OK
@@ -78,7 +78,7 @@ class TestApiDocs(BaseTest):
     def test_schema_models(self, test_client: TestClient):
         """Test that the schema includes all expected models."""
         # Send request to get the OpenAPI schema
-        response = test_client.get("/api/v1/openapi.json")
+        response = test_client.get("/api/openapi.json")
         
         # Check response
         assert response.status_code == status.HTTP_200_OK

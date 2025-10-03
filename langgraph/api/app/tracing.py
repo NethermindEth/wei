@@ -14,7 +14,7 @@ from functools import wraps
 from typing import Dict, Any, List, Optional, Union, Callable
 
 # Local application imports
-from app.config import LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_HOST, LANGFUSE_PROJECT
+from app.config import settings
 
 # Configure logging
 logger = logging.getLogger('wei_api_tracing')
@@ -36,9 +36,9 @@ def initialize_langfuse() -> bool:
         from langfuse import Langfuse
         
         # Get Langfuse configuration from config
-        public_key = LANGFUSE_PUBLIC_KEY
-        secret_key = LANGFUSE_SECRET_KEY
-        host = LANGFUSE_HOST
+        public_key = settings.LANGFUSE_PUBLIC_KEY
+        secret_key = settings.LANGFUSE_SECRET_KEY
+        host = settings.LANGFUSE_HOST
         
         if not public_key or not secret_key:
             logger.warning("Langfuse credentials not found in environment variables")
@@ -49,7 +49,7 @@ def initialize_langfuse() -> bool:
             public_key=public_key,
             secret_key=secret_key,
             host=host,
-            project=LANGFUSE_PROJECT
+            project=settings.LANGFUSE_PROJECT
         )
         
         # Test the connection

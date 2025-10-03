@@ -19,12 +19,10 @@ from sqlalchemy.sql import text
 
 # Local application imports
 from app.auth import get_api_key
-from app.config import (
-    WEI_AGENT_AI_MODEL_PROVIDER, WEI_AGENT_AI_MODEL_NAME,
-    WEI_AGENT_OPEN_ROUTER_API_KEY, WEI_AGENT_EXA_API_KEY
-)
+from app.config import settings
 from app.db import get_session
 from app.db.models import Analysis, WebhookEvent
+from app.api.dependencies import get_analysis_service
 from app.schemas import (
     AnalysisResponse, ArgumentsRequest, CacheEntry, CacheInvalidateRequest,
     CacheListResponse, CacheRefreshRequest, CacheStats, ChatRequest,
@@ -41,6 +39,25 @@ logger = logging.getLogger(__name__)
 
 # Create router
 router = APIRouter()
+
+
+@router.get("/health", summary="Health check endpoint")
+async def health_check():
+    """Health check endpoint."""
+    return {
+        "status": "ok",
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@router.get("/info", summary="Information about the API")
+async def info():
+    """Get information about the API."""
+    return {
+        "name": settings.PROJECT_NAME,
+        "environment": os.environ.get("ENVIRONMENT", "development"),
+        "version": "1.0.0"
+    }
 
 
 @router.get("/test")
@@ -63,12 +80,19 @@ async def analyze_proposal(
     """
     logger.info(f"Analyzing proposal: {request.proposal_id or 'new'}")
     
+    # Validate request
+    if not request.content or len(request.content.strip()) < 10:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Proposal content must be at least 10 characters long",
+        )
+    
     try:
         # Create context
         context = Context(
-            model=f"{WEI_AGENT_AI_MODEL_PROVIDER}/{WEI_AGENT_AI_MODEL_NAME}",
-            openrouter_api_key=WEI_AGENT_OPEN_ROUTER_API_KEY,
-            exa_api_key=WEI_AGENT_EXA_API_KEY
+            model=f"{settings.WEI_AGENT_AI_MODEL_PROVIDER}/{settings.WEI_AGENT_AI_MODEL_NAME}",
+            openrouter_api_key=settings.WEI_AGENT_OPEN_ROUTER_API_KEY,
+            exa_api_key=settings.WEI_AGENT_EXA_API_KEY
         )
         
         # Set proposal text in context
@@ -122,6 +146,9 @@ async def analyze_proposal(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to analyze proposal: no analysis result returned",
             )
+    except HTTPException as e:
+        # Re-raise HTTP exceptions
+        raise
     except Exception as e:
         logger.error(f"Error analyzing proposal: {str(e)}")
         raise HTTPException(
@@ -144,9 +171,9 @@ async def get_proposal_arguments(
     try:
         # Create context
         context = Context(
-            model=f"{WEI_AGENT_AI_MODEL_PROVIDER}/{WEI_AGENT_AI_MODEL_NAME}",
-            openrouter_api_key=WEI_AGENT_OPEN_ROUTER_API_KEY,
-            exa_api_key=WEI_AGENT_EXA_API_KEY,
+            model=f"{settings.WEI_AGENT_AI_MODEL_PROVIDER}/{settings.WEI_AGENT_AI_MODEL_NAME}",
+            openrouter_api_key=settings.WEI_AGENT_OPEN_ROUTER_API_KEY,
+            exa_api_key=settings.WEI_AGENT_EXA_API_KEY,
             max_arguments=request.max_arguments or 5
         )
         
@@ -230,9 +257,9 @@ async def custom_evaluate_proposal(
     try:
         # Create context
         context = Context(
-            model=f"{WEI_AGENT_AI_MODEL_PROVIDER}/{WEI_AGENT_AI_MODEL_NAME}",
-            openrouter_api_key=WEI_AGENT_OPEN_ROUTER_API_KEY,
-            exa_api_key=WEI_AGENT_EXA_API_KEY
+            model=f"{settings.WEI_AGENT_AI_MODEL_PROVIDER}/{settings.WEI_AGENT_AI_MODEL_NAME}",
+            openrouter_api_key=settings.WEI_AGENT_OPEN_ROUTER_API_KEY,
+            exa_api_key=settings.WEI_AGENT_EXA_API_KEY
         )
         
         # Set proposal text and custom criteria in context
@@ -483,9 +510,9 @@ async def search_related_proposals(
     try:
         # Create context
         context = Context(
-            model=f"{WEI_AGENT_AI_MODEL_PROVIDER}/{WEI_AGENT_AI_MODEL_NAME}",
-            openrouter_api_key=WEI_AGENT_OPEN_ROUTER_API_KEY,
-            exa_api_key=WEI_AGENT_EXA_API_KEY
+            model=f"{settings.WEI_AGENT_AI_MODEL_PROVIDER}/{settings.WEI_AGENT_AI_MODEL_NAME}",
+            openrouter_api_key=settings.WEI_AGENT_OPEN_ROUTER_API_KEY,
+            exa_api_key=settings.WEI_AGENT_EXA_API_KEY
         )
         
         # Run the graph
@@ -656,9 +683,9 @@ async def chat(
     try:
         # Create context
         context = Context(
-            model=f"{WEI_AGENT_AI_MODEL_PROVIDER}/{WEI_AGENT_AI_MODEL_NAME}",
-            openrouter_api_key=WEI_AGENT_OPEN_ROUTER_API_KEY,
-            exa_api_key=WEI_AGENT_EXA_API_KEY
+            model=f"{settings.WEI_AGENT_AI_MODEL_PROVIDER}/{settings.WEI_AGENT_AI_MODEL_NAME}",
+            openrouter_api_key=settings.WEI_AGENT_OPEN_ROUTER_API_KEY,
+            exa_api_key=settings.WEI_AGENT_EXA_API_KEY
         )
         
         # Create messages

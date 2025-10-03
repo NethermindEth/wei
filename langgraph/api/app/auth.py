@@ -11,13 +11,13 @@ from fastapi.security import APIKeyHeader
 from starlette.requests import Request
 
 # Local application imports
-from app.config import API_KEYS, API_KEY_NAME
+from app.config import settings
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 # API key header
-api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
+api_key_header = APIKeyHeader(name=settings.API_KEY_NAME, auto_error=False)
 
 
 async def get_api_key(
@@ -38,12 +38,12 @@ async def get_api_key(
         HTTPException: If the API key is invalid
     """
     # Skip API key validation if no API keys are configured
-    if not API_KEYS:
+    if not settings.API_KEYS:
         logger.warning("No API keys configured, allowing all requests")
         return "no_api_key_required"
     
     # Check if the API key is in the list of valid keys
-    if api_key not in API_KEYS:
+    if api_key not in settings.API_KEYS:
         key_prefix = api_key[:5] if api_key else "None"
         logger.warning(f"Invalid API key attempt: {key_prefix}")
         raise HTTPException(

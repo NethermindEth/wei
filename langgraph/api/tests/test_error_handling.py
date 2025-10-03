@@ -34,7 +34,7 @@ class TestErrorHandling(BaseTest):
         )
         
         # API should return an error for empty content
-        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
         data = response.json()
         assert "detail" in data
     
@@ -53,8 +53,8 @@ class TestErrorHandling(BaseTest):
             headers=self.get_auth_headers()
         )
         
-        # API returns a server error for missing content
-        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        # API returns a bad request error for missing content
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
         data = response.json()
         assert "detail" in data
     

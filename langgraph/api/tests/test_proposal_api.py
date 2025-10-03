@@ -77,18 +77,18 @@ class TestProposalApi(BaseTest):
     def test_api_docs_endpoints(self, test_client: TestClient):
         """Test API documentation endpoints."""
         # Test OpenAPI schema endpoint
-        response = test_client.get("/api/v1/openapi.json")
+        response = test_client.get("/api/openapi.json")
         assert response.status_code == status.HTTP_200_OK
         schema = response.json()
         assert "paths" in schema
         assert "/api/v1/pre-filter" in schema["paths"]
         
         # Test Swagger UI endpoint
-        response = test_client.get("/docs")
+        response = test_client.get("/api/docs")
         assert response.status_code == status.HTTP_200_OK
         assert "swagger" in response.text.lower()
         
         # Test ReDoc endpoint
-        response = test_client.get("/redoc")
+        response = test_client.get("/api/redoc")
         assert response.status_code == status.HTTP_200_OK
         assert "redoc" in response.text.lower()

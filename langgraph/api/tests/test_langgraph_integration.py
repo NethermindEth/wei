@@ -224,19 +224,16 @@ class TestLangGraphIntegration(BaseTest):
     @pytest.mark.e2e
     def test_model_configuration(self, test_client: TestClient, monkeypatch):
         """Test that the model is correctly configured from environment variables."""
-        from app.config import (
-            WEI_AGENT_AI_MODEL_PROVIDER,
-            WEI_AGENT_AI_MODEL_NAME
-        )
+        from app.config import settings
         from app.services.langgraph.graph import graph
         
         # The model configuration should be available
-        assert WEI_AGENT_AI_MODEL_PROVIDER is not None
-        assert WEI_AGENT_AI_MODEL_NAME is not None
+        assert settings.WEI_AGENT_AI_MODEL_PROVIDER is not None
+        assert settings.WEI_AGENT_AI_MODEL_NAME is not None
         
         # Mock the graph.ainvoke method
         async def mock_ainvoke(input_data, runtime=None):
-            return {"messages": ["I am using " + WEI_AGENT_AI_MODEL_NAME]}
+            return {"messages": ["I am using " + settings.WEI_AGENT_AI_MODEL_NAME]}
         
         # Apply the mock
         monkeypatch.setattr(graph, "ainvoke", AsyncMock(side_effect=mock_ainvoke))

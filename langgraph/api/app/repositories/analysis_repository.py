@@ -4,14 +4,42 @@ Repository for Analysis model operations.
 
 # Standard library imports
 import uuid
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any, Union
 
 # Third-party imports
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # Local application imports
 from app.db.models import Analysis
+
+
+# Define Pydantic models for create and update operations
+class AnalysisCreate(BaseModel):
+    """Schema for creating an Analysis."""
+    proposal_id: str
+    result: str
+    confidence: float
+    details: str
+    arguments: Optional[Dict[str, List[str]]] = None
+    
+    class Config:
+        """Pydantic configuration."""
+        orm_mode = True
+
+
+class AnalysisUpdate(BaseModel):
+    """Schema for updating an Analysis."""
+    proposal_id: Optional[str] = None
+    result: Optional[str] = None
+    confidence: Optional[float] = None
+    details: Optional[str] = None
+    arguments: Optional[Dict[str, List[str]]] = None
+    
+    class Config:
+        """Pydantic configuration."""
+        orm_mode = True
 
 
 class AnalysisRepository:

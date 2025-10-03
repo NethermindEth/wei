@@ -1,249 +1,204 @@
-# Wei Agent API Server
+# Wei Agent API
 
-A FastAPI server for the Wei Agent that provides proposal analysis and evaluation capabilities.
+This is a FastAPI-based service for analyzing governance proposals.
 
 ## Features
 
-- Proposal analysis and evaluation
-- Custom evaluation with user-defined criteria
-- Argument generation for and against proposals
-- Related proposal search
-- Community analysis
-- Roadmap generation
-- Cache management
-- Chat interface
+- **Repository Pattern**: Clean separation of data access logic
+- **Service Layer**: Business logic encapsulation
+- **Dependency Injection**: Improved testability and modularity
+- **Enhanced Error Handling**: Consistent error responses
+- **Pydantic Settings**: Type-safe configuration management
+- **Request Logging**: Detailed logging of requests and performance
+- **Rate Limiting**: Protection against excessive requests
+- **OpenAPI Documentation**: Comprehensive API documentation
+- **Test Utilities**: Tools for easier testing
 
-## Prerequisites
+## Architecture
+
+The application follows a layered architecture:
+
+1. **API Layer**: FastAPI routes and controllers
+2. **Service Layer**: Business logic and orchestration
+3. **Repository Layer**: Data access and persistence
+4. **Domain Layer**: Core domain models and schemas
+
+## Directory Structure
+
+```
+app/
+├── api/
+│   ├── dependencies.py  # Dependency injection
+│   └── routes.py        # API routes
+├── config.py            # Configuration with Pydantic
+├── db/
+│   ├── core.py                   # Database setup
+│   └── models.py                 # SQLAlchemy models
+├── errors.py                     # Error handling utilities
+├── main.py              # Application entry point
+├── middleware.py        # Custom middleware
+├── repositories/
+│   ├── analysis_repository.py  # Analysis repository
+│   └── base.py                   # Base repository
+├── schemas.py                    # Pydantic schemas
+├── services/
+│   ├── analysis_service.py  # Analysis service
+│   ├── base_service.py           # Base service
+│   └── langgraph/                # LangGraph integration
+└── test_utils.py                 # Test utilities
+```
+
+## Getting Started
+
+### Prerequisites
 
 - Python 3.9+
-- PostgreSQL 12+
-- API keys for language models (OpenRouter, Exa)
+- PostgreSQL
+- Poetry (recommended for dependency management)
 
-## Installation
+### Installation
 
-1. Clone the repository
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/NethermindEth/wei.git
+   cd wei/langgraph/api
+   ```
 
-```bash
-git clone https://github.com/NethermindEth/wei.git
-cd wei/langgraph/api
-```
+2. Install dependencies:
+   ```bash
+   poetry install
+   ```
 
-2. Install dependencies
+3. Set up environment variables:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your configuration
+   ```
 
-```bash
-pip install -r requirements.txt
-```
+### Running the Application
 
-3. Set up environment variables
-
-Create a `.env` file in the `langgraph/api` directory with the following variables:
-
-```
-# API SERVER CONFIGURATION
-PORT=8000
-
-# Database Configuration
-DATABASE_HOST=localhost
-DATABASE_PORT=5432
-DATABASE_USER=postgres
-DATABASE_PASSWORD=postgres
-DATABASE_NAME=wei_agent
-# Optional: provide full URL instead of individual components
-# DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/wei_agent
-
-# API Security
-SECRET_KEY=your_secret_key_here
-API_KEYS=key1,key2,key3
-
-# CORS Configuration
-BACKEND_CORS_ORIGINS=http://localhost:3000,*nethermind.io,*nethermind-org.vercel.app
-
-# AI MODEL CONFIGURATION
-# OpenRouter API Key (required for AI model access)
-WEI_AGENT_OPEN_ROUTER_API_KEY=your_openrouter_api_key_here
-
-# Model Configuration
-WEI_AGENT_AI_MODEL_PROVIDER=openai
-WEI_AGENT_AI_MODEL_NAME=gpt-4o-mini
-
-# Optional: secondary model for roadmap/planning features
-WEI_AGENT_ROADMAP_MODEL_NAME=perplexity/sonar-pro
-
-# Optional: Web search provider key
-WEI_AGENT_EXA_API_KEY=your_exa_api_key_here
-
-# Model parameters
-WEI_AGENT_ANALYZING_TEMPERATURE=0.2
-WEI_AGENT_ANALYZING_MAX_TOKENS=2000
-WEI_AGENT_MAX_TOKENS=400
-
-# TRACING CONFIGURATION (optional)
-LANGFUSE_PUBLIC_KEY=your_langfuse_public_key_here
-LANGFUSE_SECRET_KEY=your_langfuse_secret_key_here
-LANGFUSE_HOST=https://cloud.langfuse.com
-LANGFUSE_PROJECT=default
-
-# Logging level (debug, info, warn, error)
-LOG_LEVEL=info
-```
-
-4. Initialize the database
-
-Make sure PostgreSQL is running, then you can initialize the database in one of two ways:
-
-- **Automatic initialization**: The server will automatically create the database and run migrations on startup.
-
-- **Manual initialization**: Run the initialization script:
+Run the application:
 
 ```bash
-python init_db.py
+python run.py
 ```
 
-This is useful if you want to set up the database before starting the server.
-
-## Usage
-
-### Starting the server
+Or with custom settings:
 
 ```bash
-python server.py
-```
-
-The server will be available at http://localhost:8000.
-
-### API Documentation
-
-Once the server is running, you can access the API documentation at:
-
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
-
-### API Authentication
-
-Protected endpoints require an API key to be provided in the `X-API-Key` header. You can configure multiple valid API keys by setting the `API_KEYS` environment variable to a comma-separated list of keys:
-
-```
-API_KEYS=key1,key2,key3
-```
-
-This allows you to issue different API keys to different clients and revoke them individually if needed.
-
-You can test API key authentication with the `/api/v1/test` endpoint:
-
-```bash
-# Test with a valid API key
-curl -H "X-API-Key: your_api_key_here" http://localhost:8007/api/v1/test
-
-# Response if valid
-{"message":"API key is valid"}
-
-# Response if invalid
-{"detail":"Invalid API key"}
-```
-
-### API Endpoints
-
-#### Proposal Analysis
-
-- `POST /api/v1/pre-filter` - Analyze a proposal
-- `POST /api/v1/pre-filter/arguments` - Generate arguments for a proposal
-- `POST /api/v1/pre-filter/custom` - Evaluate a proposal with custom criteria
-- `GET /api/v1/pre-filter/{id}` - Get analysis by ID
-- `GET /api/v1/pre-filter/proposals/{id}` - Get analysis by proposal ID
-- `GET /api/v1/pre-filter/proposal/{proposal_id}` - Get all analyses for a proposal
-
-#### Related Proposals
-
-- `GET /api/v1/related-proposals` - Search for related proposals
-
-#### Community Analysis
-
-- `GET /api/v1/community` - Get community analysis
-- `POST /api/v1/community` - Analyze community
-
-#### Roadmap
-
-- `GET /api/v1/roadmap` - Get cached roadmap
-- `POST /api/v1/roadmap` - Generate roadmap
-
-#### Cache Management
-
-- `GET /api/v1/cache` - List cached queries
-- `GET /api/v1/cache/stats` - Get cache statistics
-- `POST /api/v1/cache/invalidate` - Invalidate cache entries
-- `POST /api/v1/cache/refresh` - Refresh cache entries
-- `POST /api/v1/cache/cleanup` - Clean up cache
-
-#### Chat
-
-- `POST /api/v1/chat` - Chat with the Wei Agent
-
-## Development
-
-### Project Structure
-
-```
-api/
-├── alembic.ini          # Alembic configuration
-├── app/                 # Application package
-│   ├── __init__.py
-│   ├── api/             # API routes
-│   │   ├── __init__.py
-│   │   └── routes.py    # API endpoints
-│   ├── auth.py          # Authentication middleware
-│   ├── config.py        # Application configuration
-│   ├── db/              # Database module
-│   │   ├── __init__.py
-│   │   ├── core.py      # Database connection
-│   │   └── models.py    # Database models
-│   ├── main.py          # FastAPI application
-│   └── schemas.py       # Request/response models
-├── migrations/          # Database migrations
-│   ├── env.py
-│   ├── script.py.mako
-│   ├── versions/
-│   └── 001_initial_schema.sql
-├── README.md            # This file
-├── requirements.txt     # Dependencies
-└── server.py           # Entry point
-```
-
-### Running with Hot Reload
-
-The server is configured to run with hot reload by default, which means it will automatically restart when you make changes to the code.
-
-### Database Migrations
-
-The server uses Alembic for database migrations. To create a new migration:
-
-```bash
-alembic revision -m "description of changes"
-```
-
-To apply migrations manually:
-
-```bash
-alembic upgrade head
+python run.py --host 0.0.0.0 --port 8002 --workers 4 --log-level info
 ```
 
 ### Running Tests
 
-The project includes unit tests for key functionality. To run the tests:
+Run the tests with pytest:
 
 ```bash
-python run_tests.py
+pytest tests/test_api.py -v
 ```
 
-Or using pytest directly:
+## API Documentation
 
-```bash
-pytest -v
+Once the application is running, you can access the API documentation at:
+
+- Swagger UI: http://localhost:8002/api/docs
+- ReDoc: http://localhost:8002/api/redoc
+
+## Key Improvements
+
+### 1. Repository Pattern
+
+The repository pattern abstracts data access logic from business logic:
+
+```python
+class BaseRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
+    """Base repository class with default methods for CRUD operations."""
+    
+    def __init__(self, model: Type[ModelType], db: AsyncSession):
+        self.model = model
+        self.db = db
+    
+    async def create(self, obj_in: Union[CreateSchemaType, Dict[str, Any]]) -> ModelType:
+        """Create a new record."""
+        # Implementation...
 ```
 
-The tests cover:
-- JSON parsing utilities with various formats
-- API endpoint functionality
-- Tracing integration
+### 2. Service Layer
+
+The service layer encapsulates business logic:
+
+```python
+class BaseService(Generic[RepoType, ModelType, ResponseSchemaType, CreateSchemaType, UpdateSchemaType]):
+    """Base service class with default methods for business logic."""
+    
+    def __init__(self, repository: RepoType):
+        self.repository = repository
+    
+    async def create(self, obj_in: CreateSchemaType) -> ResponseSchemaType:
+        """Create a new record."""
+        # Implementation...
+```
+
+### 3. Dependency Injection
+
+Dependency injection is used for better testability:
+
+```python
+class ServiceDependency(Generic[S, R]):
+    """Factory for service dependencies."""
+    
+    def __init__(self, service_class: Type[S], repository_dependency: Callable[..., AsyncGenerator[R, None]]):
+        self.service_class = service_class
+        self.repository_dependency = repository_dependency
+    
+    async def __call__(self, repository: R = Depends()) -> AsyncGenerator[S, None]:
+        """Create and yield a service instance."""
+        service = self.service_class(repository)
+        yield service
+```
+
+### 4. Enhanced Error Handling
+
+Consistent error handling with custom exception classes:
+
+```python
+class AppError(Exception):
+    """Base exception class for application errors."""
+    
+    def __init__(
+        self, 
+        message: str, 
+        status_code: int = status.HTTP_500_INTERNAL_SERVER_ERROR,
+        details: Optional[Dict[str, Any]] = None
+    ):
+        self.message = message
+        self.status_code = status_code
+        self.details = details or {}
+        super().__init__(self.message)
+```
+
+### 5. Pydantic Settings
+
+Type-safe configuration management:
+
+```python
+class Settings(BaseSettings):
+    """Application settings with environment variable validation."""
+    
+    # API settings
+    API_V1_STR: str = "/api/v1"
+    PROJECT_NAME: str = "Wei Agent API"
+    PORT: int = 8002
+    
+    # Database settings
+    DATABASE_HOST: str = "localhost"
+    DATABASE_PORT: str = "5432"
+    # ...
+```
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 

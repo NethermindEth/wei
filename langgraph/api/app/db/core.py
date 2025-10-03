@@ -17,11 +17,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.sql import text
 
 # Local application imports
-from app.config import (
-    DATABASE_URL, DATABASE_NAME, DB_ECHO_LOG,
-    DB_POOL_SIZE, DB_MAX_OVERFLOW, DB_POOL_TIMEOUT, DB_POOL_RECYCLE,
-    get_postgres_system_url
-)
+from app.config import settings, get_postgres_system_url
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -45,12 +41,12 @@ async def init_db_pool():
     
     # Create async engine
     engine = create_async_engine(
-        DATABASE_URL,
-        echo=DB_ECHO_LOG,
-        pool_size=DB_POOL_SIZE,
-        max_overflow=DB_MAX_OVERFLOW,
-        pool_timeout=DB_POOL_TIMEOUT,
-        pool_recycle=DB_POOL_RECYCLE,
+        settings.DATABASE_URL,
+        echo=settings.DB_ECHO_LOG,
+        pool_size=settings.DB_POOL_SIZE,
+        max_overflow=settings.DB_MAX_OVERFLOW,
+        pool_timeout=settings.DB_POOL_TIMEOUT,
+        pool_recycle=settings.DB_POOL_RECYCLE,
     )
     
     # Create session maker
@@ -75,7 +71,7 @@ async def ensure_database_exists() -> Tuple[bool, str]:
     Returns:
         Tuple[bool, str]: (was_created, database_name)
     """
-    db_name = DATABASE_NAME
+    db_name = settings.DATABASE_NAME
     postgres_url = get_postgres_system_url()
     
     # Connect to postgres system database

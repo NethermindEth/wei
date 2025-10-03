@@ -1,225 +1,160 @@
 """
-Main module for the application.
+Main application module.
+
+This module initializes the FastAPI application with middleware, routes, and exception handlers.
 """
 
 # Standard library imports
 import logging
 import os
-import time
+from typing import Dict, Any, Callable
+from datetime import datetime
 
 # Third-party imports
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from sqlalchemy.sql import text
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+import time
 
 # Local application imports
-from app.api import router
-from app.db import init_db
-from app.middleware import TracingMiddleware
-from app.tracing import initialize_langfuse
+from app.api.routes import router as api_router
+from app.config import settings
+from app.errors import AppError
+from app.db.core import init_db
+from app.middleware import add_middleware
 
 # Configure logging
-log_level_name = os.getenv("LOG_LEVEL", "info").upper()
-log_level = getattr(logging, log_level_name, logging.INFO)
 logging.basicConfig(
-    level=log_level,
+    level=getattr(logging, settings.LOG_LEVEL.upper()),
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
-# API settings
-API_V1_STR = "/api/v1"
-PROJECT_NAME = "Wei Agent API"
 
-# Create FastAPI app
-app = FastAPI(
-    title=PROJECT_NAME,
-    openapi_url=f"{API_V1_STR}/openapi.json",
-)
-
-# Process CORS origins
-cors_origins = os.getenv("BACKEND_CORS_ORIGINS", "*")
-if cors_origins:
-    if cors_origins == "*":
-        allow_origins = ["*"]
-    else:
-        allow_origins = [origin.strip() for origin in cors_origins.split(",") if origin.strip()]
-else:
-    allow_origins = ["*"]
-
-logger.info(f"Configuring CORS with origins: {allow_origins}")
-
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=allow_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Add tracing middleware
-app.add_middleware(TracingMiddleware)
-
-# Add middleware to check initialization status
-@app.middleware("http")
-async def check_initialization_middleware(request: Request, call_next):
-    if not _initialization_complete and not request.url.path == "/health":
-        return JSONResponse(
-            status_code=503,
-            content={"detail": "Service is starting up. Please try again later."},
-        )
-    return await call_next(request)
-
-# Include API router
-app.include_router(router, prefix=API_V1_STR)
-
-
-@app.get("/")
-async def root():
-    """Root endpoint."""
-    return {"message": f"{PROJECT_NAME} is running"}
-
-
-@app.get("/health")
-async def health():
-    """Health check endpoint."""
-    status = "ok" if _initialization_complete else "initializing"
+def create_app() -> FastAPI:
+    """
+    Create and configure the FastAPI application.
     
-    return {
-        "status": status,
-        "initialization_complete": _initialization_complete,
-        "timestamp": time.time()
-    }
-
-
-@app.get("/info")
-async def info():
-    """Get information about the application."""
-    
-    return {
-        "name": PROJECT_NAME,
-        "environment": {
-            "WEI_AGENT_OPEN_ROUTER_API_KEY": "Set" if os.getenv("WEI_AGENT_OPEN_ROUTER_API_KEY") else "Not set",
-            "WEI_AGENT_AI_MODEL_PROVIDER": os.getenv("WEI_AGENT_AI_MODEL_PROVIDER", "Not set"),
-            "WEI_AGENT_AI_MODEL_NAME": os.getenv("WEI_AGENT_AI_MODEL_NAME", "Not set"),
-            "WEI_AGENT_EXA_API_KEY": "Set" if os.getenv("WEI_AGENT_EXA_API_KEY") else "Not set",
-        }
-    }
-
-
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    """Global exception handler."""
-    logger.error(f"Unhandled exception: {str(exc)}")
-    return JSONResponse(
-        status_code=500,
-        content={"detail": f"Internal server error: {str(exc)}"},
+    Returns:
+        The configured FastAPI application
+    """
+    # Create FastAPI app
+    app = FastAPI(
+        title=settings.PROJECT_NAME,
+        description="API for Wei Agent, a proposal analysis tool",
+        version="1.0.0",
+        docs_url="/api/docs",
+        redoc_url="/api/redoc",
+        openapi_url="/api/openapi.json",
+        debug=settings.DEBUG
     )
-
-
-# Flag to track initialization status
-_initialization_complete = False
-
-@app.on_event("startup")
-async def startup_event():
-    """Startup event handler."""
-    global _initialization_complete
-    logger.info("Starting up application")
     
-    # Skip database initialization if TESTING is set
-    if os.getenv("TESTING") == "True":
-        logger.info("TESTING environment detected. Skipping database initialization.")
-        _initialization_complete = True
-        return
+    # Add CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.BACKEND_CORS_ORIGINS,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
     
-    try:
-        # Initialize database - this is critical, so we raise an exception if it fails
-        await init_db()
-        logger.info("Database initialization complete")
+    # Add custom middleware
+    add_middleware(app)
+    
+    # Add exception handlers
+    @app.exception_handler(StarletteHTTPException)
+    async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+        """Handle HTTP exceptions."""
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail},
+        )
+    
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+        """Handle validation errors."""
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={"detail": str(exc)},
+        )
+    
+    @app.exception_handler(AppError)
+    async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
+        """Handle application errors."""
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.message, "extra": exc.details},
+        )
+    
+    @app.exception_handler(Exception)
+    async def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+        """Handle unexpected exceptions."""
+        logger.error(f"Unhandled exception: {str(exc)}", exc_info=True)
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": "Internal server error"},
+        )
+    
+    # Add startup and shutdown events
+    @app.on_event("startup")
+    async def startup_event():
+        """Initialize the application on startup."""
+        logger.info("Starting up application")
         
-        # Check if tables exist and run migrations if needed
-        from app.db import get_session, Base
-        from app.db.models import Analysis, WebhookEvent
+        # Skip database initialization in testing mode
+        if os.environ.get("TESTING") == "True":
+            logger.info("TESTING environment detected. Skipping database initialization.")
+            return
         
-        # Get a database session
-        session_gen = get_session()
-        session = await session_gen.__anext__()
-        
+        # Initialize database
         try:
-            # Check if the tables exist by querying the database directly
-            tables_exist = False
-            try:
-                # Try to query the analyses table
-                async with session.begin():
-                    query = text("SELECT 1 FROM analyses LIMIT 1")
-                    await session.execute(query)
-                tables_exist = True
-                logger.info("Tables exist. Skipping migrations.")
-            except Exception as e:
-                # If the query fails, the table doesn't exist
-                tables_exist = False
-                logger.info(f"Tables don't exist: {e}. Will run migrations.")
-            
-            if not tables_exist:
-                logger.info("Tables do not exist. Running migrations...")
-                
-                # Run migrations using the SQL script
-                migration_file = os.path.join(
-                    os.path.dirname(os.path.abspath(__file__)),
-                    '..',
-                    'migrations',
-                    '001_initial_schema.sql'
-                )
-                
-                if os.path.exists(migration_file):
-                    with open(migration_file, 'r') as f:
-                        migration_sql = f.read()
-                    
-                    # Execute the migration SQL
-                    async with session.begin():
-                        # Create extension for UUID generation
-                        await session.execute(text("CREATE EXTENSION IF NOT EXISTS pgcrypto;"))
-                        
-                        # Execute the migration SQL
-                        statements = migration_sql.split(';')
-                        for statement in statements:
-                            if statement.strip():
-                                await session.execute(text(statement))
-                    
-                    logger.info("Migration completed successfully")
-                else:
-                    logger.error(f"Migration file not found: {migration_file}")
-            else:
-                logger.info("Tables already exist. Skipping migrations.")
-        finally:
-            # Close the session
-            await session.close()
-            
-    except Exception as e:
-        logger.error(f"Database initialization failed: {e}")
-        # Exit the application if database initialization fails
-        logger.critical("Cannot start application without database connection")
-        # We don't call sys.exit here because it would be caught by uvicorn
-        # Instead, we'll raise an exception that will be propagated to the server
-        raise RuntimeError(f"Database initialization failed: {e}")
+            await init_db()
+            logger.info("Database initialized successfully")
+        except Exception as e:
+            logger.error(f"Error initializing database: {str(e)}")
+            raise
     
-    try:
-        # Initialize Langfuse tracing - this is optional
-        if initialize_langfuse():
-            logger.info("Langfuse tracing initialized")
-        else:
-            logger.info("Langfuse tracing not available")
-    except Exception as e:
-        logger.error(f"Langfuse initialization failed: {e}")
+    @app.on_event("shutdown")
+    async def shutdown_event():
+        """Clean up resources on shutdown."""
+        logger.info("Shutting down application")
     
-    # Mark initialization as complete
-    _initialization_complete = True
-    logger.info("Application startup complete")
+    # Add API routes
+    app.include_router(api_router, prefix=settings.API_V1_STR)
+    
+    # Add health and info endpoints directly to the app
+    @app.get("/health", summary="Health check endpoint")
+    async def health_check():
+        """Health check endpoint."""
+        return {
+            "status": "ok",
+            "timestamp": datetime.now().isoformat()
+        }
+    
+    @app.get("/info", summary="Information about the API")
+    async def info():
+        """Get information about the API."""
+        return {
+            "name": settings.PROJECT_NAME,
+            "environment": os.environ.get("ENVIRONMENT", "development"),
+            "version": "1.0.0"
+        }
+    
+    return app
 
 
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Shutdown event handler."""
-    logger.info("Shutting down application")
+# Create the application instance
+app = create_app()
+
+
+if __name__ == "__main__":
+    """Run the application with uvicorn when executed directly."""
+    import uvicorn
+    uvicorn.run(
+        "app.main:app",
+        host="0.0.0.0",
+        port=settings.PORT,
+        reload=settings.DEBUG
+    )
