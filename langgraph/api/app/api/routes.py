@@ -3,12 +3,11 @@ API routes for the application.
 """
 
 # Standard library imports
-import asyncio
+import json
 import logging
 import os
-import sys
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Any, Union
 
 # Third-party imports
@@ -21,18 +20,42 @@ from sqlalchemy.sql import text
 from app.auth import get_api_key
 from app.config import settings
 from app.db import get_session
-from app.db.models import Analysis, WebhookEvent
-from app.api.dependencies import get_analysis_service
+from app.db.models import Analysis
 from app.schemas import (
-    AnalysisResponse, ArgumentsRequest, CacheEntry, CacheInvalidateRequest,
+    AnalysisResponse, AnalyzeResponse, ArgumentsRequest, CacheEntry, CacheInvalidateRequest,
     CacheListResponse, CacheRefreshRequest, CacheStats, ChatRequest,
-    ChatResponse, CustomEvaluationRequest, CustomEvaluationResponse,
-    ProposalArguments, ProposalRequest, WebhookEventResponse, EvaluationResult
+    ChatResponse, CustomEvaluationRequest, CustomEvaluationResponse, DeepResearchRequest, DeepResearchApiResponse,
+    EvaluationResult, ProposalArguments, ProposalArgumentsResponse, ProposalRequest, RelatedProposalsResponse,
+    RelatedProposal, RoadmapRequest, RoadmapResponse, RoadmapApiResponse
 )
 from app.services.langgraph.context import Context
 from app.services.langgraph.graph import graph
 from app.tracing import trace_function, trace_span
 from app.utils import extract_json_from_markdown, try_extract_json_from_markdown
+
+# Helper functions
+def is_valid_argument(arg: str) -> bool:
+    """Check if an argument is valid (not empty or placeholder)."""
+    if not arg or not isinstance(arg, str):
+        return False
+    
+    # Check if it's too short
+    if len(arg.strip()) < 5:
+        return False
+    
+    # Check for placeholder text
+    placeholders = [
+        "placeholder", "example", "insert", "argument here", 
+        "to be added", "to be determined", "tbd", "n/a", "none"
+    ]
+    
+    lower_arg = arg.lower()
+    for placeholder in placeholders:
+        if placeholder in lower_arg:
+            return False
+    
+    return True
+
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -68,7 +91,7 @@ async def test_api_key(
     return {"message": "API key is valid"}
 
 
-@router.post("/pre-filter", response_model=AnalysisResponse)
+@router.post("/pre-filter", response_model=AnalyzeResponse)
 @trace_function("analyze_proposal")
 async def analyze_proposal(
     request: ProposalRequest,
@@ -81,10 +104,10 @@ async def analyze_proposal(
     logger.info(f"Analyzing proposal: {request.proposal_id or 'new'}")
     
     # Validate request
-    if not request.content or len(request.content.strip()) < 10:
+    if not request.proposal_text or len(request.proposal_text.strip()) < 10:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Proposal content must be at least 10 characters long",
+            detail="Proposal description must be at least 10 characters long",
         )
     
     try:
@@ -96,7 +119,7 @@ async def analyze_proposal(
         )
         
         # Set proposal text in context
-        context.proposal_text = request.content
+        context.proposal_text = request.proposal_text
         
         # Run the graph
         from langgraph.runtime import Runtime
@@ -105,43 +128,29 @@ async def analyze_proposal(
         # Use the graph for analysis
         result = await graph.ainvoke({
             "task": "analyze_proposal",
-            "proposal_text": request.content
+            "proposal_text": request.proposal_text
         }, runtime=runtime)
+        
+        # Debug log the result
+        logger.info(f"Graph result: {result}")
         
         # Extract the analysis result
         if "analysis_result" in result:
             analysis_data = result["analysis_result"]
             
-            # Extract arguments if available
-            arguments = result.get("arguments")
+            # Convert each evaluation category to EvaluationResult objects
+            for key in ["goals_and_motivation", "measurable_outcomes", "budget", "technical_specifications", "language_quality"]:
+                if key in analysis_data:
+                    analysis_data[key] = EvaluationResult(
+                        status=analysis_data[key].get("status", "n/a"),
+                        justification=analysis_data[key].get("justification", ""),
+                        suggestions=analysis_data[key].get("suggestions", [])
+                    )
             
-            # Create and save analysis record
-            analysis = await create_analysis(
-                db,
-                proposal_id=request.proposal_id or str(uuid.uuid4()),
-                result=analysis_data.get("result", "unknown"),
-                confidence=float(analysis_data.get("confidence", 0.5)),
-                details=analysis_data.get("details", "No details provided"),
-                arguments=arguments
-            )
-            
-            # Return response
-            response = AnalysisResponse(
-                id=analysis.id,
-                proposal_id=analysis.proposal_id,
-                result=analysis.result,
-                confidence=analysis.confidence,
-                details=analysis.details,
-                created_at=analysis.created_at,
-                updated_at=analysis.updated_at,
-            )
-            
-            # Add arguments if available
-            if hasattr(analysis, 'arguments') and analysis.arguments:
-                response.arguments = ProposalArguments(**analysis.arguments)
-                
-            return response
+            # Return the response with dynamic fields
+            return AnalyzeResponse(**analysis_data)
         else:
+            # If no analysis result, return a default response
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to analyze proposal: no analysis result returned",
@@ -157,7 +166,7 @@ async def analyze_proposal(
         )
 
 
-@router.post("/pre-filter/arguments", response_model=ProposalArguments)
+@router.post("/pre-filter/arguments", response_model=ProposalArgumentsResponse)
 @trace_function("get_proposal_arguments")
 async def get_proposal_arguments(
     request: ArgumentsRequest,
@@ -178,7 +187,7 @@ async def get_proposal_arguments(
         )
         
         # Set proposal text in context
-        context.proposal_text = request.content
+        context.proposal_text = request.proposal_text
         
         # Run the graph
         from langgraph.runtime import Runtime
@@ -186,7 +195,7 @@ async def get_proposal_arguments(
         
         # Use the graph for argument generation
         result = await graph.ainvoke(
-            {"proposal_text": request.content, "task": "generate_arguments"}, 
+            {"proposal_text": request.proposal_text, "task": "generate_arguments"}, 
             runtime=runtime
         )
         
@@ -197,49 +206,58 @@ async def get_proposal_arguments(
             # If arguments is a string (possibly JSON in markdown), try to parse it
             if isinstance(arguments, str):
                 success, parsed_result = extract_json_from_markdown(arguments)
-                if success and isinstance(parsed_result, dict):
+                if success:
                     arguments = parsed_result
-                else:
-                    logger.warning(f"Failed to parse arguments result: {parsed_result}")
-                    arguments = {}
             
-            # Extract and clean up arguments
-            for_proposal = arguments.get("for_proposal", [])
-            against = arguments.get("against", [])
-            
-            # Filter out placeholder or empty arguments
-            if isinstance(for_proposal, list):
-                for_proposal = [arg for arg in for_proposal if arg and not arg.lower().startswith("placeholder")]
-            else:
-                for_proposal = []
+            # Check if arguments is a dictionary with the expected keys
+            if isinstance(arguments, dict) and "for_proposal" in arguments and "against" in arguments:
+                # Filter out placeholder arguments
+                for_proposal = [arg for arg in arguments["for_proposal"] if is_valid_argument(arg)]
+                against = [arg for arg in arguments["against"] if is_valid_argument(arg)]
                 
-            if isinstance(against, list):
-                against = [arg for arg in against if arg and not arg.lower().startswith("placeholder")]
-            else:
-                against = []
-            
-            # Ensure minimum arguments per side with fallback messages
-            if not for_proposal:
-                for_proposal = ["No supporting arguments were generated."]
+                # Ensure we have at least one argument on each side
+                if not for_proposal:
+                    for_proposal = ["No supporting arguments were generated."]
+                if not against:
+                    against = ["No opposing arguments were generated."]
                 
-            if not against:
-                against = ["No opposing arguments were generated."]
-            
-            return ProposalArguments(
-                for_proposal=for_proposal,
-                against=against,
-            )
-        else:
-            # Fallback to empty arguments with explanatory messages
-            return ProposalArguments(
-                for_proposal=["No supporting arguments were generated."],
-                against=["No opposing arguments were generated."]
-            )
+                # Create arguments object
+                proposal_arguments = ProposalArguments(
+                    for_proposal=for_proposal,
+                    against=against
+                )
+                
+                # Return wrapped response to match Rust implementation
+                return ProposalArgumentsResponse(
+                    arguments=proposal_arguments,
+                    from_cache=False  # We're not implementing caching in this version
+                )
+        
+        # Fallback to empty arguments if no valid arguments were found
+        proposal_arguments = ProposalArguments(
+            for_proposal=["No supporting arguments were generated."],
+            against=["No opposing arguments were generated."]
+        )
+        
+        # Return wrapped response
+        return ProposalArgumentsResponse(
+            arguments=proposal_arguments,
+            from_cache=False
+        )
     except Exception as e:
+        # Log the error
         logger.error(f"Error generating arguments: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate arguments: {str(e)}",
+        
+        # Return fallback arguments
+        proposal_arguments = ProposalArguments(
+            for_proposal=["Error generating supporting arguments."],
+            against=["Error generating opposing arguments."]
+        )
+        
+        # Return wrapped response
+        return ProposalArgumentsResponse(
+            arguments=proposal_arguments,
+            from_cache=False
         )
 
 
@@ -263,7 +281,7 @@ async def custom_evaluate_proposal(
         )
         
         # Set proposal text and custom criteria in context
-        context.proposal_text = request.content
+        context.proposal_text = request.proposal_text
         context.custom_criteria = request.custom_criteria
         
         # Run the graph
@@ -273,7 +291,7 @@ async def custom_evaluate_proposal(
         # Use the graph for custom evaluation
         result = await graph.ainvoke(
             {
-                "proposal_text": request.content, 
+                "proposal_text": request.proposal_text, 
                 "custom_criteria": request.custom_criteria,
                 "task": "custom_evaluate"
             }, 
@@ -293,9 +311,10 @@ async def custom_evaluate_proposal(
                     logger.warning(f"Failed to parse custom evaluation result: {parsed_result}")
                     evaluation = {}
             
+            # Return the response in the correct format
             return CustomEvaluationResponse(
                 summary=evaluation.get("summary", "No summary provided"),
-                response_map=evaluation.get("response_map", {}),
+                response_map=evaluation.get("response_map", {})
             )
         else:
             raise HTTPException(
@@ -318,7 +337,8 @@ async def create_analysis(
     result: str,
     confidence: float,
     details: str,
-    arguments: Optional[Dict[str, List[str]]] = None
+    arguments: Optional[Dict[str, List[str]]] = None,
+    content: Optional[str] = None
 ) -> Analysis:
     """
     Create and save an analysis record in the database.
@@ -497,36 +517,99 @@ async def get_proposal_analyses(
     return result
 
 
-@router.get("/related-proposals")
+@router.get("/related-proposals", response_model=RelatedProposalsResponse)
 async def search_related_proposals(
-    query: str = Query(None),
+    query: str = Query(..., description="The search query"),
+    limit: int = Query(5, description="Maximum number of results to return", ge=1, le=10),
     api_key: str = Depends(get_api_key),
 ):
     """
     Search for related proposals.
     """
-    logger.info(f"Searching for related proposals: {query}")
+    logger.info(f"Searching for related proposals: {query} (limit: {limit})")
     
     try:
-        # Create context
-        context = Context(
-            model=f"{settings.WEI_AGENT_AI_MODEL_PROVIDER}/{settings.WEI_AGENT_AI_MODEL_NAME}",
-            openrouter_api_key=settings.WEI_AGENT_OPEN_ROUTER_API_KEY,
-            exa_api_key=settings.WEI_AGENT_EXA_API_KEY
-        )
+        # Create cache key
+        cache_key = f"related-proposals:{query}:{limit}"
+        logger.info(f"Would check cache for key: {cache_key}")
         
-        # Run the graph
-        from langgraph.runtime import Runtime
-        runtime = Runtime(context=context)
+        # Simulate cache check
+        cached_result = None  # In a real implementation, this would be the cached result
         
-        # Use the graph for search
-        result = await graph.ainvoke(
-            {"search_query": query, "task": "search_related_proposals"}, 
-            runtime=runtime
-        )
-        
-        # Return the search results
-        return result.get("search_results", [])
+        if cached_result:
+            logger.info(f"Cache hit for query: {query}")
+            # Return cached result
+            return cached_result
+        else:
+            logger.info(f"Cache miss for query: {query}, performing fresh search")
+            
+            # Create context with API keys
+            from dotenv import load_dotenv
+            load_dotenv()
+            
+            # Get API keys directly from environment
+            exa_api_key = os.getenv("WEI_AGENT_EXA_API_KEY")
+            openrouter_api_key = os.getenv("WEI_AGENT_OPEN_ROUTER_API_KEY")
+            model_provider = os.getenv("WEI_AGENT_AI_MODEL_PROVIDER", "openai")
+            model_name = os.getenv("WEI_AGENT_AI_MODEL_NAME", "gpt-4o-mini")
+            
+            # Log the API keys for debugging (mask them for security)
+            if exa_api_key:
+                masked_exa = exa_api_key[:4] + "*" * (len(exa_api_key) - 8) + exa_api_key[-4:]
+                logger.info(f"Found EXA API key: {masked_exa}")
+            if openrouter_api_key:
+                masked_or = openrouter_api_key[:4] + "*" * (len(openrouter_api_key) - 8) + openrouter_api_key[-4:]
+                logger.info(f"Found OpenRouter API key: {masked_or}")
+            
+            context = Context(
+                model=f"{model_provider}/{model_name}",
+                openrouter_api_key=openrouter_api_key,
+                exa_api_key=exa_api_key
+            )
+            
+            # Run the graph
+            from langgraph.runtime import Runtime
+            runtime = Runtime(context=context)
+            
+            # Use the graph for search
+            result = await graph.ainvoke(
+                {"search_query": query, "task": "search_related_proposals"}, 
+                runtime=runtime
+            )
+            
+            # Get search results
+            search_results = result.get("search_results", [])
+            
+            # Limit the results
+            search_results = search_results[:limit]
+            
+            # Convert to RelatedProposal objects
+            related_proposals = []
+            for item in search_results:
+                related_proposals.append(
+                    RelatedProposal(
+                        id=item.get("id", ""),
+                        title=item.get("title", ""),
+                        score=item.get("score", 0.0),
+                        content=item.get("content"),
+                        url=item.get("url")
+                    )
+                )
+            
+            # Create the response
+            now = datetime.now(timezone.utc)  # Use UTC time to match Rust implementation
+            response = RelatedProposalsResponse(
+                related_proposals=related_proposals,
+                query=query,
+                from_cache=False,  # Always false since we're not implementing caching
+                cache_key=cache_key
+            )
+            
+            # In a real implementation, we would store this in a cache
+            # For now, just log that we would cache it
+            logger.info(f"Would cache result with key: {cache_key}")
+            
+            return response
     except Exception as e:
         logger.error(f"Error searching for related proposals: {str(e)}")
         raise HTTPException(
@@ -537,55 +620,305 @@ async def search_related_proposals(
 
 @router.get("/community")
 async def get_community_analysis(
+    topic: str,
     api_key: str = Depends(get_api_key),
-    db: AsyncSession = Depends(get_session),
 ):
     """
-    Get community analysis.
+    Get cached community analysis results.
     """
-    logger.info("Getting community analysis")
+    logger.info(f"Getting community analysis for topic: {topic}")
     
-    # This is a placeholder - implement actual community analysis logic
-    return {"message": "Community analysis endpoint"}
+    try:
+        # In a real implementation, this would check a cache
+        # For now, just call the analyze_community endpoint with a note that we would check cache
+        cache_key = f"community:{topic}"
+        logger.info(f"Would check cache for key: {cache_key}")
+        
+        # Simulate cache check
+        cached_result = None  # In a real implementation, this would be the cached result
+        
+        if cached_result:
+            logger.info(f"Cache hit for topic: {topic}")
+            # Return cached result
+            return cached_result
+        else:
+            logger.info(f"Cache miss for topic: {topic}, performing fresh analysis")
+            # Perform fresh analysis
+            request = DeepResearchRequest(topic=topic)
+            return await analyze_community(request, api_key)
+    except Exception as e:
+        logger.error(f"Error getting community analysis: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get community analysis: {str(e)}",
+        )
 
 
-@router.post("/community")
+@router.post("/community", response_model=DeepResearchApiResponse)
 async def analyze_community(
+    request: DeepResearchRequest,
     api_key: str = Depends(get_api_key),
 ):
     """
-    Analyze community.
+    Analyze community discourse for a protocol/topic.
     """
-    logger.info("Analyzing community")
+    logger.info(f"Analyzing community for topic: {request.topic}")
     
-    # This is a placeholder - implement actual community analysis logic
-    return {"message": "Community analysis initiated"}
+    try:
+        # Create context with all necessary API keys
+        import os
+        from dotenv import load_dotenv
+        
+        # Load environment variables from .env file
+        load_dotenv()
+        
+        # Get API keys directly from environment
+        exa_api_key = os.getenv("WEI_AGENT_EXA_API_KEY")
+        openrouter_api_key = os.getenv("WEI_AGENT_OPEN_ROUTER_API_KEY")
+        model_provider = os.getenv("WEI_AGENT_AI_MODEL_PROVIDER", "openai")
+        model_name = os.getenv("WEI_AGENT_AI_MODEL_NAME", "gpt-4o-mini")
+        
+        # Log the API keys for debugging (mask them for security)
+        if exa_api_key:
+            masked_exa = exa_api_key[:4] + "*" * (len(exa_api_key) - 8) + exa_api_key[-4:]
+            logger.info(f"Found EXA API key: {masked_exa}")
+        if openrouter_api_key:
+            masked_or = openrouter_api_key[:4] + "*" * (len(openrouter_api_key) - 8) + openrouter_api_key[-4:]
+            logger.info(f"Found OpenRouter API key: {masked_or}")
+        
+        context = Context(
+            model=f"{model_provider}/{model_name}",
+            openrouter_api_key=openrouter_api_key,
+            exa_api_key=exa_api_key
+        )
+        
+        # Set topic in context
+        context.topic = request.topic
+        
+        # Log API key status for debugging
+        if context.exa_api_key:
+            logger.info("EXA API key is set and will be used for research")
+        else:
+            logger.warning("EXA API key is not set, will fall back to other search methods")
+        
+        # Run the graph
+        from langgraph.runtime import Runtime
+        runtime = Runtime(context=context)
+        
+        # Use the graph for deep research
+        result = await graph.ainvoke({
+            "task": "deep_research",
+            "topic": request.topic
+        }, runtime=runtime)
+        
+        # Extract the deep research result
+        if "deep_research_result" in result:
+            research_data = result["deep_research_result"]
+            
+            # Create the response
+            now = datetime.now(timezone.utc)  # Use UTC time to match Rust implementation
+            expires_at = now + timedelta(hours=24)  # Cache for 24 hours
+            
+            # Check if we should cache this result
+            should_cache = len(research_data.get("resources", [])) > 0
+            cache_key = None
+            
+            if should_cache:
+                # In a real implementation, we would store this in a cache
+                # For now, just log that we would cache it
+                cache_key = f"community:{research_data['topic']}"
+                logger.info(f"Would cache result with key: {cache_key}")
+            
+            return DeepResearchApiResponse(
+                topic=research_data["topic"],
+                resources=research_data["resources"],
+                from_cache=False,  # Always false since we're not implementing caching
+                created_at=now,
+                expires_at=expires_at
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to analyze community: no research result returned",
+            )
+    except Exception as e:
+        logger.error(f"Error analyzing community: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to analyze community: {str(e)}",
+        )
 
 
 @router.get("/roadmap")
 async def get_cached_roadmap(
+    subject: str = Query(..., description="Subject of the roadmap"),
     api_key: str = Depends(get_api_key),
 ):
     """
     Get cached roadmap.
     """
-    logger.info("Getting cached roadmap")
+    logger.info(f"Getting cached roadmap for subject: {subject}")
     
-    # This is a placeholder - implement actual roadmap retrieval logic
-    return {"message": "Roadmap endpoint"}
+    try:
+        # Create cache key
+        cache_key = f"roadmap:{subject}"
+        logger.info(f"Would check cache for key: {cache_key}")
+        
+        # Simulate cache check
+        cached_result = None  # In a real implementation, this would be the cached result
+        
+        if cached_result:
+            logger.info(f"Cache hit for subject: {subject}")
+            # Return cached result
+            return cached_result
+        else:
+            logger.info(f"Cache miss for subject: {subject}, need to generate new roadmap")
+            # Return a 404 if not found in cache
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No cached roadmap found for subject: {subject}",
+            )
+    except Exception as e:
+        logger.error(f"Error getting cached roadmap: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get cached roadmap: {str(e)}",
+        )
 
 
-@router.post("/roadmap")
+@router.post("/roadmap", response_model=RoadmapApiResponse)
 async def generate_roadmap(
+    request: RoadmapRequest,
     api_key: str = Depends(get_api_key),
 ):
     """
     Generate roadmap.
     """
-    logger.info("Generating roadmap")
+    logger.info(f"Generating roadmap for subject: {request.subject}")
     
-    # This is a placeholder - implement actual roadmap generation logic
-    return {"message": "Roadmap generation initiated"}
+    try:
+        # Validate required fields
+        if not request.subject or not request.subject.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Subject cannot be empty",
+            )
+        
+        if not request.kind or not request.kind.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Kind cannot be empty",
+            )
+        
+        if not request.scope or not request.scope.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Scope cannot be empty",
+            )
+        
+        # Validate date formats if provided
+        if request.from_date:
+            try:
+                datetime.strptime(request.from_date, "%Y-%m-%d")
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="From date must be in YYYY-MM-DD format",
+                )
+        
+        if request.to_date:
+            try:
+                datetime.strptime(request.to_date, "%Y-%m-%d")
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="To date must be in YYYY-MM-DD format",
+                )
+        
+        # Validate date range if both dates are provided
+        if request.from_date and request.to_date and request.from_date > request.to_date:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="From date must be before or equal to To date",
+            )
+        
+        # Create context with API keys
+        from dotenv import load_dotenv
+        load_dotenv()
+        
+        # Get API keys directly from environment
+        openrouter_api_key = os.getenv("WEI_AGENT_OPEN_ROUTER_API_KEY")
+        model_provider = os.getenv("WEI_AGENT_AI_MODEL_PROVIDER", "openai")
+        model_name = os.getenv("WEI_AGENT_ROADMAP_MODEL_NAME", "perplexity/sonar-pro")
+        
+        # Log the API keys for debugging (mask them for security)
+        if openrouter_api_key:
+            masked_or = openrouter_api_key[:4] + "*" * (len(openrouter_api_key) - 8) + openrouter_api_key[-4:]
+            logger.info(f"Found OpenRouter API key: {masked_or}")
+        
+        context = Context(
+            model=f"{model_provider}/{model_name}",
+            openrouter_api_key=openrouter_api_key
+        )
+        
+        # Run the graph
+        from langgraph.runtime import Runtime
+        runtime = Runtime(context=context)
+        
+        # Convert request to dict for the graph
+        roadmap_request = {
+            "subject": request.subject,
+            "kind": request.kind,
+            "scope": request.scope,
+            "from_date": request.from_date,
+            "to_date": request.to_date,
+            "additional_context": request.additional_context
+        }
+        
+        # Use the graph for roadmap generation
+        result = await graph.ainvoke(
+            {"roadmap_request": roadmap_request, "task": "generate_roadmap"}, 
+            runtime=runtime
+        )
+        
+        # Check for errors
+        if "error" in result:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=result["error"],
+            )
+        
+        # Get roadmap result
+        roadmap_result = result.get("roadmap_result")
+        if not roadmap_result:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to generate roadmap: no result returned",
+            )
+        
+        # Process the response to ensure it matches the expected format
+        try:
+            # Return the response
+            return RoadmapApiResponse(
+                result=roadmap_result,
+                cache_info=None  # No cache info for fresh generation
+            )
+        except Exception as e:
+            # If there's an error with the response format, return a raw JSON response
+            logger.error(f"Error formatting roadmap response: {str(e)}")
+            return {
+                "result": roadmap_result,
+                "cache_info": None
+            }
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except Exception as e:
+        logger.error(f"Error generating roadmap: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate roadmap: {str(e)}",
+        )
 
 
 # Cache management routes

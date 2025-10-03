@@ -58,7 +58,7 @@ class TestApiComponents:
     @pytest.fixture
     def mock_create_analysis(self):
         """Mock the create_analysis function."""
-        async def mock_create_analysis(db, proposal_id, result, confidence, details, arguments=None):
+        async def mock_create_analysis(db, proposal_id, result, confidence, details, arguments=None, content=None):
             # Create a mock Analysis object
             analysis = MagicMock()
             analysis.id = uuid.uuid4()
@@ -67,6 +67,7 @@ class TestApiComponents:
             analysis.confidence = confidence
             analysis.details = details
             analysis.arguments = arguments
+            analysis.content = content
             analysis.created_at = datetime.now()
             analysis.updated_at = datetime.now()
             return analysis
@@ -214,7 +215,7 @@ class TestApiComponents:
                 response = await async_client.post(
                     "/api/v1/pre-filter",
                     json={
-                        "content": proposal_text,
+                        "description": proposal_text,
                         "proposal_id": proposal_id
                     },
                     headers=auth_headers
@@ -223,16 +224,18 @@ class TestApiComponents:
                 # Check response
                 assert response.status_code == status.HTTP_200_OK
                 data = response.json()
-                assert "id" in data
-                assert data["proposal_id"] == proposal_id
-                assert data["result"] == "pass"
-                assert data["confidence"] == 0.85
-                assert data["details"] == "Test details"
-                assert "created_at" in data
-                assert "updated_at" in data
-                assert "arguments" in data
-                assert "for_proposal" in data["arguments"]
-                assert "against" in data["arguments"]
+                assert "structured_response" in data
+                structured_response = data["structured_response"]
+                assert "id" in structured_response
+                assert structured_response["proposal_id"] == proposal_id
+                assert structured_response["result"] == "pass"
+                assert structured_response["confidence"] == 0.85
+                assert structured_response["details"] == "Test details"
+                assert "created_at" in structured_response
+                assert "updated_at" in structured_response
+                assert "arguments" in structured_response
+                assert "for_proposal" in structured_response["arguments"]
+                assert "against" in structured_response["arguments"]
     
     
     @pytest.mark.asyncio
@@ -260,7 +263,7 @@ class TestApiComponents:
                 response = await async_client.post(
                     "/api/v1/pre-filter/arguments",
                     json={
-                        "content": proposal_text,
+                        "description": proposal_text,
                         "proposal_id": proposal_id,
                         "max_arguments": 3
                     },
@@ -270,10 +273,13 @@ class TestApiComponents:
                 # Check response
                 assert response.status_code == status.HTTP_200_OK
                 data = response.json()
-                assert "for_proposal" in data
-                assert "against" in data
-                assert len(data["for_proposal"]) > 0
-                assert len(data["against"]) > 0
+                assert "arguments" in data
+                assert "from_cache" in data
+                arguments = data["arguments"]
+                assert "for_proposal" in arguments
+                assert "against" in arguments
+                assert len(arguments["for_proposal"]) > 0
+                assert len(arguments["against"]) > 0
     
     @pytest.mark.asyncio
     async def test_custom_evaluate_proposal(
@@ -304,7 +310,7 @@ class TestApiComponents:
                 response = await async_client.post(
                     "/api/v1/pre-filter/custom",
                     json={
-                        "content": proposal_text,
+                        "description": proposal_text,
                         "custom_criteria": custom_criteria
                     },
                     headers=auth_headers
@@ -348,11 +354,15 @@ class TestApiComponents:
                 # Check response
                 assert response.status_code == status.HTTP_200_OK
                 data = response.json()
-                assert isinstance(data, list)
-                assert len(data) > 0
-                assert "id" in data[0]
-                assert "title" in data[0]
-                assert "score" in data[0]
+                assert "related_proposals" in data
+                assert "query" in data
+                assert "from_cache" in data
+                related_proposals = data["related_proposals"]
+                assert isinstance(related_proposals, list)
+                assert len(related_proposals) > 0
+                assert "id" in related_proposals[0]
+                assert "title" in related_proposals[0]
+                assert "score" in related_proposals[0]
     @pytest.mark.asyncio
     async def test_chat(
         self, 
@@ -396,11 +406,13 @@ class TestApiComponents:
         response = await async_client.post(
             "/api/v1/pre-filter",
             json={
-                "content": "",  # Empty content should fail validation
+                "description": "",  # Empty description should fail validation
                 "proposal_id": str(uuid.uuid4())
             },
             headers=auth_headers
         )
+        # Pydantic will validate that the field exists, but our custom validation in the route
+        # will check if it's empty, so we need to make sure it passes Pydantic validation first
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         
         # Test missing required field
@@ -408,8 +420,8 @@ class TestApiComponents:
             "/api/v1/pre-filter",
             json={
                 "proposal_id": str(uuid.uuid4())
-                # Missing content field
+                # Missing description field
             },
             headers=auth_headers
         )
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY  # Pydantic validation error

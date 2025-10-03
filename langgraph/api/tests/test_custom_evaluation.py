@@ -18,7 +18,7 @@ class TestCustomEvaluation(BaseTest):
         """Test custom evaluation of a proposal."""
         # Create request data
         request_data = {
-            "content": self.get_test_proposal()["content"],
+            "description": self.get_test_proposal()["description"],
             "custom_criteria": self.get_test_custom_criteria()
         }
         
@@ -72,7 +72,7 @@ class TestCustomEvaluation(BaseTest):
         """Test custom evaluation with empty criteria."""
         # Create request data with empty criteria
         request_data = {
-            "content": self.get_test_proposal()["content"],
+            "description": self.get_test_proposal()["description"],
             "custom_criteria": {}
         }
         
@@ -116,7 +116,7 @@ class TestCustomEvaluation(BaseTest):
         }
         
         request_data = {
-            "content": self.get_test_proposal()["content"],
+            "description": self.get_test_proposal()["description"],
             "custom_criteria": complex_criteria
         }
         

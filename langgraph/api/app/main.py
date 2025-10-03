@@ -45,9 +45,9 @@ def create_app() -> FastAPI:
         title=settings.PROJECT_NAME,
         description="API for Wei Agent, a proposal analysis tool",
         version="1.0.0",
-        docs_url="/api/docs",
-        redoc_url="/api/redoc",
-        openapi_url="/api/openapi.json",
+        docs_url="/docs",
+        redoc_url="/redoc",
+        openapi_url="/openapi.json",
         debug=settings.DEBUG
     )
     

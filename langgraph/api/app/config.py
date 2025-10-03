@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 # Create settings dictionary
 settings_dict = {
     # API settings
-    "API_V1_STR": "/api/v1",
+    "API_V1_STR": "",
     "PROJECT_NAME": "Wei Agent API",
     "PORT": int(os.getenv("PORT", "8002")),
     

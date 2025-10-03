@@ -20,7 +20,7 @@ class BaseTest:
     def get_test_proposal(proposal_id: str = "test-proposal-1") -> Dict[str, Any]:
         """Get a test proposal for testing."""
         return {
-            "content": "This is a test proposal to increase the community treasury allocation for developer grants by 10%.",
+            "description": "This is a test proposal to increase the community treasury allocation for developer grants by 10%.",
             "proposal_id": proposal_id,
             "metadata": {"space": "test-space", "author": "test-author"}
         }
