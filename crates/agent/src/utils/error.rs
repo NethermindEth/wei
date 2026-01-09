@@ -1,5 +1,6 @@
 //! Error types for the agent service
 
+use crate::models::eip_error::EipError;
 use thiserror::Error;
 
 /// Agent service error
@@ -62,6 +63,10 @@ pub enum Error {
     /// Internal service error
     #[error("Internal error: {0}")]
     Internal(String),
+
+    /// EIP-related errors
+    #[error("{0}")]
+    Eip(#[from] EipError),
 }
 
 impl From<openrouter_rs::error::OpenRouterError> for Error {

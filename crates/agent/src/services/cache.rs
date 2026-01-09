@@ -7,7 +7,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
-use tracing::{debug, warn};
+use tracing::debug;
 
 use crate::db::repositories::cache::{CacheConfig, CacheRepository};
 use crate::utils::error::Result;
@@ -58,84 +58,97 @@ impl CacheableQuery {
         self
     }
 
-    /// Set the request body
-    pub fn with_body<T: Serialize>(mut self, body: &T) -> Result<Self> {
-        self.body = Some(serde_json::to_value(body)?);
-        Ok(self)
-    }
-
-    /// Set user context for user-specific caching
-    pub fn with_user_context(mut self, user_id: &str) -> Self {
-        self.user_context = Some(user_id.to_string());
+    /// Add a request body
+    pub fn with_body<T: Serialize>(mut self, body: T) -> Self {
+        match serde_json::to_value(body) {
+            Ok(value) => self.body = Some(value),
+            Err(e) => {
+                // Log the error but continue without body
+                tracing::warn!("Failed to serialize body: {}", e);
+            }
+        }
         self
     }
 
-    /// Generate a unique cache key for this query
-    pub fn cache_key(&self) -> String {
-        let mut hasher = Sha256::new();
-
-        // Hash the endpoint and method
-        hasher.update(self.endpoint.as_bytes());
-        hasher.update(self.method.as_bytes());
-
-        // Hash query parameters (sorted for consistency)
-        let mut sorted_params: Vec<_> = self.query_params.iter().collect();
-        sorted_params.sort_by_key(|(k, _)| *k);
-        for (key, value) in sorted_params {
-            hasher.update(key.as_bytes());
-            hasher.update(value.as_bytes());
-        }
-
-        // Hash body if present
-        if let Some(ref body) = self.body {
-            if let Ok(body_str) = serde_json::to_string(body) {
-                hasher.update(body_str.as_bytes());
-            }
-        }
-
-        // Hash user context if present
-        if let Some(ref user_context) = self.user_context {
-            hasher.update(user_context.as_bytes());
-        }
-
-        format!("query:{:x}", hasher.finalize())
+    /// Add user context
+    pub fn with_user_context(mut self, user_context: &str) -> Self {
+        self.user_context = Some(user_context.to_string());
+        self
     }
 
-    /// Generate a human-readable cache description
+    /// Get a human-readable description of the cache query
     pub fn cache_description(&self) -> String {
-        let params_str = if self.query_params.is_empty() {
-            String::new()
-        } else {
-            format!(
-                "?{}",
-                self.query_params
-                    .iter()
-                    .map(|(k, v)| format!("{}={}", k, v))
-                    .collect::<Vec<_>>()
-                    .join("&")
-            )
-        };
+        let mut desc = format!("{}:{}", self.method, self.endpoint);
 
-        format!("{} {}{}", self.method, self.endpoint, params_str)
+        if !self.query_params.is_empty() {
+            let params: Vec<String> = self
+                .query_params
+                .iter()
+                .map(|(k, v)| format!("{k}={v}"))
+                .collect();
+            desc.push_str(&format!(" with params {}", params.join(", ")));
+        }
+
+        if self.body.is_some() {
+            desc.push_str(" with request body");
+        }
+
+        desc
+    }
+
+    /// Get the cache key for this query
+    pub fn cache_key(&self) -> String {
+        self.to_cache_key()
+    }
+
+    /// Create a community analysis query
+    pub fn community_analysis(topic: &str) -> Self {
+        Self::new("/community", "POST").with_param("topic", topic)
+    }
+
+    /// Generate a unique cache key for this query
+    pub fn to_cache_key(&self) -> String {
+        // Create a string representation of the query
+        let mut query_string = format!("{}:{}", self.method, self.endpoint);
+
+        // Add sorted query parameters
+        let mut params: Vec<(&String, &String)> = self.query_params.iter().collect();
+        params.sort_by(|a, b| a.0.cmp(b.0));
+        for (key, value) in params {
+            query_string.push_str(&format!("&{}={}", key, value));
+        }
+
+        // Add body if present
+        if let Some(body) = &self.body {
+            query_string.push_str(&format!(":{}", body));
+        }
+
+        // Add user context if present
+        if let Some(context) = &self.user_context {
+            query_string.push_str(&format!(":user:{}", context));
+        }
+
+        // Hash the query string to create a fixed-length key
+        let mut hasher = Sha256::new();
+        hasher.update(query_string.as_bytes());
+        let result = hasher.finalize();
+        format!("query:{:x}", result)
     }
 }
 
-/// Response wrapper that includes cache metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Response with cache metadata
+#[derive(Debug, Clone)]
 pub struct CachedResponse<T> {
-    /// The actual response data
-    #[serde(flatten)]
+    /// The actual data
     pub data: T,
-    /// Whether this response was served from cache
+    /// Whether the data was retrieved from cache
     pub from_cache: bool,
-    /// When this response was created
-    pub created_at: DateTime<Utc>,
-    /// When this response expires
-    pub expires_at: DateTime<Utc>,
-    /// The cache key for this response
-    pub cache_key: String,
-    /// Human-readable description of the cached query
-    pub cache_description: String,
+    /// When the data was cached
+    pub cached_at: Option<DateTime<Utc>>,
+    /// When the cache will expire
+    pub expires_at: Option<DateTime<Utc>>,
+    /// Additional metadata
+    pub metadata: Option<Value>,
 }
 
 impl CacheService {
@@ -147,248 +160,218 @@ impl CacheService {
         }
     }
 
-    /// Cache or retrieve a value using a query
-    /// If the value exists in cache and is not expired, it's returned
-    /// Otherwise, the provided closure is executed and its result is cached
+    /// Set the default TTL for cache entries
+    pub fn with_ttl(mut self, ttl_seconds: u32) -> Self {
+        // Convert ttl_seconds to Duration
+        let duration = chrono::Duration::seconds(ttl_seconds as i64);
+        self.config.default_ttl = duration;
+        self
+    }
+
+    /// Get a cached value or compute it if not found
     pub async fn cache_or_compute<T, F, Fut>(
         &self,
         query: &CacheableQuery,
         compute_fn: F,
     ) -> Result<CachedResponse<T>>
     where
-        T: Serialize + for<'de> Deserialize<'de> + Clone,
+        T: Serialize + for<'de> Deserialize<'de> + Send + Sync,
         F: FnOnce() -> Fut,
         Fut: Future<Output = Result<T>>,
     {
-        let cache_key = query.cache_key();
-        debug!("Checking cache for query: {}", query.cache_description());
+        let cache_key = query.to_cache_key();
 
         // Try to get from cache first
         if let Some(entry) = self.repository.get_entry(&cache_key).await? {
-            debug!("Cache hit for query: {}", query.cache_description());
-
-            let cached_data: T = serde_json::from_value(entry.data)?;
+            debug!("Cache hit for key: {}", cache_key);
+            let data: T = serde_json::from_value(entry.data)?;
             return Ok(CachedResponse {
-                data: cached_data,
+                data,
                 from_cache: true,
-                created_at: entry.created_at,
-                expires_at: entry.expires_at,
-                cache_key: cache_key.clone(),
-                cache_description: query.cache_description(),
+                cached_at: Some(entry.created_at),
+                expires_at: Some(entry.expires_at),
+                metadata: entry.metadata,
             });
         }
 
-        debug!(
-            "Cache miss for query: {}, computing value",
-            query.cache_description()
-        );
-
-        // Cache miss - compute the value
+        debug!("Cache miss for key: {}", cache_key);
+        // Compute the value
         let computed_value = compute_fn().await?;
-        let created_at = Utc::now();
+        let metadata = serde_json::json!({
+            "query": {
+                "endpoint": query.endpoint,
+                "method": query.method,
+                "params": query.query_params,
+                "user_context": query.user_context,
+            }
+        });
 
-        // Determine expiry based on endpoint pattern
-        let ttl = self
-            .config
-            .ttl_overrides
-            .iter()
-            .find(|(pattern, _)| query.endpoint.starts_with(pattern))
-            .map(|(_, ttl)| *ttl)
-            .unwrap_or(self.config.default_ttl);
+        let metadata_clone = metadata.clone();
 
-        let expires_at = created_at + ttl;
-
-        // Store in cache with query metadata
-        let metadata = serde_json::to_value(query)?;
-        if let Err(e) = self
-            .repository
+        // Store in cache
+        self.repository
             .set(&cache_key, &computed_value, &self.config, Some(metadata))
-            .await
-        {
-            warn!(
-                "Failed to cache value for query {}: {}",
-                query.cache_description(),
-                e
-            );
-            // Don't fail the entire request if caching fails
-        }
+            .await?;
 
         Ok(CachedResponse {
             data: computed_value,
             from_cache: false,
-            created_at,
-            expires_at,
-            cache_key,
-            cache_description: query.cache_description(),
+            cached_at: Some(Utc::now()),
+            expires_at: None,
+            metadata: Some(metadata_clone),
         })
     }
 
-    /// Refresh (invalidate and recompute) a cached query
-    pub async fn refresh_query<T, F, Fut>(
+    /// Invalidate a specific cache entry
+    pub async fn invalidate(&self, query: &CacheableQuery) -> Result<bool> {
+        let cache_key = query.to_cache_key();
+        debug!("Invalidating cache key: {}", cache_key);
+        let _ = self.repository.delete(&cache_key).await;
+        Ok(true)
+    }
+
+    /// Invalidate a specific cache entry (alias for invalidate)
+    pub async fn invalidate_query(&self, query: &CacheableQuery) -> Result<bool> {
+        self.invalidate(query).await
+    }
+
+    /// Delete a specific cache entry by key
+    pub async fn delete(&self, cache_key: &str) -> Result<bool> {
+        self.repository.delete(cache_key).await
+    }
+
+    /// Delete all cache entries matching a pattern
+    pub async fn delete_pattern(&self, key_pattern: &str) -> Result<u64> {
+        self.repository.delete_pattern(key_pattern).await
+    }
+
+    /// List all cached queries
+    pub async fn list_cached_queries(&self) -> Result<Vec<CachedQueryInfo>> {
+        let keys = self.repository.get_active_keys().await?;
+        let mut result = Vec::new();
+
+        for key in keys {
+            if let Some(entry) = self.repository.get_entry(&key).await? {
+                if let Some(metadata) = entry.metadata {
+                    if let Ok(query_info) = serde_json::from_value::<QueryMetadata>(metadata) {
+                        result.push(CachedQueryInfo {
+                            key,
+                            endpoint: query_info.query.endpoint,
+                            method: query_info.query.method,
+                            params: query_info.query.params,
+                            user_context: query_info.query.user_context,
+                            created_at: entry.created_at,
+                            expires_at: entry.expires_at,
+                        });
+                    }
+                }
+            }
+        }
+
+        Ok(result)
+    }
+
+    /// Refresh a cached value by recomputing it
+    pub async fn refresh<T, F, Fut>(
         &self,
         query: &CacheableQuery,
         compute_fn: F,
     ) -> Result<CachedResponse<T>>
     where
-        T: Serialize + for<'de> Deserialize<'de> + Clone,
+        T: Serialize + for<'de> Deserialize<'de> + Send + Sync,
         F: FnOnce() -> Fut,
         Fut: Future<Output = Result<T>>,
     {
-        let cache_key = query.cache_key();
-        debug!("Refreshing cache for query: {}", query.cache_description());
+        let cache_key = query.to_cache_key();
 
-        // Invalidate existing cache entry
-        let _ = self.repository.delete(&cache_key).await;
+        // Delete existing entry if any
+        self.delete(&cache_key).await?;
 
-        // Compute fresh value
-        self.cache_or_compute(query, compute_fn).await
-    }
-
-    /// Invalidate cache for a specific key
-    pub async fn invalidate(&self, cache_key: &str) -> Result<bool> {
-        debug!("Invalidating cache for key: {}", cache_key);
-        self.repository.delete(cache_key).await
-    }
-
-    /// Invalidate all cache entries matching a pattern
-    pub async fn invalidate_pattern(&self, key_pattern: &str) -> Result<u64> {
-        debug!("Invalidating cache for pattern: {}", key_pattern);
-        self.repository.delete_pattern(key_pattern).await
-    }
-
-    /// Get all cached queries with their metadata
-    pub async fn list_cached_queries(&self) -> Result<Vec<CachedQueryInfo>> {
-        let keys = self.repository.get_active_keys().await?;
-        let mut cached_queries = Vec::new();
-
-        for key in keys {
-            if let Some(entry) = self.repository.get_entry(&key).await? {
-                let query_info = if let Some(metadata) = entry.metadata {
-                    if let Ok(query) = serde_json::from_value::<CacheableQuery>(metadata) {
-                        CachedQueryInfo {
-                            cache_key: entry.cache_key,
-                            description: query.cache_description(),
-                            endpoint: query.endpoint,
-                            method: query.method,
-                            created_at: entry.created_at,
-                            expires_at: entry.expires_at,
-                            query_params: query.query_params,
-                            user_context: query.user_context,
-                        }
-                    } else {
-                        // Fallback for entries without proper metadata
-                        CachedQueryInfo {
-                            cache_key: entry.cache_key.clone(),
-                            description: format!("Legacy cache entry: {}", entry.cache_key),
-                            endpoint: "unknown".to_string(),
-                            method: "unknown".to_string(),
-                            created_at: entry.created_at,
-                            expires_at: entry.expires_at,
-                            query_params: HashMap::new(),
-                            user_context: None,
-                        }
-                    }
-                } else {
-                    // Fallback for entries without metadata
-                    CachedQueryInfo {
-                        cache_key: entry.cache_key.clone(),
-                        description: format!("Legacy cache entry: {}", entry.cache_key),
-                        endpoint: "unknown".to_string(),
-                        method: "unknown".to_string(),
-                        created_at: entry.created_at,
-                        expires_at: entry.expires_at,
-                        query_params: HashMap::new(),
-                        user_context: None,
-                    }
-                };
-                cached_queries.push(query_info);
+        // Compute the value
+        let computed_value = compute_fn().await?;
+        let metadata = serde_json::json!({
+            "query": {
+                "endpoint": query.endpoint,
+                "method": query.method,
+                "params": query.query_params,
+                "user_context": query.user_context,
             }
-        }
+        });
 
-        // Sort by creation time (newest first)
-        cached_queries.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+        let metadata_clone = metadata.clone();
 
-        Ok(cached_queries)
-    }
+        // Store in cache
+        self.repository
+            .set(&cache_key, &computed_value, &self.config, Some(metadata))
+            .await?;
 
-    /// Invalidate cache by query (frontend can call this to refresh specific queries)
-    pub async fn invalidate_query(&self, query: &CacheableQuery) -> Result<bool> {
-        let cache_key = query.cache_key();
-        debug!(
-            "Invalidating cache for query: {}",
-            query.cache_description()
-        );
-        self.repository.delete(&cache_key).await
+        Ok(CachedResponse {
+            data: computed_value,
+            from_cache: false,
+            cached_at: Some(Utc::now()),
+            expires_at: None,
+            metadata: Some(metadata_clone),
+        })
     }
 
     /// Get cache statistics
-    pub async fn get_stats(&self) -> Result<crate::db::repositories::cache::CacheStats> {
-        self.repository.get_stats().await
+    pub async fn get_stats(&self) -> Result<CacheStats> {
+        let repo_stats = self.repository.get_stats().await?;
+
+        Ok(CacheStats {
+            total_entries: repo_stats.total_entries,
+            active_entries: repo_stats.active_entries,
+            expired_entries: repo_stats.expired_entries,
+        })
     }
 
-    /// Clean up expired entries
+    /// Clean up expired cache entries
     pub async fn cleanup_expired(&self) -> Result<u64> {
-        debug!("Cleaning up expired cache entries");
         self.repository.cleanup_expired().await
     }
+}
+
+/// Cache statistics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CacheStats {
+    /// Total number of entries in the cache
+    pub total_entries: u64,
+    /// Number of active (non-expired) entries
+    pub active_entries: u64,
+    /// Number of expired entries
+    pub expired_entries: u64,
 }
 
 /// Information about a cached query
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CachedQueryInfo {
-    /// The cache key
-    pub cache_key: String,
-    /// Human-readable description
-    pub description: String,
+    /// Cache key
+    pub key: String,
     /// API endpoint
     pub endpoint: String,
     /// HTTP method
     pub method: String,
-    /// When this was cached
-    pub created_at: DateTime<Utc>,
-    /// When this expires
-    pub expires_at: DateTime<Utc>,
     /// Query parameters
-    pub query_params: HashMap<String, String>,
-    /// User context if any
+    pub params: HashMap<String, String>,
+    /// User context
     pub user_context: Option<String>,
+    /// When the query was cached
+    pub created_at: DateTime<Utc>,
+    /// When the cache will expire
+    pub expires_at: DateTime<Utc>,
 }
 
-/// Helper functions for creating common queries
-impl CacheableQuery {
-    /// Create a query for proposal analysis
-    pub fn proposal_analysis(proposal_id: &str) -> Self {
-        Self::new("/pre-filter", "POST").with_param("proposal_id", proposal_id)
-    }
+/// Query metadata structure
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct QueryMetadata {
+    query: QueryInfo,
+}
 
-    /// Create a query for community analysis
-    pub fn community_analysis(topic: &str) -> Self {
-        Self::new("/community", "POST").with_param("topic", topic)
-    }
-
-    /// Create a query for getting community analysis
-    pub fn get_community_analysis(topic: &str) -> Self {
-        Self::new("/community", "GET").with_param("topic", topic)
-    }
-
-    /// Create a query for related proposals search
-    pub fn related_proposals(query: &str, limit: Option<u8>) -> Self {
-        let mut cacheable_query = Self::new("/related-proposals", "GET").with_param("query", query);
-
-        if let Some(limit) = limit {
-            cacheable_query = cacheable_query.with_param("limit", &limit.to_string());
-        }
-
-        cacheable_query
-    }
-
-    /// Create a query for getting analysis by ID
-    pub fn analysis_by_id(analysis_id: &str) -> Self {
-        Self::new(&format!("/pre-filter/{}", analysis_id), "GET")
-    }
-
-    /// Create a query for getting proposal analyses
-    pub fn proposal_analyses(proposal_id: &str) -> Self {
-        Self::new(&format!("/pre-filter/proposal/{}", proposal_id), "GET")
-    }
+/// Query information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct QueryInfo {
+    endpoint: String,
+    method: String,
+    params: HashMap<String, String>,
+    user_context: Option<String>,
 }

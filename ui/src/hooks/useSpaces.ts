@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { apolloClient } from '../services/graphql';
 import { SpacesQuery } from '../queries/spaces.gql';
+import { ETHEREUM_SPACE } from '../utils/eip-adapters';
 
 export interface Space {
   id: string;
@@ -45,7 +46,8 @@ export function useSpaces(): UseSpacesResult {
             .filter(space => space.name)
             .sort((a, b) => (b.members || 0) - (a.members || 0));
           
-          setSpaces(validSpaces);
+          // Add Ethereum as the first space
+          setSpaces([ETHEREUM_SPACE, ...validSpaces]);
         }
         setError(null);
       } catch (err) {

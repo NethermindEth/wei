@@ -7,6 +7,9 @@ use crate::models::analysis::{
     Analysis, AnalysisResult, EvaluationCategory, ProposalAnalysis, ProposalMetadata,
     StructuredAnalysisResponse,
 };
+use crate::models::eip::{
+    EipDiscussion, EipFilterRequest, EipProposal, EipResponse, EipVote, EipsResponse,
+};
 use crate::models::roadmap::{
     CurrentValue, Domain, Evidence, FitnessFunction, Intervention, Link, LiveValidation, Metadata,
     Problem, Proposal as RoadmapProposal, ResearchWindow, RoadmapApiResponse, RoadmapRequest,
@@ -28,7 +31,9 @@ pub mod handlers;
         crate::api::handlers::get_analysis,
         crate::api::handlers::get_proposal_analyses,
         crate::api::handlers::generate_roadmap,
-        crate::api::handlers::get_cached_roadmap
+        crate::api::handlers::get_cached_roadmap,
+        crate::api::handlers::get_eip,
+        crate::api::handlers::list_eips
     ),
     components(
         schemas(
@@ -36,13 +41,15 @@ pub mod handlers;
             StructuredAnalysisResponse, EvaluationCategory, ProposalAnalysis, ProposalMetadata,
             RoadmapApiResponse, RoadmapRequest, RoadmapResponse, RoadmapResult,
             Domain, ResearchWindow, FitnessFunction, Target, CurrentValue, Problem, Evidence,
-            Intervention, LiveValidation, Signal, RoadmapProposal, Link, Source, Metadata
+            Intervention, LiveValidation, Signal, RoadmapProposal, Link, Source, Metadata,
+            EipProposal, EipDiscussion, EipVote, EipResponse, EipsResponse, EipFilterRequest
         )
     ),
     tags(
         (name = "Health", description = "Service health and status endpoints"),
         (name = "Analysis", description = "Proposal analysis endpoints for AI-powered governance assessment"),
-        (name = "Roadmap", description = "Outcome-driven roadmap generation endpoints for protocols, DAOs, and companies")
+        (name = "Roadmap", description = "Outcome-driven roadmap generation endpoints for protocols, DAOs, and companies"),
+        (name = "EIP", description = "Ethereum Improvement Proposals endpoints for fetching EIPs with discussions and votes")
     ),
     info(
         title = "Wei Agent API",

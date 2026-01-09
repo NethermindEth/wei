@@ -36,6 +36,7 @@ async fn main() -> agent::Result<()> {
     info!("Starting Wei Agent service...");
 
     // Initialize database connection using config with automatic database creation and migrations
+    // Database connection is required for the server to work
     let db = match agent::db::core::init_db_with_migrations(&config.database_url).await {
         Ok(pool) => {
             info!("Database initialized successfully with migrations");
@@ -53,7 +54,7 @@ async fn main() -> agent::Result<()> {
     let agent_service = AgentService::new(db.clone(), config.clone());
 
     // Initialize cache service
-    let cache_repo = CacheRepository::new(db);
+    let cache_repo = CacheRepository::new(db.clone());
     let cache_service = CacheService::new(cache_repo);
 
     let app = create_router(&config, agent_service, cache_service);

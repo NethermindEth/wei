@@ -46,8 +46,7 @@ impl AgentService {
     /// Create a new agent service
     pub fn new(db: Database, config: Config) -> Self {
         let community_repo = CommunityRepository::new(db.clone());
-        let cache_repo = CacheRepository::new(db.clone());
-        let cache_service = CacheService::new(cache_repo);
+        let cache_service = CacheService::new(CacheRepository::new(db.clone()));
         Self {
             db,
             community_repo,
@@ -682,7 +681,7 @@ impl AgentServiceTrait for AgentService {
         proposal: &Proposal,
     ) -> Result<CachedResponse<StructuredAnalysisResponse>> {
         // Create a cache query based on the proposal content hash
-        let query = CacheableQuery::new("/pre-filter", "POST").with_body(proposal)?;
+        let query = CacheableQuery::new("/pre-filter", "POST").with_body(proposal);
 
         self.cache_service
             .cache_or_compute(&query, || async {
@@ -697,7 +696,7 @@ impl AgentServiceTrait for AgentService {
         proposal: &Proposal,
     ) -> Result<CachedResponse<crate::models::analysis::ProposalArguments>> {
         // Create a cache query based on the proposal content hash
-        let query = CacheableQuery::new("/pre-filter/arguments", "POST").with_body(proposal)?;
+        let query = CacheableQuery::new("/pre-filter/arguments", "POST").with_body(proposal);
 
         self.cache_service
             .cache_or_compute(&query, || async {
@@ -742,7 +741,7 @@ impl AgentServiceTrait for AgentService {
 
         let query = CacheableQuery::new("/roadmap", "POST")
             .with_params(query_params)
-            .with_body(request)?;
+            .with_body(request);
 
         let request_clone = request.clone();
         let cached_response = self

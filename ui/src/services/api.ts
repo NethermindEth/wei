@@ -1,5 +1,6 @@
 import { getApiUrl, getApiHeaders } from '../config/api';
 import { Proposal, AnalysisResponse, ProposalArguments, CustomEvaluationRequest, CustomEvaluationResponse } from '../types/proposal';
+import { EipResponse, EipsResponse, EipFilterRequest } from '../types/eip';
 import { CacheService } from './cache';
 
 export class ApiService {
@@ -20,6 +21,7 @@ export class ApiService {
       
       if (!response.ok) {
         const errorText = await response.text();
+        // Keep this error log for API errors
         console.error(`API error (${response.status}): ${errorText}`);
         throw new Error(`API error: ${response.status} ${response.statusText}`);
       }
@@ -27,7 +29,8 @@ export class ApiService {
       const data = await response.json();
       return data;
     } catch (error) {
-      console.error(`API request error for ${endpoint}:`, error);
+      // Keep this error log for request failures
+      console.error(`API request error for ${endpoint}:`, error instanceof Error ? error.message : error);
       throw error;
     }
   }
@@ -40,7 +43,7 @@ export class ApiService {
         body: JSON.stringify(proposal),
       });
       
-      // Debug logging
+      // Response received successfully
       
       // Check if response has structured_response field
       if (response && response.structured_response) {
@@ -49,7 +52,7 @@ export class ApiService {
         return response as unknown as AnalysisResponse;
       }
     } catch (error) {
-      console.error('Error in analyzeProposal:', error);
+      console.error('Error in analyzeProposal:', error instanceof Error ? error.message : error);
       throw error;
     }
   }
@@ -100,12 +103,62 @@ export class ApiService {
       
       return response;
     } catch (error) {
-      console.error('Error in getProposalArguments:', error);
+      console.error('Error in getProposalArguments:', error instanceof Error ? error.message : error);
       // Re-throw with more context
       throw new Error(
         error instanceof Error 
           ? `Failed to fetch proposal arguments: ${error.message}` 
           : 'Failed to fetch proposal arguments'
+      );
+    }
+  }
+  
+  /**
+   * Get a list of EIPs with pagination
+   */
+  static async getEips(params: EipFilterRequest = {}): Promise<EipsResponse> {
+    try {
+      // Build query string from params
+      const queryParams = new URLSearchParams();
+      if (params.eip_type) queryParams.append('eip_type', params.eip_type);
+      if (params.category) queryParams.append('category', params.category);
+      if (params.status) queryParams.append('status', params.status);
+      if (params.author) queryParams.append('author', params.author);
+      if (params.limit) queryParams.append('limit', params.limit.toString());
+      if (params.page) queryParams.append('page', params.page.toString());
+      if (params.page_size) queryParams.append('page_size', params.page_size.toString());
+      
+      const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
+      
+      return this.makeRequest<EipsResponse>(`/eip${queryString}`, {
+        method: 'GET',
+      });
+    } catch (error) {
+      console.error('Error in getEips:', error instanceof Error ? error.message : error);
+      throw new Error(
+        error instanceof Error 
+          ? `Failed to fetch EIPs: ${error.message}` 
+          : 'Failed to fetch EIPs'
+      );
+    }
+  }
+
+  /**
+   * Get a specific EIP by number
+   */
+  static async getEip(eipNumber: number, includeDiscussions: boolean = false): Promise<EipResponse> {
+    try {
+      const queryString = includeDiscussions ? '?include_discussions=true' : '';
+      
+      return this.makeRequest<EipResponse>(`/eip/${eipNumber}${queryString}`, {
+        method: 'GET',
+      });
+    } catch (error) {
+      console.error(`Error in getEip ${eipNumber}:`, error instanceof Error ? error.message : error);
+      throw new Error(
+        error instanceof Error 
+          ? `Failed to fetch EIP-${eipNumber}: ${error.message}` 
+          : `Failed to fetch EIP-${eipNumber}`
       );
     }
   }
