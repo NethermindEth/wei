@@ -4,6 +4,13 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { ChevronDownIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { Avatar, DefaultAvatar } from './avatar';
+import {
+  SignInButton,
+  SignUpButton,
+  SignedIn,
+  SignedOut,
+  UserButton,
+} from "@clerk/nextjs";
 
 // Protocol/Space interface
 export interface Protocol {
@@ -88,7 +95,7 @@ export function Header({
           <div className="relative">
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="w-full flex items-center justify-between px-4 py-2 bg-white/5 border border-white/10 rounded-lg hover:bg-white/8 transition-colors focus:outline-none focus:ring-2 focus:ring-[--color-accent]/50"
+              className="w-full flex items-center justify-between px-4 py-2 bg-white/5 border border-white/10 rounded-lg hover:bg-white/8 transition-colors focus:outline-none focus:ring-2 focus:ring-[--color-accent]/50 cursor-pointer disabled:cursor-not-allowed"
               disabled={loading}
             >
               <div className="flex items-center gap-2 min-w-0">
@@ -129,7 +136,7 @@ export function Header({
                     onProtocolChange(null);
                     setIsDropdownOpen(false);
                   }}
-                  className={`w-full flex items-center gap-2 px-4 py-2 text-left hover:bg-white/5 transition-colors ${
+                  className={`w-full flex items-center gap-2 px-4 py-2 text-left hover:bg-white/5 transition-colors cursor-pointer ${
                     !selectedProtocol ? 'bg-white/10' : ''
                   }`}
                 >
@@ -144,7 +151,7 @@ export function Header({
                       onProtocolChange(protocol.id);
                       setIsDropdownOpen(false);
                     }}
-                    className={`w-full flex items-center gap-2 px-4 py-2 text-left hover:bg-white/5 transition-colors ${
+                    className={`w-full flex items-center gap-2 px-4 py-2 text-left hover:bg-white/5 transition-colors cursor-pointer ${
                       selectedProtocol === protocol.id || selectedProtocol === protocol.domain ? 'bg-white/10' : ''
                     }`}
                   >
@@ -173,11 +180,11 @@ export function Header({
           </div>
         </div>
 
-        {/* Right: Search Button */}
-        <div className="flex items-center">
+        {/* Right: Search Button & Auth */}
+        <div className="flex items-center gap-3">
           <button
             onClick={onSearch}
-            className="flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/10 rounded-lg hover:bg-white/8 transition-colors focus:outline-none focus:ring-2 focus:ring-[--color-accent]/50"
+            className="flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/10 rounded-lg hover:bg-white/8 transition-colors focus:outline-none focus:ring-2 focus:ring-[--color-accent]/50 cursor-pointer"
           >
             <MagnifyingGlassIcon className="w-4 h-4 text-white/60" />
             <span className="text-sm text-white/60 hidden sm:inline">
@@ -187,6 +194,33 @@ export function Header({
               <span className="text-xs">⌘</span>K
             </kbd>
           </button>
+
+          {/* Authentication */}
+          <div className="flex items-center gap-2">
+            <SignedOut>
+              <div className="flex items-center gap-2">
+                <SignInButton mode="modal">
+                  <button className="px-3 py-2 text-sm font-medium text-white/90 hover:text-white transition-colors cursor-pointer">
+                    Sign In
+                  </button>
+                </SignInButton>
+                <SignUpButton mode="modal">
+                  <button className="px-3 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors cursor-pointer">
+                    Sign Up
+                  </button>
+                </SignUpButton>
+              </div>
+            </SignedOut>
+            <SignedIn>
+              <UserButton
+                appearance={{
+                  elements: {
+                    avatarBox: "w-8 h-8",
+                  },
+                }}
+              />
+            </SignedIn>
+          </div>
         </div>
       </div>
     </header>

@@ -2,7 +2,7 @@
 
 use axum::{
     extract::{Path, Query, State},
-    Json,
+    Extension, Json,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -35,7 +35,8 @@ use crate::{
     models::{
         analysis::{AnalyzeResponse, ProposalArguments},
         CustomEvaluationRequest, CustomEvaluationResponse, DeepResearchApiResponse,
-        DeepResearchRequest, HealthResponse, Proposal, RoadmapApiResponse, RoadmapRequest,
+        DeepResearchRequest, HealthResponse, Proposal, RoadmapApiResponse, RoadmapRequest, User,
+        UserResponse,
     },
     services::{
         agent::AgentServiceTrait,
@@ -73,10 +74,14 @@ pub async fn health() -> Json<HealthResponse> {
     responses(
         (status = 200, description = "Analysis completed successfully", body = AnalyzeResponse),
         (status = 400, description = "Invalid request data"),
+        (status = 401, description = "Unauthorized - invalid or missing API key"),
         (status = 500, description = "Internal server error during analysis")
     ),
     tag = "Analysis",
     summary = "Analyze a DAO/Governance proposal",
+    security(
+        ("ApiKeyAuth" = [])
+    ),
     description = descriptions::HANDLER_ANALYSIS_DESCRIPTION
 )]
 pub async fn analyze_proposal(
@@ -103,8 +108,12 @@ pub async fn analyze_proposal(
     ),
     responses(
         (status = 200, description = "Analysis retrieved successfully", body = serde_json::Value),
+        (status = 401, description = "Unauthorized - invalid or missing API key"),
         (status = 404, description = "Analysis not found"),
         (status = 500, description = "Internal server error")
+    ),
+    security(
+        ("ApiKeyAuth" = [])
     ),
     tag = "Analysis",
     summary = "Retrieve analysis by ID",
@@ -529,10 +538,14 @@ pub async fn get_proposal_arguments(
     responses(
         (status = 200, description = "Roadmap generated successfully", body = RoadmapApiResponse),
         (status = 400, description = "Invalid request data"),
+        (status = 401, description = "Unauthorized - invalid or missing API key"),
         (status = 500, description = "Internal server error during roadmap generation")
     ),
     tag = "Roadmap",
     summary = "Generate an outcome-driven roadmap",
+    security(
+        ("ApiKeyAuth" = [])
+    ),
     description = descriptions::HANDLER_GENERATE_ROADMAP_DESCRIPTION
 )]
 pub async fn generate_roadmap(
@@ -708,4 +721,27 @@ pub async fn custom_evaluate_proposal(
         .map_err(|e| log_and_convert_api_error(OperationContext::CustomEvaluateProposal, e))?;
 
     Ok(Json(custom_response))
+}
+/// Get current user information from Clerk
+#[utoipa::path(
+    get,
+    path = "/user/me",
+    responses(
+        (status = 200, description = "User information retrieved successfully", body = UserResponse),
+        (status = 401, description = "Unauthorized - invalid or missing API key or JWT token"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "User",
+    summary = "Get current user", 
+    description = "Retrieve the current user's information from Clerk using the provided JWT token. Requires both API key and JWT Bearer token.",
+    security(
+        ("ApiKeyAuth" = [], "BearerAuth" = [])
+    )
+)]
+pub async fn get_current_user(
+    Extension(user): Extension<User>,
+) -> Result<Json<UserResponse>, ApiError> {
+    let user = user.clone();
+
+    Ok(Json(UserResponse { user }))
 }

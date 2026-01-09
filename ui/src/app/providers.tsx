@@ -1,5 +1,6 @@
 "use client";
 
+import { ClerkProvider } from "@clerk/nextjs";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import * as React from "react";
 
@@ -8,5 +9,9 @@ interface ProvidersProps {
 }
 
 export function Providers({ children }: ProvidersProps) {
-  return <NuqsAdapter>{children}</NuqsAdapter>;
+  return (
+    <ClerkProvider>
+      <NuqsAdapter>{children}</NuqsAdapter>
+    </ClerkProvider>
+  );
 } 
